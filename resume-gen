@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+# Thin wrapper so `resume-gen render ...` reads like a native CLI tool
+# instead of a raw `docker run` invocation (PRD.md §6, TECH_SPEC.md §7).
+# Build the image once with: docker build -t resume-gen .
+exec docker run --rm -v "$(pwd)":/work resume-gen "$@"

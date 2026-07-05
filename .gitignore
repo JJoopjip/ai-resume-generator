@@ -1,0 +1,7 @@
+output/
+__pycache__/
+*.pyc
+*.aux
+*.log
+*.out
+*Zone.Identifier

@@ -1,0 +1,113 @@
+\documentclass[10pt,letterpaper]{article}
+
+\usepackage[margin=\VAR{layout['margin_in']}in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{lastpage}
+
+% Accent used only for the header impact line and its hairline rules. Purely
+% visual — the same metrics live in the bullets, so an ATS still reads them
+% from the prose even though it ignores color entirely.
+\definecolor{accent}{HTML}{7A2E2E}
+
+\pagestyle{empty}
+\raggedbottom
+\raggedright
+
+\hypersetup{colorlinks=true, urlcolor=black, linkcolor=black}
+
+% Body/heading/name sizes all derive from layout.font_size_pt (schema-bounded
+% 10.0-11.0pt) rather than the documentclass option, since standard LaTeX
+% classes only offer 10/11/12pt and we need fractional steps like 10.5pt.
+\AtBeginDocument{\fontsize{\VAR{layout['font_size_pt']}}{\VAR{(layout['font_size_pt'] * 1.2) | round(1)}}\selectfont}
+
+\titleformat{\section}{\scshape\raggedright\fontsize{\VAR{layout['font_size_pt'] + 1.5}}{\VAR{(layout['font_size_pt'] * 1.2) | round(1)}}\selectfont\bfseries}{}{0em}{}[\titlerule]
+\titlespacing{\section}{0pt}{6pt}{3pt}
+
+\newcommand{\resumeItemListStart}{\begin{itemize}[leftmargin=1.1em, itemsep=0pt, topsep=1pt, parsep=0pt]}
+\newcommand{\resumeItemListEnd}{\end{itemize}}
+
+\begin{document}
+
+% ---------- Header ----------
+\begin{center}
+  {\fontsize{\VAR{layout['font_size_pt'] + 3.5}}{\VAR{(layout['font_size_pt'] * 1.2) | round(1)}}\selectfont\textbf{\VAR{meta.name}}} \\[1pt]
+  \VAR{meta.location} $\vert$ \VAR{meta.phone} $\vert$
+  \href{mailto:\VAR{meta.email}}{\VAR{meta.email}} $\vert$
+  \href{https://\VAR{meta.linkedin}}{\VAR{meta.linkedin}}
+\end{center}
+
+% ---------- Impact line (colored, ATS-safe: plain in-order text) ----------
+\BLOCK{if highlights}
+\vspace{3pt}
+\noindent{\color{accent}\rule{\linewidth}{0.4pt}}\par\vspace{1pt}
+\begin{center}
+{\color{accent}\bfseries\BLOCK{for h in highlights}\VAR{h.value}~\VAR{h.label}\BLOCK{if not loop.last} \textperiodcentered{} \BLOCK{endif}\BLOCK{endfor}}
+\end{center}
+\vspace{-4pt}\noindent{\color{accent}\rule{\linewidth}{0.4pt}}
+\BLOCK{endif}
+
+% ---------- Summary ----------
+\section*{Summary}
+\VAR{summary}
+
+% One role block, shared by the Experience and Additional Experience sections.
+% `layout` is passed explicitly — Jinja macros don't see the render context.
+\BLOCK{macro exp_block(exp, layout)}
+\textbf{\VAR{exp.title}} \hfill \VAR{exp.start} -- \VAR{exp.end if exp.end else "Present"} \\
+\VAR{exp.company}\BLOCK{if exp.multinational and exp.multinational_note} {\fontsize{\VAR{layout['font_size_pt'] - 1}}{\VAR{(layout['font_size_pt'] * 1.2) | round(1)}}\selectfont\itshape (\VAR{exp.multinational_note})}\BLOCK{endif} \hfill \VAR{exp.location} \\[-3pt]
+\resumeItemListStart
+\BLOCK{for bullet in exp.bullets}
+  \item \VAR{bullet.text}
+\BLOCK{endfor}
+\resumeItemListEnd
+\BLOCK{endmacro}
+
+% ---------- Experience ----------
+\BLOCK{set core_roles = experience | rejectattr('additional') | list}
+\BLOCK{set additional_roles = experience | selectattr('additional') | list}
+\section*{Experience}
+\BLOCK{for exp in core_roles}
+\VAR{exp_block(exp, layout)}
+\BLOCK{if not loop.last}\vspace{3pt}\BLOCK{endif}
+\BLOCK{endfor}
+
+% ---------- Additional Experience (header disappears when none present) ----------
+\BLOCK{if additional_roles}
+\section*{Additional Experience}
+\BLOCK{for exp in additional_roles}
+\VAR{exp_block(exp, layout)}
+\BLOCK{if not loop.last}\vspace{3pt}\BLOCK{endif}
+\BLOCK{endfor}
+\BLOCK{endif}
+
+% ---------- Education ----------
+\section*{Education}
+\BLOCK{for edu in education}
+\textbf{\VAR{edu.institution}} \hfill \VAR{edu.start} -- \VAR{edu.end} \\
+\VAR{edu.degree} \hfill \VAR{edu.location} \\
+\BLOCK{if edu.detail}{\fontsize{\VAR{layout['font_size_pt'] - 1}}{\VAR{(layout['font_size_pt'] * 1.2) | round(1)}}\selectfont \VAR{edu.detail}}\\\BLOCK{endif}
+\BLOCK{if not loop.last}\vspace{3pt}\BLOCK{endif}
+\BLOCK{endfor}
+
+% ---------- Skills ----------
+\section*{Skills}
+\BLOCK{for group in skills}
+\textbf{\VAR{group.label}:} \VAR{group['items'] | join(", ")} \\
+\BLOCK{endfor}
+\BLOCK{if certifications}
+\textbf{Certifications:} \VAR{certifications | map(attribute="name") | join(", ")}
+\BLOCK{endif}
+
+% ---------- Languages ----------
+\section*{Languages}
+\VAR{languages | map("format_language") | join(" \\quad ")}
+
+\vfill
+\hfill{\fontsize{\VAR{layout['font_size_pt'] - 1.5}}{\VAR{(layout['font_size_pt'] * 1.2) | round(1)}}\selectfont\thepage\ of \pageref{LastPage}}
+
+\end{document}

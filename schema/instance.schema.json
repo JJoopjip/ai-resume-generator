@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chantamas.dev/resume-generator/instance.schema.json",
+  "title": "Resume Instance",
+  "description": "Structural schema for instance.yaml, resolved against master.yaml schema_version 1.0.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "profile",
+    "job_description_ref",
+    "meta",
+    "summary",
+    "experience",
+    "education",
+    "certifications",
+    "skills",
+    "languages",
+    "priority_order"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "number" },
+    "profile": { "type": "string", "minLength": 1 },
+    "job_description_ref": { "type": "string", "minLength": 1 },
+    "meta": {
+      "type": "object",
+      "required": ["name", "location", "phone", "email", "linkedin", "taglines"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "location": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "linkedin": { "type": "string" },
+        "taglines": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "summary": { "type": "string", "minLength": 1 },
+    "experience": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "company", "location", "title", "start", "end", "bullets"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "company": { "type": "string", "minLength": 1 },
+          "location": { "type": "string", "minLength": 1 },
+          "title": { "type": "string", "minLength": 1 },
+          "start": { "type": "string", "minLength": 1 },
+          "end": { "type": ["string", "null"] },
+          "multinational": { "type": "boolean" },
+          "multinational_note": { "type": "string" },
+          "part_time": { "type": "boolean" },
+          "concurrent": { "type": "boolean" },
+          "additional": { "type": "boolean" },
+          "bullets": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["id", "text"],
+              "additionalProperties": false,
+              "properties": {
+                "id": { "type": "string", "minLength": 1 },
+                "text": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "education": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "institution", "location", "degree", "detail", "start", "end"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "institution": { "type": "string", "minLength": 1 },
+          "location": { "type": "string", "minLength": 1 },
+          "degree": { "type": "string", "minLength": 1 },
+          "detail": { "type": "string" },
+          "start": { "type": "string", "minLength": 1 },
+          "end": { "type": "string", "minLength": 1 },
+          "anchor": { "type": "boolean" }
+        }
+      }
+    },
+    "certifications": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "skills": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["label", "items"],
+        "additionalProperties": false,
+        "properties": {
+          "label": { "type": "string", "minLength": 1 },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "languages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "level"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "level": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "priority_order": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string", "minLength": 1 }
+      }
+    },
+    "highlights": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["id", "value", "label"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "value": { "type": "string", "minLength": 1 },
+          "label": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}
