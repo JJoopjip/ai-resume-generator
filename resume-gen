@@ -39,13 +39,14 @@ fi
 JD="$(realpath "$JD_INPUT")"
 TODAY="$(date +%F)"
 
-# Model/effort pinned for reproducibility: tailoring is high-stakes and
-# infrequent, and JD->bullet selection + overflow trade-offs reward the strongest
-# model at high effort. Drop to `--model claude-sonnet-5 --effort medium` if you
-# run it often and want it cheaper/faster. Perms pre-authorize the tools the
-# headless run needs (write instance.yaml, shell `resume-gen render`) so it runs
-# unattended. Override the whole set via RESUME_GEN_CLAUDE_FLAGS.
-CLAUDE_FLAGS="${RESUME_GEN_CLAUDE_FLAGS:---model claude-opus-4-8 --effort high --permission-mode acceptEdits --allowedTools Bash Read Edit Write}"
+# Model/effort pinned for reproducibility: Sonnet 5 / medium is a strong,
+# cost-effective default for JD->bullet selection (the validator guards
+# correctness regardless of model). Bump to `--model claude-opus-4-8 --effort
+# high` for the sharpest selection on a high-stakes application. Perms
+# pre-authorize the tools the headless run needs (write instance.yaml, shell
+# `resume-gen render`) so it runs unattended. Override the whole set via
+# RESUME_GEN_CLAUDE_FLAGS.
+CLAUDE_FLAGS="${RESUME_GEN_CLAUDE_FLAGS:---model claude-sonnet-5 --effort medium --permission-mode acceptEdits --allowedTools Bash Read Edit Write}"
 
 TASK="Non-interactive tailored-resume run. Working directory: $(pwd).
 Follow prompts/tailor_resume.md exactly as your specification. Job description

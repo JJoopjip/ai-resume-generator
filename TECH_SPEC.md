@@ -282,12 +282,12 @@ assembly script.
   `prompts/tailor_resume.md`, `master.yaml`, and the job description file by
   path — Claude reads all three with its own Read tool. No file content is
   pre-concatenated into the prompt string by a wrapper script.
-- **Model**: pinned in the `resume-gen` launcher to `--model claude-opus-4-8
-  --effort high` for reproducibility — JD→bullet selection and overflow
-  trade-offs reward the strongest model at high effort on this infrequent,
-  high-stakes task. Overridable via `RESUME_GEN_CLAUDE_FLAGS` (e.g.
-  `--model claude-sonnet-5 --effort medium` for cheaper/faster runs). Interactive
-  sessions still use whatever the invoking session is configured for.
+- **Model**: pinned in the `resume-gen` launcher to `--model claude-sonnet-5
+  --effort medium` for reproducibility — a strong, cost-effective default for
+  content selection (the validator guards correctness regardless of model).
+  Overridable via `RESUME_GEN_CLAUDE_FLAGS` (e.g. `--model claude-opus-4-8
+  --effort high` for the sharpest selection on a high-stakes application).
+  Interactive sessions still use whatever the invoking session is configured for.
 - **Job description input**: plain text file, `job_description.txt`, path
   passed to Claude in the prompt; Claude copies it into
   `output/<slug>/job_description.txt` as part of writing `instance.yaml`
