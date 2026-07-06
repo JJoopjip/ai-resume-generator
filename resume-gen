@@ -21,8 +21,14 @@ set -eu
 
 case "${1:-}" in
   render|validate|"")
-    # Deterministic stage — hand straight to the container.
-    exec docker run --rm -v "$(pwd)":/work resume-gen "$@"
+    # Deterministic stage — hand straight to the container. A named volume backs
+    # Tectonic's package/font cache so it survives `--rm` and is shared across
+    # every render (the image already ships a warm cache; this also catches any
+    # package a future template adds that the image's warm step missed).
+    exec docker run --rm \
+      -v "$(pwd)":/work \
+      -v resume-gen-tectonic-cache:/home/appuser/.cache/Tectonic \
+      resume-gen "$@"
     ;;
   -h|--help)
     sed -n '2,20p' "$0"

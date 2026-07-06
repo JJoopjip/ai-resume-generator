@@ -29,6 +29,24 @@ COPY schema/ ./schema/
 
 RUN useradd -m appuser
 USER appuser
+
+# Warm Tectonic's bundle cache into the image. Without this, `docker run --rm`
+# starts every render with an empty ~/.cache/Tectonic and re-downloads the whole
+# LaTeX support bundle (LM fonts, class, hyperref, lastpage, …) over the network
+# — ~100s per render, paid again on each overflow-loop retry. Compiling a
+# throwaway doc that pulls the same packages resume.tex.j2 uses bakes that cache
+# (~40MB) into the image, so runtime compiles are ~2s. Run as appuser so the
+# cache lands in the same HOME the entrypoint uses.
+RUN printf '%s\n' \
+      '\documentclass[10pt,letterpaper]{article}' \
+      '\usepackage[margin=0.4in]{geometry}' \
+      '\usepackage[T1]{fontenc}' \
+      '\usepackage{lmodern}\usepackage{titlesec}\usepackage{enumitem}' \
+      '\usepackage{xcolor}\usepackage{hyperref}\usepackage{lastpage}' \
+      '\begin{document}warm\end{document}' > /tmp/warm.tex \
+    && tectonic --outdir /tmp /tmp/warm.tex \
+    && rm -f /tmp/warm.*
+
 WORKDIR /work
 
 ENTRYPOINT ["python3", "/app/scripts/generate_resume.py"]

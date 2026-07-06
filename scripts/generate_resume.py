@@ -180,6 +180,17 @@ def cmd_render(args: argparse.Namespace) -> int:
         return EXIT_RENDER_ERROR
 
     _log(f"      ✓ PDF compiled — {pdf_result['page_count']} page(s)")
+    page_count = pdf_result["page_count"]
+
+    # On overflow the instance will be trimmed and re-rendered, so a DOCX written
+    # now is immediately superseded — skip it and let the caller iterate on the
+    # PDF page count alone. The DOCX is produced only on the final, 1-page render.
+    if page_count > 1:
+        _log(f"⚠ OVERFLOW — {page_count} pages (exit 3). Drop the lowest-priority "
+             "bullet and re-run. (DOCX deferred until 1 page.)")
+        _emit("render", True, [], page_count, {"pdf": str(pdf_result["pdf_path"]), "docx": None})
+        return EXIT_OVERFLOW
+
     _log("[4/4] writing DOCX …")
     try:
         docx_path = render_docx.render_docx(instance, out_dir)
@@ -195,13 +206,6 @@ def cmd_render(args: argparse.Namespace) -> int:
         return EXIT_RENDER_ERROR
 
     output_files = {"pdf": str(pdf_result["pdf_path"]), "docx": str(docx_path)}
-    page_count = pdf_result["page_count"]
-
-    if page_count > 1:
-        _log(f"⚠ OVERFLOW — {page_count} pages (exit 3). Drop the lowest-priority "
-             "bullet and re-run.")
-        _emit("render", True, [], page_count, output_files)
-        return EXIT_OVERFLOW
 
     _log(f"✓ done — 1 page.  PDF: {output_files['pdf']}")
     _log(f"                  DOCX: {output_files['docx']}")
