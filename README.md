@@ -1,164 +1,216 @@
 # Tailored Resume Generator
 
-Turns a job description + `master.yaml` (the single source-of-truth content
-bank) into a one-page `resume.pdf` + `resume.docx`. Content selection is a
-Claude Code agent's job (`prompts/tailor_resume.md`); rendering, validation,
-and page-count enforcement are a deterministic script's job — no LLM call
-happens inside the renderer itself. See `PRD.md` for the full design and
-`TECH_SPEC.md` for implementation-level decisions.
+**An AI orchestration pipeline that turns a job posting into a polished, one-page resume — automatically.**
 
-## One-shot: job description → resume
+You give it a job description. It reads your career history, decides which of
+your achievements best match that specific job, writes them up, lays them out
+as a professional PDF and Word document, and checks that everything fits on one
+page — trimming intelligently if it doesn't. The result is a draft ready for you
+to review and send.
+
+---
+
+## 1. How to use it
+
+The whole thing is one command. Save a job posting into a text file, then run:
 
 ```sh
-./resume-gen path/to/job_description.txt
+./resume-gen jd.txt
 ```
 
-This launches a scripted, headless Claude Code session (`TECH_SPEC.md` §6) that
-reads `prompts/tailor_resume.md` + `master.yaml` + the JD, writes
-`output/<company>-<role>-<date>/instance.yaml`, then drives the render/overflow
-loop itself until it produces a one-page `resume.pdf` + `resume.docx`. Requires
-the `claude` CLI on `PATH` (uses your existing Claude Code login — no API key).
-The result is always a **draft for human review**.
+That's it. A few minutes later you'll find a finished resume here:
 
-The tailor stage defaults to `--model claude-sonnet-5 --effort medium` (a strong,
-cost-effective default; the validator guards correctness regardless of model).
-Bump to Opus 4.8 / high for the sharpest selection on a high-stakes application:
+```
+output/<company>-<role>-<date>/
+    ├── resume.pdf     ← the resume, ready to review
+    ├── resume.docx    ← an editable Word copy (for recruiters / job boards)
+    ├── instance.yaml  ← exactly what the AI chose, in plain text
+    ├── omitted.md     ← what it left OUT, and why (so you can add things back)
+    └── job_description.txt  ← a copy of the posting, for your records
+```
+
+> **The output is always a draft for a human to review** — nothing is ever sent
+> anywhere automatically.
+
+### Options (the short version)
+
+| What you want to do | Command |
+|---------------------|---------|
+| Generate a resume from a job posting | `./resume-gen jd.txt` |
+| Use the most powerful AI for a high-stakes application | see below |
+| Just re-build the PDF from an existing draft (no AI) | `./resume-gen render --instance output/<folder>/instance.yaml` |
+| Check a draft is valid without building anything | `./resume-gen validate --instance output/<folder>/instance.yaml` |
+
+**Dialing the AI up for an important application.** By default the tool uses a
+fast, cost-effective model. For your dream job, switch to the most capable one:
 
 ```sh
 RESUME_GEN_CLAUDE_FLAGS="--model claude-opus-4-8 --effort high \
   --permission-mode acceptEdits --allowedTools Bash Read Edit Write" ./resume-gen jd.txt
 ```
 
-Everything below is the deterministic render half that the tailor stage (and you)
-call — no LLM involved.
-
-## Quick start (Docker — no local Python/LaTeX needed)
+**One-time setup.** The AI step uses the `claude` command-line tool (it signs in
+with your existing Claude account — no separate API key needed). The build step
+runs inside Docker, so you don't have to install anything technical yourself —
+just build the toolbox once:
 
 ```sh
 docker build -t resume-gen .
-
-./resume-gen validate --instance output/acme-pm-2026-07-05/instance.yaml \
-                       --master master.yaml
-
-./resume-gen render --instance output/acme-pm-2026-07-05/instance.yaml \
-                     --master master.yaml \
-                     --out output/acme-pm-2026-07-05/
 ```
 
-`resume-gen` is a thin wrapper (`./resume-gen`) that mounts your current
-directory into the container at `/work` and runs the image's entrypoint —
-so all `--instance`/`--master`/`--out` paths above are relative to wherever
-you run it from, not to the repo checkout inside the image.
+---
 
-## Normal workflow
+## 2. What this project actually does
 
-1. Save the job posting as `job_description.txt` somewhere (e.g.
-   `output/<company>-<role>-<date>/job_description.txt`).
-2. Run Claude Code in this repo and point it at `prompts/tailor_resume.md`,
-   `master.yaml`, and the job description. Claude reads all three and
-   writes `output/<company>-<role>-<date>/instance.yaml`.
-3. Claude shells out to `resume-gen render` itself, reads the JSON off
-   stdout and the exit code, and on overflow (exit 3) trims the
-   lowest-priority bullet from `instance.yaml`'s `priority_order` and
-   retries — capped at 5 attempts.
-4. You end up with:
-   ```
-   output/<company>-<role>-<date>/
-     ├── job_description.txt
-     ├── instance.yaml
-     ├── resume.pdf
-     └── resume.docx
-   ```
-   Review before sending — output is always a draft, never auto-submitted.
+This is a portfolio piece demonstrating **AI orchestration** — designing a
+pipeline where an AI agent does the judgment-heavy creative work, while
+deterministic (non-AI) software does the exact, repeatable work, and the two
+hand off to each other cleanly.
 
-## CLI reference
+I'm not a software developer by trade. I built this through **spec-driven /
+"vibe" coding with AI assistance**: I wrote the product spec (`PRD.md`) and
+technical spec (`TECH_SPEC.md`) in plain English, then directed an AI coding
+assistant to implement them. The specs are in this repo — they're as much a part
+of the work as the code, and they show how I break a fuzzy goal into a system an
+AI can build reliably.
 
-```
-resume-gen render
-    --instance PATH   (required) path to instance.yaml
-    --master PATH      (optional, default: ./master.yaml)
-    --out DIR          (optional, default: the instance file's own folder)
-    --layout PATH        (optional, default: 10.0pt / 0.4in tight one-page baseline)
-    --schema PATH        (optional, default: schema/instance.schema.json
-                          bundled in the image)
+**The core design idea: split the brain from the machine.**
 
-resume-gen validate
-    --instance PATH   (required)
-    --master PATH      (optional, default: ./master.yaml)
-    --schema PATH        (optional, same default as above)
-```
+- **The AI does what only an AI can do well** — reading a job posting, judging
+  which of my past achievements are relevant, choosing the right framing for
+  each one, and writing a fitting summary. This is fuzzy, context-dependent
+  work.
+- **Plain software does what must be exact and repeatable** — laying out the
+  page, enforcing that nothing was invented or exaggerated, counting pages, and
+  producing the files. **No AI runs inside this step**, so the output is fast,
+  cheap, reproducible, and shareable with anyone.
 
-With the defaults, a render is just:
+Crucially, the AI is kept on a tight leash. It can *select and reorder* facts
+but is mechanically blocked from *rewriting* them — every number, job title,
+date, and company name is checked character-for-character against my master
+record before anything renders. If the AI drifts, the pipeline rejects its work
+and tells it exactly what to fix. This is the interesting part of AI
+orchestration: **not just calling an AI, but building guardrails that let you
+trust the result.**
 
-```sh
-./resume-gen render --instance output/acme-pm-2026-07-05/instance.yaml
-```
+### The "self-correcting loop" — orchestration in action
 
-Both subcommands print exactly one JSON object to stdout and nothing else
-(tracebacks/diagnostics go to stderr):
-
-```json
-{
-  "command": "render",
-  "valid": true,
-  "errors": [],
-  "page_count": 1,
-  "output_files": {
-    "pdf": "output/acme-pm-2026-07-05/resume.pdf",
-    "docx": "output/acme-pm-2026-07-05/resume.docx"
-  }
-}
-```
-
-### Exit codes
-
-| Code | Meaning                                                          |
-|------|-------------------------------------------------------------------|
-| 0    | Success — `validate`: schema+verbatim valid. `render`: valid AND 1 page. |
-| 1    | Validation failure (schema, locked-field, or bullet-verbatim mismatch). |
-| 2    | Render/compile error (Tectonic failure, template error, docx-write error). |
-| 3    | Page overflow — validated and rendered fine, but page count > 1.  |
-| 4    | Usage error (missing/unreadable file, bad arguments).              |
-
-Full contract (error codes, field meanings): `TECH_SPEC.md` §1-2.
-
-## Running without Docker
-
-Needs Python 3.12+, the packages in `requirements.txt`, and a
-[Tectonic](https://tectonic-typesetting.github.io/) binary on `PATH`:
-
-```sh
-pip install -r requirements.txt
-python3 scripts/generate_resume.py validate --instance instance.yaml --master master.yaml
-python3 scripts/generate_resume.py render --instance instance.yaml --master master.yaml --out output/
-```
-
-## Repository layout
+The most illustrative piece is how the two halves talk to each other:
 
 ```
-master.yaml                    # content bank: facts, bullet variants, themes
-prompts/tailor_resume.md       # master prompt driving Claude's selection step
-schema/instance.schema.json    # structural schema for instance.yaml
+   Job posting
+       │
+       ▼
+ ┌──────────────────────┐   The AI reads my whole career history,
+ │  AI agent (Claude)    │   picks the achievements that fit THIS job,
+ │  — makes the choices  │   writes a summary, and produces a draft.
+ └──────────┬───────────┘
+            │  hands the draft to ↓
+            ▼
+ ┌──────────────────────┐   1. Fact-checks every locked detail verbatim
+ │  Renderer (no AI)     │   2. Builds the PDF + Word file
+ │  — enforces the rules │   3. Counts the pages
+ └──────────┬───────────┘
+            │  reports back ↑ (pass / fail / too long)
+            ▼
+   One page?  ── No ──▶  The AI drops its own lowest-priority
+       │ Yes             achievement and tries again (up to 5 times)
+       ▼
+   Finished draft
+```
+
+The AI drives this loop itself: it calls the renderer, reads the verdict, and
+reacts — fixing a rejected fact, or trimming the least-important bullet point
+when the resume runs long. It even ranks its own choices *ahead of time* so the
+trimming order is deliberate, not random. The renderer never calls the AI back;
+control flows in one direction, which keeps the system predictable.
+
+---
+
+## 3. How it's built (architecture)
+
+Two clearly separated halves, connected by a simple contract.
+
+### The AI half — judgment
+
+| Piece | What it is |
+|-------|------------|
+| `master.yaml` | My entire career history in one file: every achievement, written in several "angles" (business development, project management, digital marketing) so the AI can pick the framing that best matches a given job. Locked facts (numbers, titles, dates) live here as the single source of truth. |
+| `prompts/tailor_resume.md` | The instruction manual I wrote for the AI — how to read a job posting, how to choose and rank achievements, what it's forbidden from doing. Plain English, editable without touching code. |
+| `resume-gen` (top of the script) | Launches the AI agent for a job and lets it run unattended. |
+
+### The deterministic half — exactness (no AI)
+
+| Piece | What it does |
+|-------|--------------|
+| `scripts/validate.py` | The guardrail. Checks the AI's draft against `master.yaml` — every locked fact must match exactly, or the pipeline refuses to build. |
+| `scripts/render_pdf.py` | Turns the draft into a professionally typeset PDF (using a LaTeX template) and counts the pages. |
+| `scripts/render_docx.py` | Produces the editable Word version for recruiters and job-board uploads. |
+| `schema/` | Formal definitions of what a valid draft and a valid layout look like. |
+| `Dockerfile` | Packages the whole build step into a self-contained "toolbox" so it runs identically on any machine, with nothing to install. |
+
+### The contract between them
+
+The two halves communicate through **exit codes and a single line of
+structured data** — a deliberately simple, unambiguous handshake:
+
+- `0` = success, and it fits on one page
+- `1` = the AI got a fact wrong (rejected — here's which one)
+- `3` = valid, but the resume is too long (the AI needs to trim)
+
+Because the verdict is machine-readable, the AI can react to it on its own
+without a human in the loop.
+
+### The specs
+
+- **`PRD.md`** — the product spec: what this tool is for and why, in plain
+  language.
+- **`TECH_SPEC.md`** — the technical spec: every implementation decision, written
+  before the code so an AI assistant could build to it without guessing.
+
+These two documents are the backbone of how I work with AI: **think it through
+in writing first, then direct the build.**
+
+---
+
+## 4. For the technically curious
+
+- **Stack:** Python 3.12 (PyYAML, Jinja2, python-docx, jsonschema), a LaTeX
+  template compiled by [Tectonic](https://tectonic-typesetting.github.io/),
+  all wrapped in Docker. The AI step is a headless [Claude
+  Code](https://claude.com/claude-code) agent session.
+- **Running without Docker** (needs Python 3.12+ and a Tectonic binary on
+  `PATH`):
+  ```sh
+  pip install -r requirements.txt
+  python3 scripts/generate_resume.py render --instance instance.yaml --master master.yaml --out output/
+  ```
+- **Tests:**
+  ```sh
+  pip install -r requirements.txt pytest
+  python3 -m pytest tests/ -q
+  ```
+- **Full CLI reference, exit-code contract, and the JSON output shape** are in
+  `TECH_SPEC.md` §1–2.
+
+### Repository layout
+
+```
+master.yaml                    # career content bank — the single source of truth
+prompts/tailor_resume.md       # the instruction manual for the AI
+schema/                        # formal definitions of a valid draft & layout
 scripts/
-  generate_resume.py           # CLI entrypoint (render / validate)
-  validate.py                  # locked-field / bullet-verbatim / schema checks
-  render_pdf.py                # Jinja2 -> .tex -> Tectonic -> .pdf + page count
-  render_docx.py               # instance.yaml -> .docx via python-docx
-templates/
-  resume.tex.j2                # Jake's-style LaTeX template
-  resume_docx_style.py         # DOCX styling constants
-tests/test_validate.py         # unit tests against master.yaml's real content
-Dockerfile, resume-gen         # packaging (see TECH_SPEC.md §7)
-output/                        # gitignored — per-application PDFs/DOCXs/instance.yaml
+  generate_resume.py           # command-line entry point (render / validate)
+  validate.py                  # the fact-checking guardrail
+  render_pdf.py                # draft → typeset PDF + page count
+  render_docx.py               # draft → editable Word document
+templates/                     # the LaTeX + Word styling
+tests/                         # automated checks against real content
+Dockerfile, resume-gen         # packaging & the one-command launcher
+output/                        # generated resumes (kept off git — contains personal info)
+PRD.md, TECH_SPEC.md           # the plain-English specs I wrote first
 ```
 
-## Development
-
-```sh
-pip install -r requirements.txt pytest
-python3 -m pytest tests/ -q
-```
-
-`output/` is gitignored (it holds PII-bearing generated files per
-application) — see `TECH_SPEC.md` §9 before pushing this repo anywhere,
-since `master.yaml` itself has plaintext phone/email regardless.
+> **A privacy note:** `output/` is deliberately kept out of git because generated
+> resumes contain personal contact details. Note that `master.yaml` itself holds
+> a phone number and email in plain text — keep any copy of this repo private.
