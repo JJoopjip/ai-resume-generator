@@ -51,15 +51,22 @@ you run it from, not to the repo checkout inside the image.
 ```
 resume-gen render
     --instance PATH   (required) path to instance.yaml
-    --master PATH      (required) path to master.yaml
-    --out DIR          (required) output directory for resume.pdf/.docx
+    --master PATH      (optional, default: ./master.yaml)
+    --out DIR          (optional, default: the instance file's own folder)
+    --layout PATH        (optional, default: 10.0pt / 0.4in tight one-page baseline)
     --schema PATH        (optional, default: schema/instance.schema.json
                           bundled in the image)
 
 resume-gen validate
     --instance PATH   (required)
-    --master PATH      (required)
+    --master PATH      (optional, default: ./master.yaml)
     --schema PATH        (optional, same default as above)
+```
+
+With the defaults, a render is just:
+
+```sh
+./resume-gen render --instance output/acme-pm-2026-07-05/instance.yaml
 ```
 
 Both subcommands print exactly one JSON object to stdout and nothing else

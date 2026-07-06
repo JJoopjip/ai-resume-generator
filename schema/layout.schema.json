@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://chantamas.dev/resume-generator/layout.schema.json",
   "title": "Resume Layout Overrides",
-  "description": "Bounded layout knobs the tailoring agent may adjust before resorting to dropping content on overflow. Defaults match the tightened Jake's-resume baseline; ranges define how far the render pipeline will let a caller push font size and margins.",
+  "description": "Bounded layout knobs the tailoring agent may adjust. Defaults are the tight one-page baseline (10.0pt / 0.4in) proven to fit a full history; a caller may loosen up toward 11pt / 0.6in for lighter content. Ranges define how far the render pipeline will let a caller push font size and margins.",
   "type": "object",
   "additionalProperties": false,
   "properties": {
@@ -10,15 +10,15 @@
       "type": "number",
       "minimum": 10.0,
       "maximum": 11.0,
-      "default": 10.5,
-      "description": "Body text size in points. 10.0 is the readability floor; below it a resume starts reading as visibly crammed."
+      "default": 10.0,
+      "description": "Body text size in points. 10.0 is the readability floor and the default (fits a full history on one page); loosen toward 11.0 for lighter content."
     },
     "margin_in": {
       "type": "number",
       "minimum": 0.4,
       "maximum": 0.6,
-      "default": 0.5,
-      "description": "Uniform page margin (all four sides) in inches. 0.4 is the practical floor — most printers can't reliably print closer to the edge, and tighter margins read as cramped."
+      "default": 0.4,
+      "description": "Uniform page margin (all four sides) in inches. 0.4 is the practical floor (most printers can't print closer to the edge) and the default; loosen toward 0.6 for lighter content."
     }
   }
 }

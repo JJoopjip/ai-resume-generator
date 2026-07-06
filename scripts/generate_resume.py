@@ -102,7 +102,10 @@ def cmd_render(args: argparse.Namespace) -> int:
         _emit("render", False, errors, None, None)
         return EXIT_VALIDATION_FAILURE
 
-    out_dir = Path(args.out)
+    # --out defaults to the instance file's own directory (the normal
+    # output/<company>-<role>-<date>/ folder), so a plain
+    # `render --instance <path>` writes the PDF/DOCX right beside it.
+    out_dir = Path(args.out) if args.out else Path(args.instance).resolve().parent
     try:
         pdf_result = render_pdf.render_pdf(instance, out_dir, layout)
     except Exception:
@@ -157,8 +160,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     render_p = subparsers.add_parser("render")
     render_p.add_argument("--instance", required=True)
-    render_p.add_argument("--master", required=True)
-    render_p.add_argument("--out", required=True)
+    render_p.add_argument("--master", default="master.yaml",
+                          help="path to master.yaml (default: ./master.yaml)")
+    render_p.add_argument("--out", default=None,
+                          help="output directory (default: the instance file's own folder)")
     render_p.add_argument("--schema", default=str(DEFAULT_SCHEMA_PATH))
     render_p.add_argument(
         "--layout",
@@ -172,7 +177,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     validate_p = subparsers.add_parser("validate")
     validate_p.add_argument("--instance", required=True)
-    validate_p.add_argument("--master", required=True)
+    validate_p.add_argument("--master", default="master.yaml",
+                            help="path to master.yaml (default: ./master.yaml)")
     validate_p.add_argument("--schema", default=str(DEFAULT_SCHEMA_PATH))
     validate_p.set_defaults(func=cmd_validate)
 
