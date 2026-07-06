@@ -7,6 +7,29 @@ and page-count enforcement are a deterministic script's job — no LLM call
 happens inside the renderer itself. See `PRD.md` for the full design and
 `TECH_SPEC.md` for implementation-level decisions.
 
+## One-shot: job description → resume
+
+```sh
+./resume-gen path/to/job_description.txt
+```
+
+This launches a scripted, headless Claude Code session (`TECH_SPEC.md` §6) that
+reads `prompts/tailor_resume.md` + `master.yaml` + the JD, writes
+`output/<company>-<role>-<date>/instance.yaml`, then drives the render/overflow
+loop itself until it produces a one-page `resume.pdf` + `resume.docx`. Requires
+the `claude` CLI on `PATH` (uses your existing Claude Code login — no API key).
+The result is always a **draft for human review**.
+
+Override the Claude flags if needed, e.g. to pin a model:
+
+```sh
+RESUME_GEN_CLAUDE_FLAGS="--model claude-opus-4-8 --permission-mode acceptEdits \
+  --allowedTools Bash Read Edit Write" ./resume-gen jd.txt
+```
+
+Everything below is the deterministic render half that the tailor stage (and you)
+call — no LLM involved.
+
 ## Quick start (Docker — no local Python/LaTeX needed)
 
 ```sh

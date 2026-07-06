@@ -1,5 +1,71 @@
 #!/usr/bin/env sh
-# Thin wrapper so `resume-gen render ...` reads like a native CLI tool
-# instead of a raw `docker run` invocation (PRD.md §6, TECH_SPEC.md §7).
-# Build the image once with: docker build -t resume-gen .
-exec docker run --rm -v "$(pwd)":/work resume-gen "$@"
+# resume-gen — one entrypoint for the whole pipeline.
+#
+#   resume-gen <job-description-file>   Tailor + render, end to end:
+#                                       launches a scripted, headless Claude Code
+#                                       session (TECH_SPEC.md §6) that selects
+#                                       content from master.yaml per
+#                                       prompts/tailor_resume.md, writes
+#                                       instance.yaml, then drives the render/
+#                                       overflow loop itself.
+#
+#   resume-gen render|validate ...      Deterministic, no-LLM renderer/validator,
+#                                       run inside the Docker image
+#                                       (build once: docker build -t resume-gen .)
+#
+# Control direction (per TECH_SPEC §6): the launcher only *starts* Claude for
+# the tailor stage — Claude then calls `resume-gen render`. The renderer itself
+# never calls back into Claude.
+
+set -eu
+
+case "${1:-}" in
+  render|validate|"")
+    # Deterministic stage — hand straight to the container.
+    exec docker run --rm -v "$(pwd)":/work resume-gen "$@"
+    ;;
+  -h|--help)
+    sed -n '2,20p' "$0"
+    exit 0
+    ;;
+esac
+
+# ---- Tailor stage: headless Claude Code one-shot -----------------------------
+JD_INPUT="$1"
+if [ ! -f "$JD_INPUT" ]; then
+  echo "resume-gen: '$JD_INPUT' is not a file. Pass a job-description file, or use 'render'/'validate'." >&2
+  exit 4
+fi
+JD="$(realpath "$JD_INPUT")"
+TODAY="$(date +%F)"
+
+# Headless run needs to write instance.yaml and shell `resume-gen render` without
+# interactive prompts, so pre-authorize those tools. Override the whole set with
+# e.g. RESUME_GEN_CLAUDE_FLAGS="--model claude-opus-4-8 --dangerously-skip-permissions".
+CLAUDE_FLAGS="${RESUME_GEN_CLAUDE_FLAGS:---permission-mode acceptEdits --allowedTools Bash Read Edit Write}"
+
+TASK="Non-interactive tailored-resume run. Working directory: $(pwd).
+Follow prompts/tailor_resume.md exactly as your specification. Job description
+file: $JD
+
+Do all of this without asking any questions:
+1. Read prompts/tailor_resume.md, master.yaml, and the job description ($JD).
+2. Pick an output slug '<company>-<role>-$TODAY' and create output/<slug>/.
+3. Copy $JD to output/<slug>/job_description.txt (audit trail).
+4. Write output/<slug>/instance.yaml per the prompt: choose the profile, select
+   and order bullets/highlights/skills, and include priority_order. Never invent
+   facts; copy every locked field verbatim from master.yaml.
+5. Render + overflow loop: run
+   ./resume-gen render --instance output/<slug>/instance.yaml
+   Read the JSON on stdout and the exit code. On exit 3 (overflow) follow §6 —
+   drop the additional/server role first, then the lowest-priority bullets —
+   editing instance.yaml and re-running, capped at 5 attempts. On exit 1 fix the
+   reported locked-field/verbatim mismatch and re-run.
+6. Stop at exit 0 (page_count 1). Print the output/<slug>/ path, the chosen
+   profile, and which roles/bullets made the final cut. This is a DRAFT for human
+   review — never submit it anywhere."
+
+echo "  resume-gen │ ▶ tailor  ·  JD: $JD" >&2
+echo "  resume-gen │ launching headless Claude Code (prompts/tailor_resume.md) …" >&2
+# shellcheck disable=SC2086
+exec claude -p "$TASK" $CLAUDE_FLAGS

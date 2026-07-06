@@ -111,6 +111,25 @@ Also resolved while writing the spec (previously listed under "Gaps"):
   driving `prompts/tailor_resume.md` end-to-end (this is Milestone 6 in
   `PRD.md`, not blocked on anything above).
 
+## Phase 4 — One-shot launcher (Milestone 6, done)
+
+- [x] **`resume-gen <jd-file>` end-to-end** — the wrapper now branches: a
+  `render`/`validate` arg goes to the Docker renderer as before, while a
+  job-description file launches a headless Claude Code session (`claude -p`,
+  per TECH_SPEC §6) that reads `prompts/tailor_resume.md` + `master.yaml` + the
+  JD, writes `output/<slug>/instance.yaml`, and drives the render/overflow loop
+  itself. Control direction preserved: the launcher only *starts* Claude; the
+  renderer never calls back into Claude.
+- [x] **Milestone 6 live run** — verified on the Octapharma "Therapeutic Area
+  Lead, Critical Care" JD: headless session picked profile `dm`, dropped the
+  `server` role then trimmed the impact line + `win_ai`/`lg_xfn_kpi` over 4
+  attempts, landed a valid one-page PDF/DOCX. Exit 0.
+- [x] **Claude auth/model config** (was an open gap): auth = the user's existing
+  Claude Code login (no API key); model = the session default, overridable via
+  `RESUME_GEN_CLAUDE_FLAGS`. Default perms `--permission-mode acceptEdits
+  --allowedTools Bash Read Edit Write` let the headless run write the instance
+  and shell `resume-gen render` without prompts.
+
 ## Gaps found while compiling this list (not yet in PRD/Tech Spec — decide before or during Phase 1)
 
 - [ ] **Repo hygiene**: no `.gitignore` yet. `output/` will contain generated
