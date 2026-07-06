@@ -1,4 +1,5 @@
 output/
+master.yaml
 __pycache__/
 *.pyc
 *.aux
