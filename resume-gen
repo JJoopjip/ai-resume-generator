@@ -65,9 +65,17 @@ Do all of this without asking any questions:
    drop the additional/server role first, then the lowest-priority bullets —
    editing instance.yaml and re-running, capped at 5 attempts. On exit 1 fix the
    reported locked-field/verbatim mismatch and re-run.
-6. Stop at exit 0 (page_count 1). Print the output/<slug>/ path, the chosen
-   profile, and which roles/bullets made the final cut. This is a DRAFT for human
-   review — never submit it anywhere."
+6. Stop at exit 0 (page_count 1), or at the 5-attempt cap per §6/§6a. Either
+   way your last action must be a render, so output/<slug>/resume.pdf always
+   reflects the final instance.yaml and is viewable.
+7. Write output/<slug>/omitted.md per §7: a Markdown table of everything from
+   master.yaml that did NOT make the final resume (bullets, the server role,
+   highlights, trimmed skills), with the FULL verbatim text of each omitted
+   bullet (never just its id), a never-selected-vs-overflow-cut category, and a
+   reason. Reflect the final rendered state.
+8. LEAD your final report with the PDF path and its page count (§6a/§8), then
+   the chosen profile, which roles/bullets made the final cut, and the
+   omitted.md path. This is a DRAFT for human review — never submit it anywhere."
 
 echo "  resume-gen │ ▶ tailor  ·  JD: $JD" >&2
 echo "  resume-gen │ launching headless Claude Code (prompts/tailor_resume.md) …" >&2

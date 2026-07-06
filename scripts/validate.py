@@ -395,7 +395,8 @@ def validate_paths(instance_path: str | Path, master_path: str | Path, schema_pa
 def default_layout(layout_schema: dict) -> dict:
     """Extracts the {field: default} map from layout.schema.json so a caller
     that supplies no --layout file gets the tightened baseline (currently
-    font_size_pt: 10.5, margin_in: 0.5) without duplicating those numbers."""
+    font_size_pt: 10.0, margin_h_in: 0.4, margin_v_in: 0.3) without duplicating
+    those numbers."""
     return {
         name: prop["default"]
         for name, prop in layout_schema.get("properties", {}).items()
@@ -405,8 +406,8 @@ def default_layout(layout_schema: dict) -> dict:
 
 def validate_layout(layout: dict, layout_schema: dict) -> list[dict]:
     """Range-checks layout.json against layout.schema.json (font_size_pt /
-    margin_in bounds). A violation is `layout_invalid`, same exit-1 bucket as
-    other validation failures."""
+    margin_h_in / margin_v_in bounds). A violation is `layout_invalid`, same
+    exit-1 bucket as other validation failures."""
     validator = jsonschema.Draft202012Validator(layout_schema)
     errors = []
     for err in sorted(validator.iter_errors(layout), key=lambda e: list(e.path)):

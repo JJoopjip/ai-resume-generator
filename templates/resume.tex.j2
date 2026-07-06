@@ -1,6 +1,9 @@
 \documentclass[10pt,letterpaper]{article}
 
-\usepackage[margin=\VAR{layout['margin_in']}in]{geometry}
+% Margins are two independent knobs (schema/layout.schema.json): horizontal
+% (left/right) sets line length / measure and floors at 0.4in; vertical
+% (top/bottom) only trades vertical whitespace and floors lower at 0.3in.
+\usepackage[top=\VAR{layout['margin_v_in']}in, bottom=\VAR{layout['margin_v_in']}in, left=\VAR{layout['margin_h_in']}in, right=\VAR{layout['margin_h_in']}in]{geometry}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
 \usepackage{titlesec}
@@ -42,13 +45,16 @@
 \end{center}
 
 % ---------- Impact line (colored, ATS-safe: plain in-order text) ----------
+% LOCKED tile spacing — these four \vspace values are fixed constants, tuned by
+% hand and not to be adjusted (they are deliberately NOT layout knobs):
+%   above top rule -10pt · inside-top 2pt · inside-bottom -1pt · outside-bottom -1pt
 \BLOCK{if highlights}
-\vspace{3pt}
-\noindent{\color{accent}\rule{\linewidth}{0.4pt}}\par\vspace{1pt}
-\begin{center}
-{\color{accent}\bfseries\BLOCK{for h in highlights}\VAR{h.value}~\VAR{h.label}\BLOCK{if not loop.last} \textperiodcentered{} \BLOCK{endif}\BLOCK{endfor}}
-\end{center}
-\vspace{-4pt}\noindent{\color{accent}\rule{\linewidth}{0.4pt}}
+\vspace{-10pt}
+\noindent{\color{accent}\rule{\linewidth}{0.4pt}}\par
+\vspace{2pt}
+\centerline{\color{accent}\bfseries\BLOCK{for h in highlights}\VAR{h.value}~\VAR{h.label}\BLOCK{if not loop.last} \textperiodcentered{} \BLOCK{endif}\BLOCK{endfor}}
+\vspace{-1pt}
+\noindent{\color{accent}\rule{\linewidth}{0.4pt}}\par\vspace{-1pt}
 \BLOCK{endif}
 
 % ---------- Summary ----------

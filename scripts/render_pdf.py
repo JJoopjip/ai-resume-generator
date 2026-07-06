@@ -87,7 +87,7 @@ def _jinja_env() -> jinja2.Environment:
 
 def render_tex(instance: dict, out_dir: Path, layout: dict) -> Path:
     """Render resume.tex.j2 with an escaped, ordered copy of instance plus the
-    bounded `layout` overrides (font_size_pt, margin_in — see
+    bounded `layout` overrides (font_size_pt, margin_h_in, margin_v_in — see
     schema/layout.schema.json) into out_dir/resume.tex. Returns the path
     written."""
     safe_instance = _escape_recursive(instance)

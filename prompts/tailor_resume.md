@@ -232,12 +232,69 @@ and report to the user: "Cannot fit one page without further human
 trimming" — do not shrink fonts/margins/facts to force it, and do not keep
 looping past the cap.
 
-## 7. Before you finish
+### 6a. Always leave a viewable PDF (even on failure)
+
+A tailoring run must **never** end without a rendered PDF the human can open
+and vet — one page or not. The renderer already writes `resume.pdf` (and
+`resume.docx`) on exit 3 (overflow), so a normal cap-stop always leaves a
+viewable draft. Two rules keep that guarantee honest:
+
+- **End on a render, not an edit.** When you stop — whether at exit 0 or the
+  5-attempt cap — your *last* action on `instance.yaml` must have been rendered.
+  Never make a cut you don't then render: the on-disk `resume.pdf` must always
+  correspond to the current `instance.yaml`. If you edited and hit the cap,
+  render that edit once more (it's the state you're reporting) before stopping.
+- **If you can't reach a rendered state at all** (e.g. you cannot resolve an
+  exit 1 validation error or exit 2 compile error), say so explicitly and
+  report that **no PDF was produced and why** — that is the one case where a
+  viewable draft does not exist, and the human needs to know.
+
+When you stop at the cap, frame the result around the draft, not the failure:
+**lead with the PDF path and its page count** ("Draft ready for review:
+`output/<slug>/resume.pdf` — 2 pages, needs further trimming to fit one"),
+then explain what you cut and what still overflows. The human's next step is
+to open that PDF, so its path is the headline, not a footnote.
+
+## 7. Omissions report — write `omitted.md`
+
+Alongside `instance.yaml`, write `output/<company>-<role>-<date>/omitted.md`: a
+human-readable audit of **everything from `master.yaml` that did NOT make the
+final resume**, so a reviewer can see what was left on the table and put
+anything back. Write it once, reflecting the *final* rendered state (after any
+§6 overflow cuts) — not intermediate attempts.
+
+It must be a Markdown file with a single table. **For bullets, put the full
+verbatim text — never just the id.** Use the text of the variant you would have
+used (your chosen profile, else `general`, else the closest, per §2). Columns:
+
+| Type | Role / Group | ID | Full text (verbatim) | Category | Reason |
+|------|--------------|----|----------------------|----------|--------|
+
+- **Type**: `bullet`, `highlight`, `role`, or `skill`.
+- **Full text (verbatim)**: for a bullet, the whole variant sentence; for a
+  highlight, its `value` + `label` (e.g. `100% — online-engagement growth`);
+  for a role, its title + company + dates; for a skill, the item text.
+- **Category**: `never-selected` (didn't make the relevance cut in §3) vs
+  `overflow-cut` (was selected, then dropped by the §6 loop to reach one page).
+  Keep these distinct — the reviewer treats them differently.
+- **Reason**: one concrete phrase (e.g. "low JD relevance — no ops keywords",
+  "cut first per §6 additional-role rule", "duplicate metric already shown by
+  `hl_experience`").
+
+Cover every omitted item in these classes: experience bullets not in the final
+`instance.yaml`, the `server` role if dropped, highlights not selected, and any
+skills items you trimmed out of an included group. If nothing was omitted in a
+class, you may skip its rows, but the file must always exist.
+
+## 8. Before you finish
 
 - Copy the job description to `output/<company>-<role>-<date>/job_description.txt`
   as part of writing the output (audit trail).
 - Confirm every locked field in `instance.yaml` string-matches `master.yaml`
   for its id — this is what `validate.py` checks, so pre-checking it
   yourself avoids a wasted render cycle.
+- Report the `output/<slug>/resume.pdf` path and its page count as the first
+  line of your result, whether you finished at one page or stopped at the cap
+  (see §6a) — the human's next action is to open it.
 - Remind the user this is a draft: they should read it before sending
   anywhere.

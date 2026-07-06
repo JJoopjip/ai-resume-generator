@@ -153,7 +153,7 @@ def cmd_render(args: argparse.Namespace) -> int:
     # `render --instance <path>` writes the PDF/DOCX right beside it.
     out_dir = Path(args.out) if args.out else Path(args.instance).resolve().parent
     _log(f"[3/4] rendering + compiling PDF ({layout['font_size_pt']}pt / "
-         f"{layout['margin_in']}in) → {out_dir}/ …")
+         f"{layout['margin_h_in']}in H × {layout['margin_v_in']}in V margins) → {out_dir}/ …")
     try:
         pdf_result = render_pdf.render_pdf(instance, out_dir, layout)
     except Exception:
@@ -236,9 +236,9 @@ def build_parser() -> argparse.ArgumentParser:
     render_p.add_argument(
         "--layout",
         default=None,
-        help="Optional path to a layout.json/.yaml overriding font_size_pt/margin_in "
-        "within schema/layout.schema.json's bounds. Omit for the tightened default "
-        "(10.5pt / 0.5in).",
+        help="Optional path to a layout.json/.yaml overriding font_size_pt/"
+        "margin_h_in/margin_v_in within schema/layout.schema.json's bounds. Omit "
+        "for the tightened default (10.0pt / 0.4in H / 0.3in V).",
     )
     render_p.add_argument("--layout-schema", default=str(DEFAULT_LAYOUT_SCHEMA_PATH))
     render_p.set_defaults(func=cmd_render)

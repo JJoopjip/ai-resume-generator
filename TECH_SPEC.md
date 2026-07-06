@@ -17,7 +17,7 @@ resume-gen render
     --out DIR             (required) output directory for resume.pdf/.docx
     --schema PATH          (optional, default schema/instance.schema.json)
     --layout PATH           (optional) path to a layout.json/.yaml overriding
-                             font_size_pt / margin_in (see §4a). Omitted keys
+                             font_size_pt / margin_h_in / margin_v_in (see §4a). Omitted keys
                              fall back to schema/layout.schema.json's defaults;
                              omit the flag entirely for the tightened default
                              (10.5pt / 0.5in).
@@ -134,10 +134,10 @@ Draft 2020-12 JSON Schema, top-level `object`, `required`: `schema_version`,
   override — see §4a, since standard LaTeX classes only offer discrete
   10/11/12pt and the allowed range includes fractional sizes like 10.5pt),
   `letterpaper`.
-- **Margins**: uniform on all four sides via `geometry`'s `margin=` option,
-  value supplied by `layout.margin_in` (§4a) — replaces the original fixed
-  asymmetric `0.5in`/`0.6in` top-bottom/left-right split with a single bounded
-  knob.
+- **Margins**: two bounded knobs via `geometry`'s `top=/bottom=/left=/right=`
+  options — `layout.margin_h_in` drives left+right (sets line length / measure,
+  floor 0.4in) and `layout.margin_v_in` drives top+bottom (vertical whitespace
+  only, floor 0.3in). See §4a.
 - **Fonts**: default Latin Modern (Computer Modern) via `lmodern` — no custom
   font install needed in the Docker image, keeps Tectonic's font resolution
   simple and reproducible.
@@ -186,8 +186,9 @@ a `minimum`, `maximum`, and `default`:
 
 | Field           | Min  | Max  | Default | Notes |
 |-----------------|------|------|---------|-------|
-| `font_size_pt`  | 10.0 | 11.0 | 10.5    | Below 10.0 reads as visibly crammed to a human skimmer; ATS itself is agnostic to font size entirely. |
-| `margin_in`     | 0.4  | 0.6  | 0.5     | Uniform on all sides. Below 0.4 risks unprintable-edge issues on real printers and starts reading as cramped. |
+| `font_size_pt`  | 10.0 | 11.0 | 10.0    | Below 10.0 reads as visibly crammed to a human skimmer; ATS itself is agnostic to font size entirely. |
+| `margin_h_in`   | 0.4  | 0.6  | 0.4     | Left + right. Sets line length / measure, so floors at 0.4 — below that risks unprintable edges and over-long lines. |
+| `margin_v_in`   | 0.3  | 0.6  | 0.3     | Top + bottom. Only trades vertical whitespace (not line length), so floors lower at 0.3. |
 
 An optional `output/<slug>/layout.json` (or `.yaml`) supplies overrides;
 missing keys fall back to the schema's `default`. `validate_layout()` in
@@ -221,9 +222,9 @@ discrete class size was declared.
 **The overflow ladder** (what a caller — currently a human, eventually
 Claude per §6 — should try, in order, before dropping a bullet):
 
-1. Render at the default layout (10.5pt / 0.5in). If ≤1 page, done.
+1. Render at the default layout (10.0pt / 0.4in H / 0.3in V). If ≤1 page, done.
 2. If overflow: re-render once at the floor (`font_size_pt: 10.0,
-   margin_in: 0.4`) in a single jump — not gradual stepping, since the
+   margin_h_in: 0.4, margin_v_in: 0.3`) in a single jump — not gradual stepping, since the
    allowed range is narrow enough that incremental steps just waste retry
    budget. If ≤1 page, done; **no content was touched.**
 3. Only if still >1 page at the floor: fall back to dropping the next
