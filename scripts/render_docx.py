@@ -118,7 +118,7 @@ def render_docx(instance: dict, out_dir: Path) -> Path:
 
     contact_p = doc.add_paragraph()
     contact_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    contact_line = f"{meta['location']} | {meta['phone']} | {meta['email']} | {meta['linkedin']}"
+    contact_line = f"{meta['location']} | {meta['phone']} | {meta['email']} | {meta['linkedin']} | {meta['github']}"
     _add_run(contact_p, contact_line)
 
     if instance.get("highlights"):
