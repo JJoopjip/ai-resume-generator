@@ -282,11 +282,12 @@ assembly script.
   `prompts/tailor_resume.md`, `master.yaml`, and the job description file by
   path — Claude reads all three with its own Read tool. No file content is
   pre-concatenated into the prompt string by a wrapper script.
-- **Model**: no model pin in v1 — uses whatever the invoking Claude Code
-  session is configured for (currently Sonnet 5 by default). This is a
-  content-selection/rephrasing task well within a single capable model's
-  reach; pinning would only matter if quality regressions show up in
-  practice, which Phase 6's dry run will surface if so.
+- **Model**: pinned in the `resume-gen` launcher to `--model claude-opus-4-8
+  --effort high` for reproducibility — JD→bullet selection and overflow
+  trade-offs reward the strongest model at high effort on this infrequent,
+  high-stakes task. Overridable via `RESUME_GEN_CLAUDE_FLAGS` (e.g.
+  `--model claude-sonnet-5 --effort medium` for cheaper/faster runs). Interactive
+  sessions still use whatever the invoking session is configured for.
 - **Job description input**: plain text file, `job_description.txt`, path
   passed to Claude in the prompt; Claude copies it into
   `output/<slug>/job_description.txt` as part of writing `instance.yaml`

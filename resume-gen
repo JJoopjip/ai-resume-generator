@@ -39,10 +39,13 @@ fi
 JD="$(realpath "$JD_INPUT")"
 TODAY="$(date +%F)"
 
-# Headless run needs to write instance.yaml and shell `resume-gen render` without
-# interactive prompts, so pre-authorize those tools. Override the whole set with
-# e.g. RESUME_GEN_CLAUDE_FLAGS="--model claude-opus-4-8 --dangerously-skip-permissions".
-CLAUDE_FLAGS="${RESUME_GEN_CLAUDE_FLAGS:---permission-mode acceptEdits --allowedTools Bash Read Edit Write}"
+# Model/effort pinned for reproducibility: tailoring is high-stakes and
+# infrequent, and JD->bullet selection + overflow trade-offs reward the strongest
+# model at high effort. Drop to `--model claude-sonnet-5 --effort medium` if you
+# run it often and want it cheaper/faster. Perms pre-authorize the tools the
+# headless run needs (write instance.yaml, shell `resume-gen render`) so it runs
+# unattended. Override the whole set via RESUME_GEN_CLAUDE_FLAGS.
+CLAUDE_FLAGS="${RESUME_GEN_CLAUDE_FLAGS:---model claude-opus-4-8 --effort high --permission-mode acceptEdits --allowedTools Bash Read Edit Write}"
 
 TASK="Non-interactive tailored-resume run. Working directory: $(pwd).
 Follow prompts/tailor_resume.md exactly as your specification. Job description

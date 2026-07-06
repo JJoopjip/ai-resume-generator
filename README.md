@@ -20,11 +20,13 @@ loop itself until it produces a one-page `resume.pdf` + `resume.docx`. Requires
 the `claude` CLI on `PATH` (uses your existing Claude Code login — no API key).
 The result is always a **draft for human review**.
 
-Override the Claude flags if needed, e.g. to pin a model:
+The tailor stage defaults to `--model claude-opus-4-8 --effort high` (best
+selection judgment for an infrequent, high-stakes task). Run it cheaper/faster
+by overriding the flags:
 
 ```sh
-RESUME_GEN_CLAUDE_FLAGS="--model claude-opus-4-8 --permission-mode acceptEdits \
-  --allowedTools Bash Read Edit Write" ./resume-gen jd.txt
+RESUME_GEN_CLAUDE_FLAGS="--model claude-sonnet-5 --effort medium \
+  --permission-mode acceptEdits --allowedTools Bash Read Edit Write" ./resume-gen jd.txt
 ```
 
 Everything below is the deterministic render half that the tailor stage (and you)
