@@ -47,6 +47,7 @@ DOWNLOADABLE = {
     "resume.docx": (
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     ),
+    "coverage.md": "text/markdown; charset=utf-8",
     "omitted.md": "text/markdown; charset=utf-8",
     "instance.yaml": "text/yaml; charset=utf-8",
 }
@@ -64,6 +65,45 @@ def _dirs():
     if not OUTPUT.exists():
         return set()
     return {p.name for p in OUTPUT.iterdir() if p.is_dir()}
+
+
+def _read_text(folder: Path, name: str):
+    """Best-effort read of an artifact the pipeline wrote (coverage.md /
+    omitted.md). Returns None if absent — both are optional."""
+    fp = folder / name
+    try:
+        return fp.read_text(encoding="utf-8") if fp.is_file() else None
+    except OSError:
+        return None
+
+
+def parse_coverage(text: str):
+    """Pull the structured summary out of coverage.md so the page can render a
+    score + term chips without re-running the scorer (keeps this server
+    stdlib-only). Returns None if the file isn't the expected shape."""
+    if not text:
+        return None
+    m = re.search(r"\*\*(\d+)%\*\*", text)
+    if not m:
+        return None
+    score = int(m.group(1))
+    bilingual = "bilingual" in text.lower()
+
+    def _terms(header):
+        # Grab the bullet list under a "## <header> (...)" section, up to the
+        # next "## " heading. Skip the "_(none)_" placeholder.
+        sec = re.search(rf"##\s+{header}[^\n]*\n(.*?)(?:\n##\s|\Z)", text, re.S)
+        if not sec:
+            return []
+        out = []
+        for line in sec.group(1).splitlines():
+            line = line.strip()
+            if line.startswith("- ") and "_(none" not in line:
+                out.append(line[2:].strip())
+        return out
+
+    return {"score": score, "bilingual": bilingual,
+            "covered": _terms("Covered"), "missing": _terms("Missing")}
 
 
 # ---- Progress narration ------------------------------------------------------
@@ -291,10 +331,14 @@ class Handler(BaseHTTPRequestHandler):
             new = sorted(_dirs() - before)
             slug = new[-1] if new else None
             if code == 0 and slug:
-                have = [f for f in ("resume.pdf", "resume.docx")
-                        if (OUTPUT / slug / f).is_file()]
+                folder = OUTPUT / slug
+                have = [f for f in ("resume.pdf", "resume.docx", "coverage.md",
+                                    "omitted.md", "instance.yaml")
+                        if (folder / f).is_file()]
                 result = {"ok": True, "slug": slug, "files": have,
-                          "folder": str((OUTPUT / slug))}
+                          "folder": str(folder),
+                          "coverage": parse_coverage(_read_text(folder, "coverage.md")),
+                          "omitted_md": _read_text(folder, "omitted.md")}
             else:
                 result = {"ok": False, "slug": slug, "code": code}
         except Exception as e:  # surface any launcher error into the log

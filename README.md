@@ -68,6 +68,10 @@ just build the toolbox once:
 docker build -t resume-gen .
 ```
 
+> **Re-build after updating the code.** The Docker image bakes in the scripts at
+> build time, so after pulling changes (e.g. the JD-coverage scorer) run
+> `docker build -t resume-gen .` again to pick them up.
+
 ---
 
 ## 2. What this project actually does

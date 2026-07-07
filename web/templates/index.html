@@ -43,6 +43,35 @@
   }
   .folder { font-size: .82rem; opacity: .7; margin-top: .5rem; word-break: break-all; }
   .err { color: #dc2626; font-weight: 600; }
+
+  /* coverage + omitted panels */
+  .panel {
+    margin: 1.25rem 0; padding: 1rem 1.15rem; border-radius: 10px;
+    border: 1px solid rgba(128,128,128,.28); background: rgba(128,128,128,.06);
+  }
+  .panel h3 { margin: 0 0 .2rem; font-size: 1rem; }
+  .panel .hint { margin: 0 0 .8rem; font-size: .82rem; opacity: .7; }
+  .cov-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+  .cov-score { font-size: 1.9rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .cov-score small { font-size: .8rem; font-weight: 500; opacity: .65; margin-left: .3rem; }
+  .meter { height: 9px; border-radius: 5px; background: rgba(128,128,128,.25); overflow: hidden; margin: .5rem 0 .9rem; }
+  .meter i { display: block; height: 100%; background: linear-gradient(90deg, #2563eb, #38bdf8); border-radius: 5px; transition: width .9s cubic-bezier(.2,.7,.2,1); }
+  .warn { font-size: .82rem; color: #b45309; margin: 0 0 .6rem; }
+  .tlabel { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; opacity: .6; margin: .5rem 0 .35rem; }
+  .terms { display: flex; flex-wrap: wrap; gap: .35rem; }
+  .term { font-size: .78rem; padding: .18rem .5rem; border-radius: 6px; border: 1px solid rgba(128,128,128,.35);
+          font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .term.hit { color: #15803d; border-color: rgba(21,128,61,.5); background: rgba(21,128,61,.09); }
+  .term.hit::before { content: "✓ "; }
+  .term.miss::before { content: "– "; opacity: .5; }
+  details.omit { margin-top: .4rem; }
+  details.omit summary { cursor: pointer; font-weight: 600; font-size: .95rem; }
+  .omit-body { margin-top: .7rem; overflow-x: auto; }
+  .omit-body table { border-collapse: collapse; width: 100%; font-size: .8rem; }
+  .omit-body th, .omit-body td { border: 1px solid rgba(128,128,128,.3); padding: .35rem .5rem; text-align: left; vertical-align: top; }
+  .omit-body th { background: rgba(128,128,128,.12); }
+  .omit-body h4 { margin: .6rem 0 .3rem; font-size: .9rem; }
+  .omit-body p { margin: .3rem 0; font-size: .82rem; }
   .spin {
     display: inline-block; width: 14px; height: 14px; border-radius: 50%;
     border: 2px solid rgba(128,128,128,.4); border-top-color: #2563eb;
@@ -139,21 +168,38 @@ function escapeHtml(s) {
   return s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 }
 
+const DL_LABELS = {
+  "resume.pdf": "Download PDF",
+  "resume.docx": "Download Word (.docx)",
+  "coverage.md": "Coverage report (.md)",
+  "omitted.md": "What was left out (.md)",
+  "instance.yaml": "The AI's choices (.yaml)",
+};
+
 function finish(r) {
   go.disabled = false;
   if (r.ok) {
     status.innerHTML = "✓ Done.";
     let html = "<h2>Your résumé is ready</h2>";
+
+    // Download buttons — resume first, then the review artifacts.
     for (const f of (r.files || [])) {
-      const label = f === "resume.pdf" ? "Download PDF" : "Download Word (.docx)";
-      html += `<a class="dl" href="/download?slug=${encodeURIComponent(r.slug)}&file=${encodeURIComponent(f)}">${label}</a>`;
+      const label = DL_LABELS[f] || ("Download " + f);
+      html += `<a class="dl" href="/download?slug=${encodeURIComponent(r.slug)}&file=${encodeURIComponent(f)}">${escapeHtml(label)}</a>`;
     }
     if (!r.files || !r.files.length) {
       html += "<p>Run finished but no PDF/DOCX was found in the output folder.</p>";
     }
-    html += `<div class="folder">Saved on disk at: ${r.folder || "output/" + (r.slug || "")}</div>`;
+
+    html += renderCoverage(r.coverage);
+    html += renderOmitted(r.omitted_md);
+    html += `<div class="folder">Saved on disk at: ${escapeHtml(r.folder || "output/" + (r.slug || ""))}</div>`;
     result.innerHTML = html;
     result.style.display = "block";
+
+    // Animate the meter once it's in the DOM.
+    const bar = document.getElementById("covbar");
+    if (bar) { const w = bar.dataset.w; bar.style.width = "0"; requestAnimationFrame(() => { bar.style.width = w + "%"; }); }
   } else {
     status.innerHTML = '<span class="err">Generation did not complete'
       + (r.code != null ? ` (exit ${r.code})` : "") + '.</span>';
@@ -161,6 +207,84 @@ function finish(r) {
       + (r.slug ? ` A partial folder may exist at output/${r.slug}.` : "") + "</p>";
     result.style.display = "block";
   }
+}
+
+// How well the résumé covers the posting's key terms (ATS-style, no AI).
+function renderCoverage(c) {
+  if (!c || typeof c.score !== "number") return "";
+  const chips = (arr, cls) => (arr || []).map(t =>
+    `<span class="term ${cls}">${escapeHtml(t)}</span>`).join("");
+  let h = '<div class="panel">';
+  h += '<div class="cov-head"><h3>Job-match coverage</h3>'
+     + `<span class="cov-score">${c.score}%<small>of key terms</small></span></div>`;
+  h += `<div class="meter"><i id="covbar" data-w="${c.score}"></i></div>`;
+  h += '<p class="hint">A keyword screen, like an applicant-tracking system — not a quality verdict. '
+     + 'Missing terms are a nudge: check “What was left out” below for content you could add back.</p>';
+  if (c.bilingual) {
+    h += '<p class="warn">⚠️ This posting looks bilingual (EN/FR). Half its text is French, '
+       + 'which an English résumé can’t match — so this score understates the true fit.</p>';
+  }
+  if (c.covered && c.covered.length) {
+    h += `<div class="tlabel">Covered (${c.covered.length})</div><div class="terms">${chips(c.covered, "hit")}</div>`;
+  }
+  if (c.missing && c.missing.length) {
+    h += `<div class="tlabel">Missing (${c.missing.length})</div><div class="terms">${chips(c.missing, "miss")}</div>`;
+  }
+  h += "</div>";
+  return h;
+}
+
+// The "omitted" report the AI writes: everything from your master file that did
+// NOT make this résumé, and why — so you can decide what to add back.
+function renderOmitted(md) {
+  if (!md || !md.trim()) return "";
+  let h = '<div class="panel"><h3>What was left out</h3>';
+  h += '<p class="hint">Content from your master file the AI did <b>not</b> include this time — '
+     + 'review it to judge quality and pull anything important back in.</p>';
+  h += '<details class="omit"><summary>Show the full omissions report</summary>'
+     + '<div class="omit-body">' + mdToHtml(md) + '</div></details></div>';
+  return h;
+}
+
+// Minimal Markdown → HTML: enough for omitted.md (headings, paragraphs, and one
+// or more GitHub-style pipe tables). Everything is escaped first.
+function mdToHtml(md) {
+  const lines = md.replace(/\r/g, "").split("\n");
+  let out = [], i = 0;
+  const isRow = (l) => l.trim().startsWith("|") || (l.includes("|") && l.trim().length > 0);
+  const isSep = (l) => /^\s*\|?[\s:|-]+\|?\s*$/.test(l) && l.includes("-");
+  const cells = (l) => l.replace(/^\s*\|/, "").replace(/\|\s*$/, "").split("|").map(c => c.trim());
+  while (i < lines.length) {
+    const line = lines[i];
+    if (line.trim() === "") { i++; continue; }
+    // table: a header row followed by a separator row
+    if (line.includes("|") && i + 1 < lines.length && isSep(lines[i + 1])) {
+      const head = cells(line);
+      i += 2;
+      let rows = [];
+      while (i < lines.length && lines[i].includes("|") && lines[i].trim() !== "") {
+        rows.push(cells(lines[i])); i++;
+      }
+      let t = "<table><thead><tr>" + head.map(c => `<th>${inline(c)}</th>`).join("") + "</tr></thead><tbody>";
+      t += rows.map(r => "<tr>" + r.map(c => `<td>${inline(c)}</td>`).join("") + "</tr>").join("");
+      t += "</tbody></table>";
+      out.push(t);
+      continue;
+    }
+    const hm = line.match(/^(#{1,6})\s+(.*)$/);
+    if (hm) { out.push(`<h4>${inline(hm[2])}</h4>`); i++; continue; }
+    out.push(`<p>${inline(line.trim())}</p>`); i++;
+  }
+  return out.join("\n");
+}
+
+// Inline markdown (escape, then bold/italic/code) for a single cell or line.
+function inline(s) {
+  s = escapeHtml(s);
+  s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
+  s = s.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+  s = s.replace(/\*([^*]+)\*/g, "<i>$1</i>");
+  return s;
 }
 </script>
 </body>
