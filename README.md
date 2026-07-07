@@ -8,6 +8,11 @@ as a professional PDF and Word document, and checks that everything fits on one
 page — trimming intelligently if it doesn't. The result is a draft ready for you
 to review and send.
 
+> **Visual overview:** [`docs/portfolio.html`](docs/portfolio.html) is a
+> one-page walkthrough of the architecture — the split-brain design, the
+> self-correcting loop, and the guardrails. Open it in a browser, or serve it
+> via GitHub Pages.
+
 ---
 
 ## 1. How to use it
@@ -26,6 +31,7 @@ output/<company>-<role>-<date>/
     ├── resume.docx    ← an editable Word copy (for recruiters / job boards)
     ├── instance.yaml  ← exactly what the AI chose, in plain text
     ├── omitted.md     ← what it left OUT, and why (so you can add things back)
+    ├── coverage.md    ← how well the resume covers the posting's key terms
     └── job_description.txt  ← a copy of the posting, for your records
 ```
 
@@ -40,6 +46,10 @@ output/<company>-<role>-<date>/
 | Use the most powerful AI for a high-stakes application | see below |
 | Just re-build the PDF from an existing draft (no AI) | `./resume-gen render --instance output/<folder>/instance.yaml` |
 | Check a draft is valid without building anything | `./resume-gen validate --instance output/<folder>/instance.yaml` |
+| Score how well a draft covers the posting (no AI) | `python3 scripts/coverage.py --instance output/<folder>/instance.yaml` |
+
+(The coverage score is also written to `coverage.md` automatically on every
+successful generation — you don't have to run it by hand.)
 
 **Dialing the AI up for an important application.** By default the tool uses a
 fast, cost-effective model. For your dream job, switch to the most capable one:
@@ -146,6 +156,7 @@ Two clearly separated halves, connected by a simple contract.
 | `scripts/validate.py` | The guardrail. Checks the AI's draft against `master.yaml` — every locked fact must match exactly, or the pipeline refuses to build. |
 | `scripts/render_pdf.py` | Turns the draft into a professionally typeset PDF (using a LaTeX template) and counts the pages. |
 | `scripts/render_docx.py` | Produces the editable Word version for recruiters and job-board uploads. |
+| `scripts/coverage.py` | The relevance meter. Pulls the key terms out of the job posting and reports what fraction actually appear on the finished resume (and which important ones are missing) — an ATS-style keyword screen, run without any AI. |
 | `schema/` | Formal definitions of what a valid draft and a valid layout look like. |
 | `Dockerfile` | Packages the whole build step into a self-contained "toolbox" so it runs identically on any machine, with nothing to install. |
 
@@ -160,6 +171,24 @@ structured data** — a deliberately simple, unambiguous handshake:
 
 Because the verdict is machine-readable, the AI can react to it on its own
 without a human in the loop.
+
+### Two kinds of "accuracy"
+
+A subtle but important design point — "is this resume accurate?" is really two
+separate questions, and the pipeline answers each with its own tool:
+
+- **Is every fact real?** (*truthfulness*) — enforced, not estimated.
+  `validate.py` checks every number, title, date, and bullet character-for-
+  character against `master.yaml`. The AI physically cannot fabricate or
+  exaggerate; if it drifts, the build is rejected.
+- **Does it speak to *this* job?** (*relevance*) — measured, not guessed.
+  `coverage.py` reports what share of the posting's key terms the resume
+  actually hits, and flags the important ones it misses — the same idea an
+  applicant-tracking system uses to screen candidates.
+
+Keeping these apart is deliberate: truthfulness is a hard gate (pass/fail),
+while relevance is an advisory signal (a number to inform a human's judgment,
+never to overrule it).
 
 ### The specs
 
@@ -201,10 +230,12 @@ prompts/tailor_resume.md       # the instruction manual for the AI
 schema/                        # formal definitions of a valid draft & layout
 scripts/
   generate_resume.py           # command-line entry point (render / validate)
-  validate.py                  # the fact-checking guardrail
+  validate.py                  # the fact-checking guardrail (truthfulness)
   render_pdf.py                # draft → typeset PDF + page count
   render_docx.py               # draft → editable Word document
+  coverage.py                  # JD keyword coverage score (relevance)
 templates/                     # the LaTeX + Word styling
+web/                           # optional local browser front end (+ its tests)
 tests/                         # automated checks against real content
 Dockerfile, resume-gen         # packaging & the one-command launcher
 output/                        # generated resumes (kept off git — contains personal info)

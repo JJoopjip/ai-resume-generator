@@ -26,6 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import validate as validate_mod  # noqa: E402
 import render_pdf  # noqa: E402
 import render_docx  # noqa: E402
+import coverage as coverage_mod  # noqa: E402
 
 DEFAULT_SCHEMA_PATH = Path(__file__).resolve().parent.parent / "schema" / "instance.schema.json"
 DEFAULT_LAYOUT_SCHEMA_PATH = Path(__file__).resolve().parent.parent / "schema" / "layout.schema.json"
@@ -210,6 +211,22 @@ def cmd_render(args: argparse.Namespace) -> int:
     _log(f"✓ done — 1 page.  PDF: {output_files['pdf']}")
     _log(f"                  DOCX: {output_files['docx']}")
     _emit("render", True, [], page_count, output_files)
+
+    # Best-effort JD-coverage report (deterministic, no LLM), written AFTER the
+    # stdout JSON so the machine contract (exactly one JSON object on stdout)
+    # stays untouched — coverage is an advisory extra surfaced as coverage.md
+    # plus a stderr line, never on stdout, and never able to fail a render.
+    jd_sibling = Path(args.instance).resolve().parent / "job_description.txt"
+    if jd_sibling.is_file():
+        try:
+            cov = coverage_mod.write_coverage(Path(args.instance), jd_sibling,
+                                              out_dir / "coverage.md")
+            note = " (bilingual — floor)" if cov["bilingual"] else ""
+            _log(f"↳ JD coverage: {cov['score']}% "
+                 f"({len(cov['covered'])}/{cov['total']} key terms){note} → coverage.md")
+        except Exception as e:  # advisory only — swallow and move on
+            _log(f"↳ coverage skipped ({e})")
+
     return EXIT_SUCCESS
 
 

@@ -74,6 +74,23 @@ The container and the plain `python3 web/app.py` both listen on port 5000, so
 run one at a time. The Desktop icon is smart about this — if the container is
 already serving on 5000, clicking the icon just opens the browser to it.
 
+## Tests
+
+The web front end has its own automated tests (`tests/test_web.py`), run
+alongside the rest of the suite:
+
+```sh
+python3 -m pytest tests/test_web.py    # just the web tests
+python3 -m pytest                      # the whole project
+```
+
+They cover the parts that can break without a full generation run: the
+progress narrator (turning the engine's event stream into readable steps), the
+download **path-traversal guard** (so only whitelisted files in `output/` can
+ever be served — never `master.yaml`), and HTTP routing / empty-input handling.
+They spin the server up in-process on a throwaway port and **never** invoke the
+real Docker + Claude pipeline, so they run in a few seconds and cost nothing.
+
 ## Notes
 
 - Binds to `127.0.0.1` only, so it is not reachable from your network. This
