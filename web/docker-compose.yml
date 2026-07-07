@@ -1,0 +1,39 @@
+# web/docker-compose.yml — run the resume web app INSIDE a container, locally.
+#
+#   cd ~/resume_generator
+#   docker compose -f web/docker-compose.yml up --build
+#   → open http://127.0.0.1:5000
+#
+# This is the "local container now" setup — it is NOT public. The web app runs in
+# a container, but it deliberately reuses your own machine:
+#   • the host Docker daemon renders the PDF (no Docker-in-Docker);
+#   • your existing `claude` subscription login is mounted read-only.
+# Everything is mounted, not baked, so nothing personal enters the image and the
+# whole thing reverts by deleting web/. Because it leans on your machine's Docker
+# socket and subscription login, this exact setup only runs here — turning it
+# into a real public site is the separate "deployable image" project.
+services:
+  resume-web:
+    build:
+      context: ..
+      dockerfile: web/Dockerfile
+    image: resume-web
+    working_dir: ${HOME}/resume_generator
+    environment:
+      HOME: ${HOME}
+      # claude lives in ~/.local/bin; keep the standard dirs for docker/python too.
+      PATH: ${HOME}/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      RESUME_WEB_HOST: 0.0.0.0        # listen on all interfaces INSIDE the container …
+    ports:
+      - "127.0.0.1:5000:5000"         # … but expose it ONLY to localhost on the host
+    volumes:
+      # Mirror the project at the SAME absolute path, so the render stage's
+      # `docker run -v $(pwd):/work` resolves correctly on the host daemon.
+      - ${HOME}/resume_generator:${HOME}/resume_generator
+      # Use the host's Docker daemon for the renderer (sibling container, not DinD).
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Your existing Claude CLI + subscription login (read-only where possible).
+      - ${HOME}/.local/share/claude:${HOME}/.local/share/claude:ro
+      - ${HOME}/.local/bin:${HOME}/.local/bin:ro
+      - ${HOME}/.claude:${HOME}/.claude
+      - ${HOME}/.claude.json:${HOME}/.claude.json

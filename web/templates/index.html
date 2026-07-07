@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resume Generator</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    max-width: 820px; margin: 0 auto; padding: 2rem 1.25rem 4rem;
+    line-height: 1.5;
+  }
+  h1 { font-size: 1.4rem; margin: 0 0 .25rem; }
+  p.sub { margin: 0 0 1.5rem; opacity: .7; font-size: .9rem; }
+  label { display: block; font-weight: 600; margin-bottom: .4rem; }
+  textarea {
+    width: 100%; min-height: 260px; padding: .75rem; font-size: .95rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    border: 1px solid rgba(128,128,128,.5); border-radius: 8px; resize: vertical;
+    background: transparent; color: inherit;
+  }
+  .row { display: flex; gap: .75rem; align-items: center; margin-top: 1rem; }
+  button {
+    font-size: 1rem; font-weight: 600; padding: .6rem 1.4rem; border: 0;
+    border-radius: 8px; background: #2563eb; color: #fff; cursor: pointer;
+  }
+  button:disabled { opacity: .5; cursor: default; }
+  .status { font-size: .9rem; opacity: .8; }
+  pre#log {
+    margin-top: 1.5rem; padding: 1rem; border-radius: 8px; max-height: 380px;
+    overflow: auto; white-space: pre-wrap; word-break: break-word;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .82rem;
+    background: rgba(128,128,128,.12); display: none;
+  }
+  #result { margin-top: 1.5rem; display: none; }
+  #result h2 { font-size: 1.1rem; margin: 0 0 .75rem; }
+  .dl {
+    display: inline-block; margin: 0 .6rem .6rem 0; padding: .55rem 1rem;
+    border: 1px solid #2563eb; border-radius: 8px; text-decoration: none;
+    color: #2563eb; font-weight: 600;
+  }
+  .folder { font-size: .82rem; opacity: .7; margin-top: .5rem; word-break: break-all; }
+  .err { color: #dc2626; font-weight: 600; }
+  .spin {
+    display: inline-block; width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid rgba(128,128,128,.4); border-top-color: #2563eb;
+    animation: spin .8s linear infinite; vertical-align: -2px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+  <h1>Resume Generator</h1>
+  <p class="sub">Paste a job description, click Generate. Takes a few minutes —
+    the live log below shows progress. Files are saved to <code>output/</code>
+    automatically; the download buttons just copy them out.</p>
+
+  <label for="jd">Job description</label>
+  <textarea id="jd" placeholder="Paste the full job posting here…"></textarea>
+
+  <div class="row">
+    <button id="go">Generate résumé</button>
+    <span class="status" id="status"></span>
+  </div>
+
+  <pre id="log"></pre>
+
+  <div id="result"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const go = $("go"), jd = $("jd"), status = $("status"), log = $("log"), result = $("result");
+
+go.addEventListener("click", async () => {
+  const text = jd.value.trim();
+  if (!text) { status.textContent = "Paste a job description first."; return; }
+
+  go.disabled = true;
+  result.style.display = "none";
+  result.innerHTML = "";
+  log.style.display = "block";
+  log.textContent = "";
+  status.innerHTML = '<span class="spin"></span> Generating…';
+
+  try {
+    const resp = await fetch("/generate", {
+      method: "POST",
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+      body: text,
+    });
+    if (!resp.ok) {
+      // e.g. 409 busy or 400 empty — body is a short plain-text message.
+      const msg = await resp.text();
+      status.innerHTML = '<span class="err">' + (msg || ('Error ' + resp.status)) + '</span>';
+      log.style.display = "none";
+      go.disabled = false; return;
+    }
+
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+
+      // Split off the final __RESULT__ sentinel if present.
+      const marker = buf.indexOf("\n__RESULT__ ");
+      if (marker !== -1) {
+        showLog(buf.slice(0, marker));
+        const rest = buf.slice(marker + "\n__RESULT__ ".length).trim();
+        if (rest) { finish(JSON.parse(rest)); return; }
+      } else {
+        showLog(buf);
+      }
+    }
+    // Stream ended without a parsed sentinel.
+    status.textContent = "Done.";
+    go.disabled = false;
+  } catch (e) {
+    status.innerHTML = '<span class="err">Error: ' + e.message + '</span>';
+    go.disabled = false;
+  }
+});
+
+// Render the running step history and lift the most recent step into the
+// prominent status line so "where are we now" is always visible at a glance.
+function showLog(text) {
+  log.textContent = text;
+  log.scrollTop = log.scrollHeight;
+  const lines = text.split("\n").filter(l => l.trim());
+  const latest = lines.length ? lines[lines.length - 1].trim() : "Working…";
+  status.innerHTML = '<span class="spin"></span> ' + escapeHtml(latest);
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+}
+
+function finish(r) {
+  go.disabled = false;
+  if (r.ok) {
+    status.innerHTML = "✓ Done.";
+    let html = "<h2>Your résumé is ready</h2>";
+    for (const f of (r.files || [])) {
+      const label = f === "resume.pdf" ? "Download PDF" : "Download Word (.docx)";
+      html += `<a class="dl" href="/download?slug=${encodeURIComponent(r.slug)}&file=${encodeURIComponent(f)}">${label}</a>`;
+    }
+    if (!r.files || !r.files.length) {
+      html += "<p>Run finished but no PDF/DOCX was found in the output folder.</p>";
+    }
+    html += `<div class="folder">Saved on disk at: ${r.folder || "output/" + (r.slug || "")}</div>`;
+    result.innerHTML = html;
+    result.style.display = "block";
+  } else {
+    status.innerHTML = '<span class="err">Generation did not complete'
+      + (r.code != null ? ` (exit ${r.code})` : "") + '.</span>';
+    result.innerHTML = "<p>Check the log above for details."
+      + (r.slug ? ` A partial folder may exist at output/${r.slug}.` : "") + "</p>";
+    result.style.display = "block";
+  }
+}
+</script>
+</body>
+</html>
