@@ -211,3 +211,39 @@ def test_missing_required_field_fails_structure(valid_instance, master, schema):
     errors = v.validate(instance, master, schema)
     assert len(errors) == 1
     assert errors[0]["code"] == "schema_error"
+
+
+# --- normalization: cosmetic typography must NOT trip verbatim checks ---------
+def test_bullet_verbatim_tolerates_cosmetic_typography(valid_instance, master, schema):
+    """A bullet copied with a smart apostrophe, an en-dash for a hyphen, and a
+    doubled space is still the same fact — it must pass, not burn a render loop
+    on invisible drift."""
+    instance = copy.deepcopy(valid_instance)
+    original = instance["experience"][0]["bullets"][0]["text"]
+    mangled = (
+        original.replace("'", "’")      # straight -> smart apostrophe
+        .replace("modern-trade", "modern–trade")  # hyphen -> en dash
+        .replace(", ", ",  ")                 # doubled space
+        + " "                                  # trailing space
+    )
+    assert mangled != original
+    instance["experience"][0]["bullets"][0]["text"] = mangled
+    errors = v.validate(instance, master, schema)
+    assert not any(e["code"] == "bullet_not_verbatim" for e in errors)
+
+
+def test_bullet_real_rewrite_still_fails(valid_instance, master, schema):
+    """Normalization only forgives typography — a changed word/number must still
+    fail, or the guard is worthless."""
+    instance = copy.deepcopy(valid_instance)
+    original = instance["experience"][0]["bullets"][0]["text"]
+    instance["experience"][0]["bullets"][0]["text"] = original.replace("four", "five")
+    errors = v.validate(instance, master, schema)
+    assert any(e["code"] == "bullet_not_verbatim" for e in errors)
+
+
+def test_locked_field_tolerates_trailing_whitespace(valid_instance, master, schema):
+    instance = copy.deepcopy(valid_instance)
+    instance["experience"][0]["title"] = instance["experience"][0]["title"] + "  "
+    errors = v.validate(instance, master, schema)
+    assert not any(e["code"] == "locked_field_mismatch" for e in errors)

@@ -18,11 +18,37 @@ unknown_id, layout_invalid.
 from __future__ import annotations
 
 import json
+import re
+import unicodedata
 from pathlib import Path
 from typing import Any
 
 import jsonschema
 import yaml
+
+
+# Cosmetic character folds and collapsed whitespace. Applied to BOTH sides of a
+# string comparison so that a bullet the model copied with a smart quote, an
+# em-dash swapped for a hyphen, an NBSP, or a doubled space still matches its
+# master.yaml source. This only forgives *typographic* drift — every letter,
+# digit, and word is preserved, so a genuinely rewritten fact ("supported" →
+# "led", "90%" → "95%") still fails. The point is to spend overflow-loop
+# attempts on real trims, not on invisible whitespace/quote diffs.
+_COSMETIC_MAP = {
+    "‘": "'", "’": "'", "“": '"', "”": '"',
+    "–": "-", "—": "-", "…": "...", " ": " ",
+}
+_WS_RE = re.compile(r"\s+")
+
+
+def _normalize(value: Any) -> Any:
+    """Fold cosmetic typography and collapse whitespace for comparison only.
+    Non-strings pass through untouched (so None/bool/number compares stay exact)."""
+    if not isinstance(value, str):
+        return value
+    value = unicodedata.normalize("NFC", value)
+    value = value.translate(str.maketrans(_COSMETIC_MAP))
+    return _WS_RE.sub(" ", value).strip()
 
 
 def load_yaml(path: str | Path) -> dict:
@@ -112,7 +138,7 @@ def _check_locked_fields(
             continue
         expected = master_entry.get(field)
         actual = instance_entry.get(field)
-        if actual != expected:
+        if _normalize(actual) != _normalize(expected):
             errors.append(
                 _error(
                     "locked_field_mismatch",
@@ -167,7 +193,8 @@ def validate_experience(instance: dict, master: dict) -> list[dict]:
 
             valid_texts = set(master_bullet.get("variants", {}).values())
             actual_text = bullet.get("text")
-            if actual_text not in valid_texts:
+            valid_normalized = {_normalize(t) for t in valid_texts}
+            if _normalize(actual_text) not in valid_normalized:
                 errors.append(
                     _error(
                         "bullet_not_verbatim",
@@ -232,11 +259,13 @@ def validate_skills(instance: dict, master: dict) -> list[dict]:
     errors = []
     items_by_label: dict[str, set[str]] = {}
     for group in master.get("skills", {}).values():
-        items_by_label.setdefault(group["label"], set()).update(group["items"])
+        items_by_label.setdefault(_normalize(group["label"]), set()).update(
+            _normalize(i) for i in group["items"]
+        )
 
     for skill_block in instance.get("skills", []):
         label = skill_block.get("label")
-        valid_items = items_by_label.get(label)
+        valid_items = items_by_label.get(_normalize(label))
         if valid_items is None:
             errors.append(
                 _error(
@@ -248,7 +277,7 @@ def validate_skills(instance: dict, master: dict) -> list[dict]:
             )
             continue
         for item in skill_block.get("items", []):
-            if item not in valid_items:
+            if _normalize(item) not in valid_items:
                 errors.append(
                     _error(
                         "unknown_id",
@@ -283,7 +312,7 @@ def validate_highlights(instance: dict, master: dict) -> list[dict]:
             )
             continue
         for field in ("value", "label"):
-            if hl.get(field) != master_hl.get(field):
+            if _normalize(hl.get(field)) != _normalize(master_hl.get(field)):
                 errors.append(
                     _error(
                         "locked_field_mismatch",

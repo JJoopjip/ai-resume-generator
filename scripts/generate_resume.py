@@ -27,6 +27,7 @@ import validate as validate_mod  # noqa: E402
 import render_pdf  # noqa: E402
 import render_docx  # noqa: E402
 import render_cover_letter  # noqa: E402
+import coverage as coverage_mod  # noqa: E402
 
 DEFAULT_SCHEMA_PATH = Path(__file__).resolve().parent.parent / "schema" / "instance.schema.json"
 DEFAULT_LAYOUT_SCHEMA_PATH = Path(__file__).resolve().parent.parent / "schema" / "layout.schema.json"
@@ -38,7 +39,8 @@ EXIT_OVERFLOW = 3
 EXIT_USAGE_ERROR = 4
 
 
-def _emit(command: str, valid: bool, errors: list[dict], page_count, output_files) -> None:
+def _emit(command: str, valid: bool, errors: list[dict], page_count, output_files,
+          coverage=None) -> None:
     payload = {
         "command": command,
         "valid": valid,
@@ -46,6 +48,11 @@ def _emit(command: str, valid: bool, errors: list[dict], page_count, output_file
         "page_count": page_count,
         "output_files": output_files,
     }
+    # `coverage` is a deterministic JD-fit read (score, selection vs content
+    # gaps, selection depth). Present on a valid `render`; omitted elsewhere so
+    # the contract stays stable for callers that never asked for it.
+    if coverage is not None:
+        payload["coverage"] = coverage
     print(json.dumps(payload), flush=True)
 
 
@@ -118,6 +125,31 @@ def _resolve_instance(path: str | None) -> tuple[str | None, str | None]:
     )
 
 
+def _build_coverage(instance: dict, master: dict, instance_path: str, out_dir: Path):
+    """Deterministic JD-fit read for a validated instance. Best-effort: finds the
+    job description beside the instance (or via its job_description_ref), scores
+    it, and writes coverage.md into out_dir. Never raises into the render — if
+    the JD is missing or anything trips, returns None and the render proceeds."""
+    try:
+        instance_dir = Path(instance_path).resolve().parent
+        ref = instance.get("job_description_ref") or "job_description.txt"
+        jd_path = instance_dir / ref
+        if not jd_path.is_file():
+            jd_path = instance_dir / "job_description.txt"
+        if not jd_path.is_file():
+            return None
+        jd_text = jd_path.read_text(encoding="utf-8", errors="replace")
+        report = coverage_mod.coverage_report(jd_text, instance, master)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        slug = out_dir.name
+        (out_dir / "coverage.md").write_text(
+            coverage_mod.render_markdown(report, slug, instance), encoding="utf-8"
+        )
+        return report
+    except Exception:
+        return None
+
+
 def cmd_render(args: argparse.Namespace) -> int:
     instance_path, resolve_err = _resolve_instance(args.instance)
     if resolve_err:
@@ -153,6 +185,18 @@ def cmd_render(args: argparse.Namespace) -> int:
     # output/<company>-<role>-<date>/ folder), so a plain
     # `render --instance <path>` writes the PDF/DOCX right beside it.
     out_dir = Path(args.out) if args.out else Path(args.instance).resolve().parent
+
+    # Deterministic JD-fit read (score, selection vs content gaps, depth). Rides
+    # in the render JSON so the tailoring agent can decide whether to swap a
+    # bullet back in, and writes coverage.md for the human. Never blocks a render.
+    coverage = _build_coverage(instance, master, args.instance, out_dir)
+    if coverage and coverage.get("score") is not None:
+        _log(f"      JD coverage {round(coverage['score'] * 100)}% "
+             f"({coverage['terms_covered']}/{coverage['terms_total']}); "
+             f"confidence {coverage['depth']['confidence']}"
+             + (f"; {len(coverage['selection_gap'])} term(s) in master but unselected"
+                if coverage['selection_gap'] else ""))
+
     _log(f"[3/4] rendering + compiling PDF ({layout['font_size_pt']}pt / "
          f"{layout['margin_h_in']}in H × {layout['margin_v_in']}in V margins) → {out_dir}/ …")
     try:
@@ -189,7 +233,8 @@ def cmd_render(args: argparse.Namespace) -> int:
     if page_count > 1:
         _log(f"⚠ OVERFLOW — {page_count} pages (exit 3). Drop the lowest-priority "
              "bullet and re-run. (DOCX deferred until 1 page.)")
-        _emit("render", True, [], page_count, {"pdf": str(pdf_result["pdf_path"]), "docx": None})
+        _emit("render", True, [], page_count,
+              {"pdf": str(pdf_result["pdf_path"]), "docx": None}, coverage=coverage)
         return EXIT_OVERFLOW
 
     _log("[4/4] writing DOCX …")
@@ -210,7 +255,7 @@ def cmd_render(args: argparse.Namespace) -> int:
 
     _log(f"✓ done — 1 page.  PDF: {output_files['pdf']}")
     _log(f"                  DOCX: {output_files['docx']}")
-    _emit("render", True, [], page_count, output_files)
+    _emit("render", True, [], page_count, output_files, coverage=coverage)
     return EXIT_SUCCESS
 
 

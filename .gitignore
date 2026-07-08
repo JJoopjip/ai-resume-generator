@@ -3,6 +3,8 @@ master.yaml
 jd.txt
 __pycache__/
 *.pyc
+.pytest_cache/
+.venv/
 *.aux
 *.log
 *.out

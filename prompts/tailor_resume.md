@@ -210,7 +210,15 @@ resume-gen render --instance <path> --master master.yaml --out <output-dir>
 
 Read the exit code and the JSON on stdout:
 
-- **Exit 0**: done. One page, valid.
+- **Exit 0**: done. One page, valid. Before you stop, glance at the
+  `coverage` block in the JSON (a deterministic ATS-style keyword screen, also
+  written to `coverage.md`). If `selection_gap` lists JD terms you *do* have
+  content for in `master.yaml` but didn't select, and the page has room, swap a
+  relevant bullet back in (still verbatim) and re-render — this is the cheap way
+  to raise real fit. `content_gap` terms are ones the bank has nothing on: never
+  invent a bullet to cover them. A large `profile.suggested`-vs-your-`profile`
+  disagreement is worth a second look at your profile choice. Coverage is a
+  nudge, not a gate — never sacrifice truthfulness or the one-page rule for it.
 - **Exit 1**: validation failure — `errors[]` names the id/field mismatch.
   Fix `instance.yaml` (you likely copied a locked field wrong or altered
   bullet text) and re-run. This does not count against the overflow retry
