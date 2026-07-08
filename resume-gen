@@ -20,7 +20,7 @@
 set -eu
 
 case "${1:-}" in
-  render|validate|"")
+  render|validate|cover|"")
     # Deterministic stage — hand straight to the container. A named volume backs
     # Tectonic's package/font cache so it survives `--rm` and is shared across
     # every render (the image already ships a warm cache; this also catches any

@@ -1,0 +1,67 @@
+\documentclass[11pt,letterpaper]{article}
+
+% Cover-letter layout knobs mirror the resume's (schema/layout.schema.json) but
+% default to letter-appropriate values: letters want whitespace, so the margins
+% are more generous than the resume's tightened defaults. The LETTERHEAD block
+% below reuses the resume header's exact typographic treatment (name size,
+% centered contact line, accent hairline) so the two documents read as a set.
+\usepackage[top=\VAR{layout['margin_v_in']}in, bottom=\VAR{layout['margin_v_in']}in, left=\VAR{layout['margin_h_in']}in, right=\VAR{layout['margin_h_in']}in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{lastpage}
+
+% Same accent as the resume header — visual only, ATS reads the prose.
+\definecolor{accent}{HTML}{7A2E2E}
+
+\pagestyle{empty}
+\raggedright
+
+\hypersetup{colorlinks=true, urlcolor=black, linkcolor=black}
+
+% Body size derives from layout.font_size_pt so a future layout override works
+% the same way it does for the resume; baselineskip is a touch looser than the
+% resume's 1.2x because running prose reads better with more leading than dense
+% bullet lists.
+\AtBeginDocument{\fontsize{\VAR{layout['font_size_pt']}}{\VAR{(layout['font_size_pt'] * 1.3) | round(1)}}\selectfont}
+
+\begin{document}
+
+% ---------- Letterhead (matches the resume header) ----------
+\begin{center}
+  {\fontsize{\VAR{layout['font_size_pt'] + 3.5}}{\VAR{(layout['font_size_pt'] * 1.2) | round(1)}}\selectfont\textbf{\VAR{meta.name}}} \\[1pt]
+  \VAR{meta.location} $\vert$ \VAR{meta.phone} $\vert$
+  \href{mailto:\VAR{meta.email}}{\VAR{meta.email}} $\vert$
+  \href{https://\VAR{meta.linkedin}}{\VAR{meta.linkedin}} $\vert$
+  \href{https://\VAR{meta.github}}{\VAR{meta.github}}
+\end{center}
+\vspace{-4pt}
+\noindent{\color{accent}\rule{\linewidth}{0.4pt}}\par
+\vspace{6pt}
+
+% ---------- Date + recipient ----------
+\noindent \VAR{date} \\[10pt]
+\BLOCK{if recipient.addressee}\noindent \VAR{recipient.addressee} \\
+\BLOCK{endif}
+\BLOCK{if recipient.company}\noindent \VAR{recipient.company}\BLOCK{if recipient.location}, \VAR{recipient.location}\BLOCK{endif} \\
+\BLOCK{endif}
+\vspace{8pt}
+
+% ---------- Salutation ----------
+\noindent \VAR{salutation} \\[6pt]
+
+% ---------- Body (one paragraph per list item; blank line separates them) ----------
+\BLOCK{for para in paragraphs}
+\noindent \VAR{para}
+\BLOCK{if not loop.last}
+
+\vspace{6pt}
+\BLOCK{endif}
+\BLOCK{endfor}
+
+\vspace{12pt}
+\noindent \VAR{signoff} \\[4pt]
+\noindent \textbf{\VAR{meta.name}}
+
+\end{document}
