@@ -87,11 +87,15 @@ def _tool_phase(block, state):
             return "  📖  reading your career history"
         if "job_description" in low or low.endswith(".txt"):
             return "  📖  reading the job description"
+        if "tailor_cover_letter" in low:
+            return "  📖  reading the cover-letter instructions"
         if "tailor_resume" in low or "/prompts/" in low:
             return "  📖  reading the tailoring instructions"
         return f"  📖  reading {os.path.basename(fp) or 'a file'}"
     if name in ("Write", "Edit"):
         fp = str(inp.get("file_path", "")).lower()
+        if "cover_letter.yaml" in fp:
+            return "  ✍️  writing your cover letter"
         if "instance.yaml" in fp:
             return "  ✍️  choosing and writing your tailored content"
         if "omitted" in fp:
@@ -101,6 +105,11 @@ def _tool_phase(block, state):
         return f"  ✍️  writing {os.path.basename(fp) or 'a file'}"
     if name == "Bash":
         cmd = str(inp.get("command", ""))
+        if "cover --letter" in cmd or "resume-gen cover " in cmd:
+            state["cover_render"] += 1
+            if state["cover_render"] == 1:
+                return "  🖨️  rendering the cover letter …"
+            return f"  🖨️  re-rendering the cover letter (attempt {state['cover_render']}) …"
         if "resume-gen render" in cmd or "render --instance" in cmd:
             state["render"] += 1
             if state["render"] == 1:
@@ -115,7 +124,7 @@ def _tool_phase(block, state):
 
 
 def make_narrator():
-    state = {"render": 0}
+    state = {"render": 0, "cover_render": 0}
 
     def narrate(line):
         text = line.rstrip("\n")
@@ -226,17 +235,22 @@ class Handler(BaseHTTPRequestHandler):
         if not jd_text:
             return self._send_text(400, "Paste a job description first.")
 
+        # ?cover=1 opts into a matching cover letter (off by default, mirroring
+        # the CLI: the resume-only path skips the extra drafting/render loop).
+        q = parse_qs(urlparse(self.path).query)
+        want_cover = (q.get("cover") or ["0"])[0] == "1"
+
         # Refuse a second concurrent run rather than race output-folder detection.
         if not _run_lock.acquire(blocking=False):
             return self._send_text(
                 409, "A résumé is already being generated. Please wait for it "
                      "to finish, then try again.")
         try:
-            self._run_pipeline(jd_text)
+            self._run_pipeline(jd_text, want_cover)
         finally:
             _run_lock.release()
 
-    def _run_pipeline(self, jd_text):
+    def _run_pipeline(self, jd_text, want_cover=False):
         # Open a streaming response. No Content-Length => body ends at close.
         self.send_response(200)
         self.send_header("Content-Type", "text/plain; charset=utf-8")
@@ -273,12 +287,18 @@ class Handler(BaseHTTPRequestHandler):
             "--output-format stream-json --verbose",
         )
 
+        cmd = [str(RESUME_GEN), jd_path]
+        if want_cover:
+            cmd.append("--cover")
+
         result = {"ok": False}
         try:
-            emit("  web │ starting — this takes a few minutes; watch the steps below.\n\n")
+            kind = "résumé + cover letter" if want_cover else "résumé"
+            emit(f"  web │ starting {kind} — this takes a few minutes; "
+                 "watch the steps below.\n\n")
             narrate = make_narrator()
             proc = subprocess.Popen(
-                [str(RESUME_GEN), jd_path],
+                cmd,
                 cwd=str(ROOT),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,

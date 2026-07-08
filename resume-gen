@@ -1,67 +1,130 @@
 #!/usr/bin/env sh
 # resume-gen — one entrypoint for the whole pipeline.
 #
-#   resume-gen <job-description-file>   Tailor + render, end to end:
-#                                       launches a scripted, headless Claude Code
-#                                       session (TECH_SPEC.md §6) that selects
-#                                       content from master.yaml per
-#                                       prompts/tailor_resume.md, writes
-#                                       instance.yaml, then drives the render/
-#                                       overflow loop itself. By default the same
-#                                       session then drafts a matching cover
-#                                       letter (prompts/tailor_cover_letter.md);
-#                                       set RESUME_GEN_COVER=0 to skip it.
+#   resume-gen <job-description-file>          Tailor + render a resume, end to
+#                                              end (headless Claude Code session,
+#                                              TECH_SPEC.md §6). Resume only.
 #
-#   resume-gen render|validate|cover .. Deterministic, no-LLM renderer/validator,
-#                                       run inside the Docker image
-#                                       (build once: docker build -t resume-gen .)
+#   resume-gen <job-description-file> --cover  Same, and in the SAME session also
+#                                              draft a matching cover letter
+#                                              (prompts/tailor_cover_letter.md).
+#
+#   resume-gen cover-letter <output-dir>       Draft + render a cover letter for a
+#                                              resume you ALREADY generated — points
+#                                              at that output/<slug>/ folder and
+#                                              reuses its instance.yaml + job
+#                                              description. Decide per posting;
+#                                              no need to re-run the resume.
+#
+#   resume-gen render|validate|cover ...       Deterministic, no-LLM renderer/
+#                                              validator, run inside the Docker
+#                                              image (build once:
+#                                              docker build -t resume-gen .)
+#
+# Cover letters are OFF by default so a resume-only posting never pays for the
+# extra drafting/render loop. Opt in with `--cover`, the `cover-letter`
+# subcommand, or RESUME_GEN_COVER=1.
 #
 # Control direction (per TECH_SPEC §6): the launcher only *starts* Claude for
-# the tailor stage — Claude then calls `resume-gen render`/`resume-gen cover`.
+# the tailor stages — Claude then calls `resume-gen render`/`resume-gen cover`.
 # The renderer itself never calls back into Claude.
 
 set -eu
 
+# ---- Deterministic (no-LLM) subcommands run in the container -----------------
 case "${1:-}" in
   render|validate|cover|"")
-    # Deterministic stage — hand straight to the container. A named volume backs
-    # Tectonic's package/font cache so it survives `--rm` and is shared across
-    # every render (the image already ships a warm cache; this also catches any
-    # package a future template adds that the image's warm step missed).
+    # A named volume backs Tectonic's package/font cache so it survives `--rm`
+    # and is shared across every render (the image already ships a warm cache).
     exec docker run --rm \
       -v "$(pwd)":/work \
       -v resume-gen-tectonic-cache:/home/appuser/.cache/Tectonic \
       resume-gen "$@"
     ;;
   -h|--help)
-    sed -n '2,21p' "$0"
+    sed -n '2,30p' "$0"
     exit 0
     ;;
 esac
 
-# ---- Tailor stage: headless Claude Code one-shot -----------------------------
-JD_INPUT="$1"
-if [ ! -f "$JD_INPUT" ]; then
-  echo "resume-gen: '$JD_INPUT' is not a file. Pass a job-description file, or use 'render'/'validate'." >&2
-  exit 4
-fi
-JD="$(realpath "$JD_INPUT")"
 TODAY="$(date +%F)"
 
 # Model/effort pinned for reproducibility: Sonnet 5 / medium is a strong,
-# cost-effective default for JD->bullet selection (the validator guards
+# cost-effective default for JD->selection work (the validator guards
 # correctness regardless of model). Bump to `--model claude-opus-4-8 --effort
-# high` for the sharpest selection on a high-stakes application. Perms
-# pre-authorize the tools the headless run needs (write instance.yaml, shell
-# `resume-gen render`) so it runs unattended. Override the whole set via
-# RESUME_GEN_CLAUDE_FLAGS.
+# high` for the sharpest selection, or drop to `--effort low` to trade a little
+# selection quality for speed. Perms pre-authorize the tools the headless run
+# needs so it runs unattended. Override the whole set via RESUME_GEN_CLAUDE_FLAGS.
 CLAUDE_FLAGS="${RESUME_GEN_CLAUDE_FLAGS:---model claude-sonnet-5 --effort medium --permission-mode acceptEdits --allowedTools Bash Read Edit Write}"
 
-# Cover letter rides the SAME headless session (it already has the JD and the
-# instance in context, so grounding is free). Default on; RESUME_GEN_COVER=0
-# runs the resume alone. When on, $COVER_TASK is spliced into the task before
-# the final report and $COVER_REPORT extends that report's headline.
-GEN_COVER="${RESUME_GEN_COVER:-1}"
+# ---- cover-letter <output-dir>: letter for an already-generated resume -------
+if [ "${1:-}" = "cover-letter" ]; then
+  shift
+  DIR="${1:-}"
+  if [ -z "$DIR" ] || [ ! -d "$DIR" ]; then
+    echo "resume-gen cover-letter: pass an existing resume output folder, e.g." >&2
+    echo "  resume-gen cover-letter output/acme-analyst-$TODAY" >&2
+    exit 4
+  fi
+  if [ ! -f "$DIR/instance.yaml" ] || [ ! -f "$DIR/job_description.txt" ]; then
+    echo "resume-gen cover-letter: '$DIR' needs instance.yaml and job_description.txt" >&2
+    echo "  (generate the resume first: resume-gen <job-description-file>)" >&2
+    exit 4
+  fi
+  COVER_ONLY_TASK="Non-interactive cover-letter run. Working directory: $(pwd).
+Follow prompts/tailor_cover_letter.md exactly as your specification.
+
+Inputs (already prepared — do NOT regenerate them):
+- Tailored resume: $DIR/instance.yaml   (your fact bank + letterhead source)
+- Job description:  $DIR/job_description.txt
+
+Do all of this without asking any questions:
+1. Read prompts/tailor_cover_letter.md, then $DIR/instance.yaml and
+   $DIR/job_description.txt. Read the target company's culture from the JD.
+2. Write $DIR/cover_letter.yaml per the prompt (schema §5), grounded ONLY in
+   that instance — every claim traceable to a bullet/summary/highlight it
+   selected, every metric verbatim; never invent to manufacture culture-fit.
+   Use today's date $TODAY, formatted like 'January 2, 2026'.
+3. Run ./resume-gen cover --letter $DIR/cover_letter.yaml and drive its
+   one-page loop: exit 0 done; exit 3 (overflow) tighten prose and re-render;
+   exit 1/2 fix cover_letter.yaml and re-run. Cap 4 attempts; ALWAYS end on a
+   render so $DIR/cover_letter.pdf is viewable.
+4. LEAD your report with the cover_letter.pdf path and its page count, then the
+   addressee you chose and one line on how you matched the company's culture.
+   This is a DRAFT for human review — never submit it anywhere."
+  echo "  resume-gen │ ▶ cover-letter  ·  folder: $DIR" >&2
+  echo "  resume-gen │ launching headless Claude Code (prompts/tailor_cover_letter.md) …" >&2
+  # shellcheck disable=SC2086
+  exec claude -p "$COVER_ONLY_TASK" $CLAUDE_FLAGS
+fi
+
+# ---- Resume tailor stage (optionally + cover letter) -------------------------
+# Parse: exactly one <job-description-file>, plus optional --cover / --no-cover.
+WANT_COVER=0
+JD_INPUT=""
+for arg in "$@"; do
+  case "$arg" in
+    --cover)    WANT_COVER=1 ;;
+    --no-cover) WANT_COVER=0 ;;
+    -*) echo "resume-gen: unknown option '$arg'." >&2; exit 4 ;;
+    *)
+      if [ -n "$JD_INPUT" ]; then
+        echo "resume-gen: pass a single job-description file (got '$JD_INPUT' and '$arg')." >&2
+        exit 4
+      fi
+      JD_INPUT="$arg" ;;
+  esac
+done
+if [ -z "$JD_INPUT" ] || [ ! -f "$JD_INPUT" ]; then
+  echo "resume-gen: '$JD_INPUT' is not a file. Pass a job-description file, add --cover" >&2
+  echo "for a cover letter too, or use 'render'/'validate'/'cover-letter'." >&2
+  exit 4
+fi
+JD="$(realpath "$JD_INPUT")"
+
+# Cover letter rides the SAME session (it already has the JD and instance in
+# context, so grounding is free). Off unless --cover or RESUME_GEN_COVER=1.
+GEN_COVER="${RESUME_GEN_COVER:-$WANT_COVER}"
 if [ "$GEN_COVER" != "0" ]; then
   COVER_TASK="8. Cover letter — SAME session, reusing the instance.yaml you just wrote as
    the fact bank (do not re-open master.yaml for facts): read
@@ -89,8 +152,10 @@ Do all of this without asking any questions:
 2. Pick an output slug '<company>-<role>-$TODAY' and create output/<slug>/.
 3. Copy $JD to output/<slug>/job_description.txt (audit trail).
 4. Write output/<slug>/instance.yaml per the prompt: choose the profile, select
-   and order bullets/highlights/skills, and include priority_order. Never invent
-   facts; copy every locked field verbatim from master.yaml.
+   and order bullets/highlights/skills, and include priority_order. Aim to fit
+   one page on the FIRST render (§3) — select conservatively so the overflow
+   loop is a fallback, not the plan. Never invent facts; copy every locked field
+   verbatim from master.yaml.
 5. Render + overflow loop: run
    ./resume-gen render --instance output/<slug>/instance.yaml
    Read the JSON on stdout and the exit code. On exit 3 (overflow) follow §6 —
@@ -114,7 +179,7 @@ echo "  resume-gen │ ▶ tailor  ·  JD: $JD" >&2
 if [ "$GEN_COVER" != "0" ]; then
   echo "  resume-gen │ launching headless Claude Code (resume + cover letter) …" >&2
 else
-  echo "  resume-gen │ launching headless Claude Code (resume only; RESUME_GEN_COVER=0) …" >&2
+  echo "  resume-gen │ launching headless Claude Code (resume only; add --cover for a letter) …" >&2
 fi
 # shellcheck disable=SC2086
 exec claude -p "$TASK" $CLAUDE_FLAGS

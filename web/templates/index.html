@@ -22,6 +22,7 @@
     background: transparent; color: inherit;
   }
   .row { display: flex; gap: .75rem; align-items: center; margin-top: 1rem; }
+  .check { display: flex; align-items: center; gap: .35rem; font-size: .9rem; color: #444; cursor: pointer; user-select: none; }
   button {
     font-size: 1rem; font-weight: 600; padding: .6rem 1.4rem; border: 0;
     border-radius: 8px; background: #2563eb; color: #fff; cursor: pointer;
@@ -61,7 +62,8 @@
   <textarea id="jd" placeholder="Paste the full job posting here…"></textarea>
 
   <div class="row">
-    <button id="go">Generate résumé</button>
+    <button id="go">Generate</button>
+    <label class="check"><input type="checkbox" id="cover"> Also write a cover letter</label>
     <span class="status" id="status"></span>
   </div>
 
@@ -71,7 +73,7 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
-const go = $("go"), jd = $("jd"), status = $("status"), log = $("log"), result = $("result");
+const go = $("go"), jd = $("jd"), status = $("status"), log = $("log"), result = $("result"), cover = $("cover");
 
 go.addEventListener("click", async () => {
   const text = jd.value.trim();
@@ -85,7 +87,7 @@ go.addEventListener("click", async () => {
   status.innerHTML = '<span class="spin"></span> Generating…';
 
   try {
-    const resp = await fetch("/generate", {
+    const resp = await fetch("/generate" + (cover.checked ? "?cover=1" : ""), {
       method: "POST",
       headers: { "Content-Type": "text/plain; charset=utf-8" },
       body: text,
@@ -149,7 +151,8 @@ function finish(r) {
       "cover_letter.pdf": "Cover letter — PDF",
       "cover_letter.docx": "Cover letter — Word (.docx)",
     };
-    let html = "<h2>Your résumé &amp; cover letter are ready</h2>";
+    const hasCover = (r.files || []).some(f => f.startsWith("cover_letter"));
+    let html = "<h2>Your résumé" + (hasCover ? " &amp; cover letter are" : " is") + " ready</h2>";
     for (const f of (r.files || [])) {
       const label = LABELS[f] || `Download ${f}`;
       html += `<a class="dl" href="/download?slug=${encodeURIComponent(r.slug)}&file=${encodeURIComponent(f)}">${label}</a>`;

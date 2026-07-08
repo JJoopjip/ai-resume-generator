@@ -92,6 +92,14 @@ Do not select a bullet id that has no `variants` entry at all under any
 profile you're using — check the bank before writing the id into
 `instance.yaml`.
 
+**Aim to fit one page on the first render.** The overflow loop in §6 is a
+safety net, not the plan — every extra attempt costs a full render cycle. Since
+the final resume is trimmed to one page regardless, a lean first pass reaches
+the same one-page result in fewer iterations. So start at the **lower** end of
+the per-role bullet counts above and treat the upper end as headroom you add
+back only if space clearly remains — prefer selecting conservatively over
+selecting maximally and relying on the loop to cut back.
+
 ### 3a. Role inclusion & timeline continuity
 
 Bullet ranking decides *which bullets* within a role; this decides *whether a
