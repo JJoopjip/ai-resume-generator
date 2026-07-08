@@ -28,18 +28,22 @@ python3 web/app.py       # or: bash web/start.sh  (also opens the browser)
 Then open <http://127.0.0.1:5000> in your browser.
 
 1. Paste the full job posting into the box.
-2. Click **Generate résumé**.
-3. Watch the live log (the run takes a few minutes — same pipeline as the CLI).
-4. When it finishes, use the **Download PDF / Word** buttons.
+2. (Optional) tick **Also write a cover letter** if this posting needs one.
+3. Click **Generate**.
+4. Watch the live log (the run takes a few minutes — same pipeline as the CLI).
+5. When it finishes, use the **Download** buttons — résumé PDF/Word, plus the
+   cover letter PDF/Word when you asked for one.
 
 Stop the server with `Ctrl-C`.
 
 ## What it actually does
 
 - Writes your pasted text to a temp file, then runs the **unmodified**
-  `./resume-gen <tempfile>` — the exact command you'd run by hand.
+  `./resume-gen <tempfile>` — the exact command you'd run by hand (adding
+  `--cover` when the cover-letter box is ticked).
 - Streams that command's console output straight into the page.
-- The pipeline writes `resume.pdf`, `resume.docx`, `omitted.md`, etc. to
+- The pipeline writes `resume.pdf`, `resume.docx`, `omitted.md` (and
+  `cover_letter.pdf` / `.docx` when requested), etc. to
   `output/<company>-<role>-<date>/` **on disk automatically**, exactly as
   before. The download buttons just copy those existing files out to your
   browser's download location — they are a convenience, not the thing that

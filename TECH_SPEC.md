@@ -27,11 +27,23 @@ resume-gen validate
     --instance PATH       (required)
     --master PATH          (required)
     --schema PATH           (optional, default schema/instance.schema.json)
+
+resume-gen cover
+    --letter PATH         (optional, default newest output/*/cover_letter.yaml)
+    --instance PATH        (optional) instance.yaml supplying the letterhead
+                            meta; defaults to instance.yaml beside the letter
+    --out DIR               (optional, default the letter file's own folder)
 ```
 
 `validate` intentionally has no `--layout` — layout affects only how the PDF
 is typeset, not whether `instance.yaml`'s content is valid, so it stays out
 of the content-only validation path.
+
+`cover` is the deterministic (no-LLM) counterpart to `render` for the optional
+cover letter: it renders `cover_letter.yaml` (prose grounded by the tailor step,
+prompts/tailor_cover_letter.md) into `cover_letter.pdf` / `.docx`, pulling the
+letterhead `meta` from the sibling `instance.yaml` so contact details never
+drift from the resume. Same exit-code contract and JSON shape as `render`.
 
 No `--json` flag: JSON is always the stdout contract (§2) since Claude is the
 primary caller and a human can pipe through `jq` when running manually.
@@ -302,6 +314,16 @@ assembly script.
 - **No separate script drives this loop.** `generate_resume.py` never calls
   Claude; the direction of control is Claude calling the script, per PRD's
   architecture split.
+- **Optional cover letter (opt-in).** `prompts/tailor_cover_letter.md` is the
+  spec for a matching cover letter; it is **off by default** so a resume-only
+  posting never pays for the extra drafting/render loop. Three ways to opt in:
+  `resume-gen <jd> --cover` (drafts it in the *same* session as the resume,
+  reusing the just-written `instance.yaml` as the fact bank — grounding is free);
+  `resume-gen cover-letter <output-dir>` (a standalone session that adds a letter
+  to a resume already generated, reusing that folder's `instance.yaml` + JD);
+  or `RESUME_GEN_COVER=1`. The letter's render/overflow loop mirrors the resume's
+  but shells `resume-gen cover ...` and is capped at 4 attempts. Same control
+  direction: Claude calls the deterministic `cover` renderer, never the reverse.
 
 ## 7. Dockerfile / Packaging Decisions
 

@@ -32,11 +32,31 @@ output/<company>-<role>-<date>/
 > **The output is always a draft for a human to review** — nothing is ever sent
 > anywhere automatically.
 
+### Cover letters (optional)
+
+Some postings want a cover letter; most don't. So it's **opt-in** — a plain
+`./resume-gen jd.txt` run stays fast and makes only the resume. When you want a
+letter, you have two ways:
+
+```sh
+./resume-gen jd.txt --cover                    # resume + cover letter, one run
+./resume-gen cover-letter output/<folder>      # add a letter to a resume you already made
+```
+
+The second form is handy when you generate resumes in bulk and only later decide
+which few postings deserve a letter — it reuses that folder's `instance.yaml` and
+job description, so it never re-does the resume. Either way you get a matching
+`cover_letter.pdf` / `cover_letter.docx` beside the resume: same letterhead, one
+page, grounded only in what the resume already claims, and written to mirror the
+target company's culture.
+
 ### Options (the short version)
 
 | What you want to do | Command |
 |---------------------|---------|
 | Generate a resume from a job posting | `./resume-gen jd.txt` |
+| Generate a resume **and** a cover letter | `./resume-gen jd.txt --cover` |
+| Add a cover letter to a resume you already made | `./resume-gen cover-letter output/<folder>` |
 | Use the most powerful AI for a high-stakes application | see below |
 | Just re-build the PDF from an existing draft (no AI) | `./resume-gen render --instance output/<folder>/instance.yaml` |
 | Check a draft is valid without building anything | `./resume-gen validate --instance output/<folder>/instance.yaml` |
@@ -197,14 +217,17 @@ in writing first, then direct the build.**
 
 ```
 master.yaml                    # career content bank — the single source of truth
-prompts/tailor_resume.md       # the instruction manual for the AI
+prompts/
+  tailor_resume.md             # the instruction manual for the AI (resume)
+  tailor_cover_letter.md       # ditto for the optional cover letter
 schema/                        # formal definitions of a valid draft & layout
 scripts/
-  generate_resume.py           # command-line entry point (render / validate)
+  generate_resume.py           # command-line entry point (render / validate / cover)
   validate.py                  # the fact-checking guardrail
   render_pdf.py                # draft → typeset PDF + page count
   render_docx.py               # draft → editable Word document
-templates/                     # the LaTeX + Word styling
+  render_cover_letter.py       # cover letter → matching PDF + Word
+templates/                     # the LaTeX + Word styling (resume & cover letter)
 tests/                         # automated checks against real content
 Dockerfile, resume-gen         # packaging & the one-command launcher
 output/                        # generated resumes (kept off git — contains personal info)
