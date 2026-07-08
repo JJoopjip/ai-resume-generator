@@ -7,15 +7,18 @@
 #                                       content from master.yaml per
 #                                       prompts/tailor_resume.md, writes
 #                                       instance.yaml, then drives the render/
-#                                       overflow loop itself.
+#                                       overflow loop itself. By default the same
+#                                       session then drafts a matching cover
+#                                       letter (prompts/tailor_cover_letter.md);
+#                                       set RESUME_GEN_COVER=0 to skip it.
 #
-#   resume-gen render|validate ...      Deterministic, no-LLM renderer/validator,
+#   resume-gen render|validate|cover .. Deterministic, no-LLM renderer/validator,
 #                                       run inside the Docker image
 #                                       (build once: docker build -t resume-gen .)
 #
 # Control direction (per TECH_SPEC §6): the launcher only *starts* Claude for
-# the tailor stage — Claude then calls `resume-gen render`. The renderer itself
-# never calls back into Claude.
+# the tailor stage — Claude then calls `resume-gen render`/`resume-gen cover`.
+# The renderer itself never calls back into Claude.
 
 set -eu
 
@@ -31,7 +34,7 @@ case "${1:-}" in
       resume-gen "$@"
     ;;
   -h|--help)
-    sed -n '2,20p' "$0"
+    sed -n '2,21p' "$0"
     exit 0
     ;;
 esac
@@ -54,7 +57,30 @@ TODAY="$(date +%F)"
 # RESUME_GEN_CLAUDE_FLAGS.
 CLAUDE_FLAGS="${RESUME_GEN_CLAUDE_FLAGS:---model claude-sonnet-5 --effort medium --permission-mode acceptEdits --allowedTools Bash Read Edit Write}"
 
-TASK="Non-interactive tailored-resume run. Working directory: $(pwd).
+# Cover letter rides the SAME headless session (it already has the JD and the
+# instance in context, so grounding is free). Default on; RESUME_GEN_COVER=0
+# runs the resume alone. When on, $COVER_TASK is spliced into the task before
+# the final report and $COVER_REPORT extends that report's headline.
+GEN_COVER="${RESUME_GEN_COVER:-1}"
+if [ "$GEN_COVER" != "0" ]; then
+  COVER_TASK="8. Cover letter — SAME session, reusing the instance.yaml you just wrote as
+   the fact bank (do not re-open master.yaml for facts): read
+   prompts/tailor_cover_letter.md and follow it exactly. Read the target
+   company's culture from the job description and mirror its register. Write
+   output/<slug>/cover_letter.yaml (its schema §5), grounded ONLY in that
+   instance — every claim traceable to a bullet/summary/highlight it selected,
+   every metric verbatim; never invent to manufacture culture-fit. Then run
+   ./resume-gen cover --letter output/<slug>/cover_letter.yaml and drive its
+   one-page loop: exit 0 done; exit 3 (overflow) tighten prose and re-render;
+   exit 1/2 fix cover_letter.yaml and re-run. Cap 4 attempts; ALWAYS end on a
+   render so output/<slug>/cover_letter.pdf is viewable."
+  COVER_REPORT=", then the cover_letter.pdf path and how you matched the company's culture"
+else
+  COVER_TASK=""
+  COVER_REPORT=""
+fi
+
+TASK="Non-interactive tailored-application run. Working directory: $(pwd).
 Follow prompts/tailor_resume.md exactly as your specification. Job description
 file: $JD
 
@@ -79,11 +105,16 @@ Do all of this without asking any questions:
    highlights, trimmed skills), with the FULL verbatim text of each omitted
    bullet (never just its id), a never-selected-vs-overflow-cut category, and a
    reason. Reflect the final rendered state.
-8. LEAD your final report with the PDF path and its page count (§6a/§8), then
-   the chosen profile, which roles/bullets made the final cut, and the
-   omitted.md path. This is a DRAFT for human review — never submit it anywhere."
+$COVER_TASK
+Finally, LEAD your report with the resume PDF path and its page count (§6a/§8),
+then the chosen profile, which roles/bullets made the final cut, the omitted.md
+path$COVER_REPORT. This is a DRAFT for human review — never submit it anywhere."
 
 echo "  resume-gen │ ▶ tailor  ·  JD: $JD" >&2
-echo "  resume-gen │ launching headless Claude Code (prompts/tailor_resume.md) …" >&2
+if [ "$GEN_COVER" != "0" ]; then
+  echo "  resume-gen │ launching headless Claude Code (resume + cover letter) …" >&2
+else
+  echo "  resume-gen │ launching headless Claude Code (resume only; RESUME_GEN_COVER=0) …" >&2
+fi
 # shellcheck disable=SC2086
 exec claude -p "$TASK" $CLAUDE_FLAGS
