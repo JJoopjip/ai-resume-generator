@@ -1,0 +1,18 @@
+# Synthetic cover letter — fixture for render tests. Pairs with
+# instance.example.yaml. Deliberately includes LaTeX-special characters
+# (100%, R&D) so the escaping path is exercised.
+schema_version: 1.0
+instance_ref: instance.example.yaml
+job_description_ref: job_description.txt
+date: "January 2, 2026"
+recipient:
+  addressee: "Hiring Team"
+  company: "Example Corp"
+  location: "Exampleville, ON"
+salutation: "Dear Hiring Team,"
+paragraphs:
+  - "I was glad to see the Example Analyst opening at Example Corp."
+  - "I drove 100% growth and coordinated across R&D and operations."
+  - "Example Corp's mission is exactly the kind of work I want to do."
+  - "I would welcome a conversation. Thank you for your consideration."
+signoff: "Sincerely,"

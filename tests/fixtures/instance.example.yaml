@@ -1,0 +1,16 @@
+# Synthetic instance — fixture for cover-letter render tests. No real person.
+# The cover-letter renderer only reads `meta` from the instance (the letterhead
+# source), so this fixture carries a full meta block and just enough else to
+# look like a real instance.
+schema_version: 1.0
+profile: pm
+meta:
+  name: Jordan Sample
+  location: Exampleville, ON
+  phone: "+1 (555) 010-0000"
+  email: jordan@example.com
+  linkedin: linkedin.com/in/jordansample
+  github: github.com/jordansample
+  taglines:
+    pm: "Project Management"
+summary: "Synthetic summary used only by fixtures."

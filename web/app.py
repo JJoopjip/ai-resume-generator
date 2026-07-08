@@ -10,7 +10,8 @@ Generate. On submit it writes your text to a temp file and runs the EXISTING
 `./resume-gen <file>` pipeline (same command you run by hand), streaming the
 pipeline's console output live into the browser. When the run finishes it
 detects the new output/<slug>/ folder and offers the on-disk resume.pdf /
-resume.docx for download.
+resume.docx — and the matching cover_letter.pdf / cover_letter.docx when the
+run produced them — for download.
 
 Note: the resume files are written to output/<slug>/ by the pipeline itself,
 exactly as today — the "Download" buttons just copy those existing files out to
@@ -42,11 +43,14 @@ HOST = os.environ.get("RESUME_WEB_HOST", "127.0.0.1")
 PORT = int(os.environ.get("RESUME_WEB_PORT", "5000"))
 
 # Only these on-disk artifacts may ever be downloaded (path-traversal guard).
+_DOCX_CTYPE = (
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+)
 DOWNLOADABLE = {
     "resume.pdf": "application/pdf",
-    "resume.docx": (
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    ),
+    "resume.docx": _DOCX_CTYPE,
+    "cover_letter.pdf": "application/pdf",
+    "cover_letter.docx": _DOCX_CTYPE,
     "omitted.md": "text/markdown; charset=utf-8",
     "instance.yaml": "text/yaml; charset=utf-8",
 }
@@ -291,7 +295,8 @@ class Handler(BaseHTTPRequestHandler):
             new = sorted(_dirs() - before)
             slug = new[-1] if new else None
             if code == 0 and slug:
-                have = [f for f in ("resume.pdf", "resume.docx")
+                have = [f for f in ("resume.pdf", "resume.docx",
+                                    "cover_letter.pdf", "cover_letter.docx")
                         if (OUTPUT / slug / f).is_file()]
                 result = {"ok": True, "slug": slug, "files": have,
                           "folder": str((OUTPUT / slug))}

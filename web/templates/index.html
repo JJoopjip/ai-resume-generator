@@ -143,9 +143,15 @@ function finish(r) {
   go.disabled = false;
   if (r.ok) {
     status.innerHTML = "✓ Done.";
-    let html = "<h2>Your résumé is ready</h2>";
+    const LABELS = {
+      "resume.pdf": "Résumé — PDF",
+      "resume.docx": "Résumé — Word (.docx)",
+      "cover_letter.pdf": "Cover letter — PDF",
+      "cover_letter.docx": "Cover letter — Word (.docx)",
+    };
+    let html = "<h2>Your résumé &amp; cover letter are ready</h2>";
     for (const f of (r.files || [])) {
-      const label = f === "resume.pdf" ? "Download PDF" : "Download Word (.docx)";
+      const label = LABELS[f] || `Download ${f}`;
       html += `<a class="dl" href="/download?slug=${encodeURIComponent(r.slug)}&file=${encodeURIComponent(f)}">${label}</a>`;
     }
     if (!r.files || !r.files.length) {
