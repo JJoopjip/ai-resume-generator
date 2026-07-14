@@ -43,7 +43,8 @@ RUN printf '%s\n' \
       '\usepackage[T1]{fontenc}' \
       '\usepackage{lmodern}\usepackage{titlesec}\usepackage{enumitem}' \
       '\usepackage{xcolor}\usepackage{hyperref}\usepackage{lastpage}' \
-      '\begin{document}warm\end{document}' > /tmp/warm.tex \
+      '\usepackage{zref-savepos}' \
+      '\begin{document}warm\zsavepos{w}\end{document}' > /tmp/warm.tex \
     && tectonic --outdir /tmp /tmp/warm.tex \
     && rm -f /tmp/warm.*
 

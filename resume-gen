@@ -57,6 +57,30 @@ TODAY="$(date +%F)"
 # needs so it runs unattended. Override the whole set via RESUME_GEN_CLAUDE_FLAGS.
 CLAUDE_FLAGS="${RESUME_GEN_CLAUDE_FLAGS:---model claude-sonnet-5 --effort medium --permission-mode acceptEdits --allowedTools Bash Read Edit Write}"
 
+# Run the headless Claude session, then record what it cost into the run's
+# output folder (scripts/session_cost.py reads the session transcript). Best
+# effort: cost logging never changes the run's exit code. Set RESUME_GEN_NO_COST=1
+# to skip it. $2 is the output dir, or AUTO to use the newest output/*/ folder
+# (the resume run picks its own slug, so we only learn it after the run).
+run_claude_and_log() {
+  _task="$1"; _outdir="$2"
+  _start="$(date +%s)"
+  set +e
+  # shellcheck disable=SC2086
+  claude -p "$_task" $CLAUDE_FLAGS
+  _rc=$?
+  set -e
+  if [ "${RESUME_GEN_NO_COST:-0}" = "0" ] && command -v python3 >/dev/null 2>&1; then
+    if [ "$_outdir" = "AUTO" ]; then
+      _outdir="$(ls -dt output/*/ 2>/dev/null | head -1)"
+    fi
+    if [ -n "$_outdir" ] && [ -d "$_outdir" ]; then
+      python3 scripts/session_cost.py --out "$_outdir" --since "$_start" --cwd "$(pwd)" || true
+    fi
+  fi
+  return $_rc
+}
+
 # ---- cover-letter <output-dir>: letter for an already-generated resume -------
 if [ "${1:-}" = "cover-letter" ]; then
   shift
@@ -94,8 +118,8 @@ Do all of this without asking any questions:
    This is a DRAFT for human review — never submit it anywhere."
   echo "  resume-gen │ ▶ cover-letter  ·  folder: $DIR" >&2
   echo "  resume-gen │ launching headless Claude Code (prompts/tailor_cover_letter.md) …" >&2
-  # shellcheck disable=SC2086
-  exec claude -p "$COVER_ONLY_TASK" $CLAUDE_FLAGS
+  run_claude_and_log "$COVER_ONLY_TASK" "$DIR"
+  exit $?
 fi
 
 # ---- Resume tailor stage (optionally + cover letter) -------------------------
@@ -158,13 +182,21 @@ Do all of this without asking any questions:
    verbatim from master.yaml.
 5. Render + overflow loop: run
    ./resume-gen render --instance output/<slug>/instance.yaml
-   Read the JSON on stdout and the exit code. On exit 3 (overflow) follow §6 —
-   drop the additional/server role first, then the lowest-priority bullets —
-   editing instance.yaml and re-running, capped at 5 attempts. On exit 1 fix the
-   reported locked-field/verbatim mismatch and re-run.
-6. Stop at exit 0 (page_count 1), or at the 5-attempt cap per §6/§6a. Either
-   way your last action must be a render, so output/<slug>/resume.pdf always
-   reflects the final instance.yaml and is viewable.
+   Read the JSON on stdout and the exit code:
+   - Exit 3 (overflow): the JSON's `fit.lines_over` estimates how many lines you
+     are past one page — trim about that much in ONE edit (per §6: the
+     additional/server role first, then the lowest-priority bullets), not one
+     line at a time, then re-run. Cap 5 attempts.
+   - Exit 1: fix the reported locked-field/verbatim mismatch and re-run.
+   - Exit 0 (one page): check `fit.lines_free` and `coverage.selection_gap`. If
+     there is free room AND the JD has key terms you already cover in master.yaml
+     but did not select (selection_gap), swap the most relevant omitted bullet
+     back in — copied VERBATIM from master.yaml, never reworded or invented — to
+     raise coverage, then re-render. Keep the swap only if it still fits (exit 0);
+     otherwise revert. Stop once there is no worthwhile swap or no room.
+6. Finish at a one-page render (exit 0), or at the 5-attempt cap per §6/§6a.
+   Either way your last action must be a render, so output/<slug>/resume.pdf
+   always reflects the final instance.yaml and is viewable.
 7. Write output/<slug>/omitted.md per §7: a Markdown table of everything from
    master.yaml that did NOT make the final resume (bullets, the server role,
    highlights, trimmed skills), with the FULL verbatim text of each omitted
@@ -181,5 +213,5 @@ if [ "$GEN_COVER" != "0" ]; then
 else
   echo "  resume-gen │ launching headless Claude Code (resume only; add --cover for a letter) …" >&2
 fi
-# shellcheck disable=SC2086
-exec claude -p "$TASK" $CLAUDE_FLAGS
+run_claude_and_log "$TASK" "AUTO"
+exit $?

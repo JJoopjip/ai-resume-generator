@@ -140,19 +140,77 @@ def extract_page_count(out_dir: Path) -> int | None:
     return int(match.group(1))
 
 
+# US Letter is 11in tall; TeX measures 1in as 72.27pt and 1pt as 65536sp, so
+# \posy (in sp, measured from the page bottom) converts back to points this way.
+_PT_PER_IN = 72.27
+_SP_PER_PT = 65536
+_PAGE_HEIGHT_PT = 11 * _PT_PER_IN
+
+
+def extract_content_end_sp(out_dir: Path) -> int | None:
+    """Read the `contentend` \\posy (sp, from the page bottom) that zref-savepos
+    wrote into resume.aux. None if the marker is absent (older template, a
+    compile that never reached a second pass, etc.) — callers treat that as
+    'no estimate' and proceed unchanged."""
+    aux_path = out_dir / "resume.aux"
+    if not aux_path.exists():
+        return None
+    aux_text = aux_path.read_text(encoding="utf-8", errors="replace")
+    match = re.search(r"\\zref@newlabel\{contentend\}\{.*?\\posy\{(\d+)\}", aux_text)
+    return int(match.group(1)) if match else None
+
+
+def compute_fill(out_dir: Path, layout: dict, page_count: int | None) -> dict | None:
+    """Turn the end-of-content \\posy into an actionable one-page fit estimate.
+
+    On a 1-page render: how many blank lines are left below the content
+    (`lines_free`) — room the tailoring loop can backfill (ties into JD
+    coverage). On overflow: roughly how many lines spilled past one page
+    (`lines_over`) — how much to cut, in one pass instead of binary-searching.
+    Returns None when the marker or page count is unavailable (fail-open)."""
+    posy_sp = extract_content_end_sp(out_dir)
+    if posy_sp is None or not page_count:
+        return None
+    posy_pt = posy_sp / _SP_PER_PT
+    margin_pt = float(layout["margin_v_in"]) * _PT_PER_IN
+    baseline_pt = float(layout["font_size_pt"]) * 1.2  # matches the template's \fontsize
+    text_top_pt = _PAGE_HEIGHT_PT - margin_pt
+    text_height_pt = _PAGE_HEIGHT_PT - 2 * margin_pt
+
+    if page_count == 1:
+        slack_pt = max(0.0, posy_pt - margin_pt)
+        return {
+            "page_count": 1,
+            "lines_free": int(slack_pt // baseline_pt),
+            "slack_pt": round(slack_pt, 1),
+        }
+    # Content on the final page runs from the text top down to the marker; each
+    # earlier overflow page is ~a full text column. Approximate — \raggedbottom
+    # means intermediate pages aren't exactly full — but good enough to size a cut.
+    overflow_pt = (page_count - 2) * text_height_pt + (text_top_pt - posy_pt)
+    overflow_pt = max(0.0, overflow_pt)
+    return {
+        "page_count": page_count,
+        "lines_over": max(1, -(-int(overflow_pt) // int(baseline_pt))),  # ceil
+        "overflow_pt": round(overflow_pt, 1),
+    }
+
+
 def render_pdf(instance: dict, out_dir: Path, layout: dict) -> dict:
-    """Full pipeline: render .tex, compile, extract page count.
+    """Full pipeline: render .tex, compile, extract page count + fit estimate.
 
     Returns {"success": bool, "page_count": int | None, "pdf_path": Path | None,
-    "log": str}.
+    "fill": dict | None, "log": str}.
     """
     tex_path = render_tex(instance, out_dir, layout)
     success, log = compile_tex(tex_path)
     pdf_path = out_dir / "resume.pdf"
     page_count = extract_page_count(out_dir) if success else None
+    fill = compute_fill(out_dir, layout, page_count) if success else None
     return {
         "success": success and pdf_path.exists(),
         "page_count": page_count,
+        "fill": fill,
         "pdf_path": pdf_path if pdf_path.exists() else None,
         "log": log,
     }

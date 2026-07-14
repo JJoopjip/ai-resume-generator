@@ -78,6 +78,35 @@ just build the toolbox once:
 docker build -t resume-gen .
 ```
 
+The image bakes in the build code (the LaTeX template, renderer, and validator),
+so **re-run `docker build -t resume-gen .` after changing anything under
+`templates/` or `scripts/`** — otherwise the container keeps running the old copy.
+
+**Where the money goes.** Each AI run now drops a `cost.json` in its
+`output/<slug>/` folder — estimated token spend and cost for that run (read from
+the headless session), plus its final JD-coverage score. Set `RESUME_GEN_NO_COST=1`
+to skip it.
+
+**If your Claude subscription lapses.** The two halves of the pipeline depend on
+different things:
+
+- **Building/re-rendering an existing draft never needs AI or a subscription.**
+  `render`, `validate`, and the cover-letter `cover` renderer run entirely inside
+  Docker (Tectonic) — they never call Claude. Any resume you've already generated
+  stays fully usable: re-render it, hand-edit its `instance.yaml` and re-render,
+  or render a cover letter from an existing `cover_letter.yaml`, all offline.
+- **Generating a *new* AI-tailored resume needs the `claude` CLI to be signed
+  in.** With no active subscription, either renew, or point the CLI at a
+  pay-per-use API key instead of the account login:
+
+  ```sh
+  export ANTHROPIC_API_KEY=sk-ant-...   # the CLI uses this instead of your account
+  ./resume-gen jd.txt
+  ```
+
+  API billing is roughly **$1 per resume** (a bit more with `--cover`), so for
+  occasional job-search use it's often cheaper than a subscription.
+
 ---
 
 ## 2. What this project actually does

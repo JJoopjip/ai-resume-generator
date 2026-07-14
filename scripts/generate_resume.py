@@ -40,7 +40,7 @@ EXIT_USAGE_ERROR = 4
 
 
 def _emit(command: str, valid: bool, errors: list[dict], page_count, output_files,
-          coverage=None) -> None:
+          coverage=None, fit=None) -> None:
     payload = {
         "command": command,
         "valid": valid,
@@ -53,6 +53,11 @@ def _emit(command: str, valid: bool, errors: list[dict], page_count, output_file
     # the contract stays stable for callers that never asked for it.
     if coverage is not None:
         payload["coverage"] = coverage
+    # `fit` is the one-page fill estimate (lines_over on overflow, lines_free on
+    # a fit) so the caller trims/backfills the right amount in one pass. Same
+    # opt-in convention as `coverage`.
+    if fit is not None:
+        payload["fit"] = fit
     print(json.dumps(payload), flush=True)
 
 
@@ -226,15 +231,17 @@ def cmd_render(args: argparse.Namespace) -> int:
 
     _log(f"      ✓ PDF compiled — {pdf_result['page_count']} page(s)")
     page_count = pdf_result["page_count"]
+    fit = pdf_result.get("fill")
 
     # On overflow the instance will be trimmed and re-rendered, so a DOCX written
     # now is immediately superseded — skip it and let the caller iterate on the
     # PDF page count alone. The DOCX is produced only on the final, 1-page render.
     if page_count > 1:
-        _log(f"⚠ OVERFLOW — {page_count} pages (exit 3). Drop the lowest-priority "
-             "bullet and re-run. (DOCX deferred until 1 page.)")
+        over = f" ~{fit['lines_over']} line(s) over" if fit else ""
+        _log(f"⚠ OVERFLOW — {page_count} pages (exit 3),{over or ' drop the lowest-priority bullet'}. "
+             "Trim about that much and re-run. (DOCX deferred until 1 page.)")
         _emit("render", True, [], page_count,
-              {"pdf": str(pdf_result["pdf_path"]), "docx": None}, coverage=coverage)
+              {"pdf": str(pdf_result["pdf_path"]), "docx": None}, coverage=coverage, fit=fit)
         return EXIT_OVERFLOW
 
     _log("[4/4] writing DOCX …")
@@ -253,9 +260,10 @@ def cmd_render(args: argparse.Namespace) -> int:
 
     output_files = {"pdf": str(pdf_result["pdf_path"]), "docx": str(docx_path)}
 
-    _log(f"✓ done — 1 page.  PDF: {output_files['pdf']}")
+    room = f"  (~{fit['lines_free']} line(s) of room left)" if fit and fit.get("lines_free") else ""
+    _log(f"✓ done — 1 page.{room}  PDF: {output_files['pdf']}")
     _log(f"                  DOCX: {output_files['docx']}")
-    _emit("render", True, [], page_count, output_files, coverage=coverage)
+    _emit("render", True, [], page_count, output_files, coverage=coverage, fit=fit)
     return EXIT_SUCCESS
 
 
