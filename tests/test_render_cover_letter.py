@@ -53,6 +53,9 @@ def test_render_tex_letterhead_comes_from_meta(tmp_path):
     assert "Jordan Sample" in tex
     assert "jordan@example.com" in tex
     assert "linkedin.com/in/jordansample" in tex
+    # Jinja renders an unknown meta key as empty rather than raising, so a
+    # renamed field would silently drop out of the letterhead. Assert it.
+    assert "jordansample.github.io" in tex
 
 
 def test_render_tex_includes_body_and_recipient(tmp_path):

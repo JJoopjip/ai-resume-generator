@@ -175,6 +175,14 @@ highlights:                       # optional; up to 3, most-relevant first
   - { id: hl_engagement, value: "100%", label: "online-engagement growth" }
   - { id: hl_retention,  value: "90%",  label: "customer retention" }
   - { id: hl_skus,       value: "20+ SKUs", label: "across 4 pipelines" }
+projects:                         # optional; omit entirely if the page is tight
+  - id: proj_jobsearch_tools      # must match an id in master.yaml.projects
+    name: ...                     # copied verbatim (locked)
+    link: ...                     # copied verbatim if present
+    stack: ...                    # copied verbatim if present
+    bullets:                      # ordered, most to least relevant, subset only
+      - id: pj_generator
+        text: "Scoped and delivered an AI résumé generator end-to-end, ..."
 education: [ ...copied verbatim, reordering allowed... ]
 certifications: [ ...copied verbatim... ]
 skills:
@@ -195,6 +203,13 @@ Notes:
 - `meta`, `education` (non-id fields), `certifications`, and `languages` are
   locked — copy them from `master.yaml` verbatim; you may reorder education
   entries but not alter their content.
+- `projects` is optional and self-built work, not employment — never merge it
+  into `experience`. Include it when the role values building, automating or
+  systems thinking, and pick each bullet's `variants` entry by profile exactly
+  as you do for experience bullets. `name`, `link` and `stack` are locked. It
+  is the lowest-priority section on the page: if the draft runs to two pages,
+  cut project bullets before cutting any real role, and drop the section whole
+  before losing an employment bullet.
 - `skills` groups/items must be a subset of what's already in `master.yaml`
   under a matching `label` — pick the groups relevant to the chosen
   profile(s) and trim `items` to what's most relevant to the JD, but don't

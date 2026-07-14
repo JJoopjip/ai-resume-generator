@@ -118,7 +118,7 @@ def render_docx(instance: dict, out_dir: Path) -> Path:
 
     contact_p = doc.add_paragraph()
     contact_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    contact_line = f"{meta['location']} | {meta['phone']} | {meta['email']} | {meta['linkedin']} | {meta['github']}"
+    contact_line = f"{meta['location']} | {meta['phone']} | {meta['email']} | {meta['linkedin']} | {meta['portfolio']}"
     _add_run(contact_p, contact_line)
 
     if instance.get("highlights"):
@@ -146,6 +146,18 @@ def render_docx(instance: dict, out_dir: Path) -> Path:
         _add_heading(doc, "Additional Experience")
         for exp in additional_roles:
             _render_experience_entry(doc, exp)
+
+    # Optional — mirrors resume.tex.j2, where the header disappears when the
+    # tailoring step drops projects to hold the page to one side.
+    if instance.get("projects"):
+        _add_heading(doc, "Projects")
+        for proj in instance["projects"]:
+            _add_split_line(doc, proj["name"], proj.get("stack", ""), left_bold=True)
+            if proj.get("link"):
+                link_p = doc.add_paragraph()
+                _add_run(link_p, proj["link"])
+            for bullet in proj["bullets"]:
+                doc.add_paragraph(bullet["text"], style="List Bullet")
 
     _add_heading(doc, "Education")
     for edu in instance["education"]:

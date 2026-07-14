@@ -153,7 +153,7 @@ def render_docx(letter: dict, meta: dict, out_dir: Path) -> Path:
     _add_run(
         contact_p,
         f"{meta['location']} | {meta['phone']} | {meta['email']} | "
-        f"{meta['linkedin']} | {meta['github']}",
+        f"{meta['linkedin']} | {meta['portfolio']}",
     )
 
     rule_p = doc.add_paragraph()

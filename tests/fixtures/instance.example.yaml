@@ -10,7 +10,7 @@ meta:
   phone: "+1 (555) 010-0000"
   email: jordan@example.com
   linkedin: linkedin.com/in/jordansample
-  github: github.com/jordansample
+  portfolio: jordansample.github.io
   taglines:
     pm: "Project Management"
 summary: "Synthetic summary used only by fixtures."

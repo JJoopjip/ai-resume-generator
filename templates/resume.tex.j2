@@ -47,7 +47,7 @@
   \VAR{meta.location} $\vert$ \VAR{meta.phone} $\vert$
   \href{mailto:\VAR{meta.email}}{\VAR{meta.email}} $\vert$
   \href{https://\VAR{meta.linkedin}}{\VAR{meta.linkedin}} $\vert$
-  \href{https://\VAR{meta.github}}{\VAR{meta.github}}
+  \href{https://\VAR{meta.portfolio}}{\VAR{meta.portfolio}}
 \end{center}
 
 % ---------- Impact line (colored, ATS-safe: plain in-order text) ----------
@@ -93,6 +93,21 @@
 \section*{Additional Experience}
 \BLOCK{for exp in additional_roles}
 \VAR{exp_block(exp, layout)}
+\BLOCK{if not loop.last}\vspace{3pt}\BLOCK{endif}
+\BLOCK{endfor}
+\BLOCK{endif}
+
+% ---------- Projects (optional; header disappears when none present) ----------
+\BLOCK{if projects}
+\section*{Projects}
+\BLOCK{for proj in projects}
+\textbf{\VAR{proj.name}}\BLOCK{if proj.stack} \hfill {\fontsize{\VAR{layout['font_size_pt'] - 1}}{\VAR{(layout['font_size_pt'] * 1.2) | round(1)}}\selectfont \VAR{proj.stack}}\BLOCK{endif} \\
+\BLOCK{if proj.link}\href{https://\VAR{proj.link}}{\VAR{proj.link}}\BLOCK{endif} \\[-3pt]
+\resumeItemListStart
+\BLOCK{for bullet in proj.bullets}
+  \item \VAR{bullet.text}
+\BLOCK{endfor}
+\resumeItemListEnd
 \BLOCK{if not loop.last}\vspace{3pt}\BLOCK{endif}
 \BLOCK{endfor}
 \BLOCK{endif}
