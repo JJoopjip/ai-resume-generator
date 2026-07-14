@@ -1,0 +1,30 @@
+# Keep the Docker build context small and free of anything personal or local.
+# Both images build from the project root (web/Dockerfile uses context: ..), and
+# neither COPYs these — excluding them speeds builds and avoids leaking data.
+
+# Version control / local tooling
+.git
+.gitignore
+.claude
+
+# Python virtualenv, caches, bytecode
+.venv
+__pycache__
+**/__pycache__
+*.pyc
+.pytest_cache
+
+# Personal content and generated output (bind-mounted at run time, never baked)
+master.yaml
+jd.txt
+output
+
+# Logs and Windows/WSL cruft
+*.log
+web/server.log
+*Zone.Identifier
+
+# Docs not needed inside any image
+docs
+*.md
+!requirements.txt
