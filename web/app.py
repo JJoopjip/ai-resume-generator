@@ -26,6 +26,8 @@ import re
 import subprocess
 import tempfile
 import threading
+import urllib.error
+import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -42,6 +44,11 @@ RESUME_GEN = ROOT / "resume-gen"           # reused verbatim; never modified
 HOST = os.environ.get("RESUME_WEB_HOST", "127.0.0.1")
 PORT = int(os.environ.get("RESUME_WEB_PORT", "5000"))
 
+# The application tracker (a separate local app) we push finished résumés to.
+# Its /api/import reads the output folder off this same filesystem — we only
+# send it the folder path + JD text, never the files themselves.
+TRACKER_URL = os.environ.get("RESUME_TRACKER_URL", "http://127.0.0.1:8000")
+
 # Only these on-disk artifacts may ever be downloaded (path-traversal guard).
 _DOCX_CTYPE = (
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -56,11 +63,26 @@ DOWNLOADABLE = {
 }
 SLUG_RE = re.compile(r"^[A-Za-z0-9._-]+$")  # output folder names only
 
+# Files the download route and result payloads report on, in display order.
+ARTIFACTS = ("resume.pdf", "resume.docx", "cover_letter.pdf", "cover_letter.docx")
+
+# Flags handed to the pipeline's headless Claude. `--output-format stream-json
+# --verbose` is what lets make_narrator() turn the run into progress lines; we
+# only set this default when the user hasn't supplied their own (see below).
+_CLAUDE_STREAM_FLAGS = (
+    "--model claude-sonnet-5 --effort medium "
+    "--permission-mode acceptEdits --allowedTools Bash Read Edit Write "
+    "--output-format stream-json --verbose"
+)
+
 # One generation at a time. The pipeline drives Docker + a headless Claude
 # session and detects "the new output folder" by diffing output/; two concurrent
 # runs would race that diff. A non-blocking acquire lets a second request fail
 # fast with a friendly "busy" instead of queuing or corrupting detection.
 _run_lock = threading.Lock()
+
+_BUSY_MSG = ("A résumé or cover letter is already being generated. Please wait "
+             "for it to finish, then try again.")
 
 
 def _dirs():
@@ -187,8 +209,13 @@ class Handler(BaseHTTPRequestHandler):
         self._send_text(404, "Not found")
 
     def do_POST(self):
-        if urlparse(self.path).path == "/generate":
+        path = urlparse(self.path).path
+        if path == "/generate":
             return self._generate()
+        if path == "/cover":
+            return self._cover()
+        if path == "/to-tracker":
+            return self._to_tracker()
         self._send_text(404, "Not found")
 
     # -- helpers ---------------------------------------------------------------
@@ -199,6 +226,51 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def _send_json(self, code, obj):
+        body = json.dumps(obj).encode("utf-8")
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _to_tracker(self):
+        """Push a finished output/<slug>/ into the application tracker. We send
+        the tracker only the folder path + JD text (it reads the files off this
+        shared filesystem itself) and relay its JSON answer back to the page."""
+        q = parse_qs(urlparse(self.path).query)
+        slug = (q.get("slug") or [""])[0]
+        if not SLUG_RE.match(slug):
+            return self._send_json(400, {"ok": False, "error": "Bad slug."})
+        folder = (OUTPUT / slug).resolve()
+        if OUTPUT.resolve() not in folder.parents or not folder.is_dir():
+            return self._send_json(404, {"ok": False, "error": "No such output folder."})
+
+        jd_file = folder / "job_description.txt"
+        jd_text = jd_file.read_text(encoding="utf-8") if jd_file.is_file() else ""
+        payload = json.dumps({"folder": str(folder), "jd_text": jd_text}).encode("utf-8")
+        req = urllib.request.Request(
+            TRACKER_URL.rstrip("/") + "/api/import", data=payload,
+            headers={"Content-Type": "application/json"}, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=180) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:  # tracker replied with 4xx/5xx JSON
+            try:
+                data = json.loads(e.read().decode("utf-8"))
+            except Exception:
+                data = {"ok": False, "error": f"Tracker error (HTTP {e.code})."}
+        except urllib.error.URLError as e:
+            return self._send_json(502, {"ok": False, "error":
+                f"Couldn't reach the tracker at {TRACKER_URL} — is it running? ({e.reason})"})
+        except Exception as e:
+            return self._send_json(502, {"ok": False, "error": f"Tracker call failed: {e}"})
+
+        # Turn the tracker's relative URL into one the browser can click.
+        if data.get("ok") and data.get("url", "").startswith("/"):
+            data["url"] = TRACKER_URL.rstrip("/") + data["url"]
+        return self._send_json(200 if data.get("ok") else 400, data)
 
     def _send_file(self, fp: Path, ctype: str):
         if not fp.is_file():
@@ -242,16 +314,43 @@ class Handler(BaseHTTPRequestHandler):
 
         # Refuse a second concurrent run rather than race output-folder detection.
         if not _run_lock.acquire(blocking=False):
-            return self._send_text(
-                409, "A résumé is already being generated. Please wait for it "
-                     "to finish, then try again.")
+            return self._send_text(409, _BUSY_MSG)
         try:
             self._run_pipeline(jd_text, want_cover)
         finally:
             _run_lock.release()
 
-    def _run_pipeline(self, jd_text, want_cover=False):
-        # Open a streaming response. No Content-Length => body ends at close.
+    def _cover(self):
+        # Draft a cover letter for a résumé that ALREADY exists on disk, reusing
+        # its instance.yaml + job_description.txt — no résumé re-run. This is the
+        # web face of `resume-gen cover-letter output/<slug>`.
+        q = parse_qs(urlparse(self.path).query)
+        slug = (q.get("slug") or [""])[0]
+        if not SLUG_RE.match(slug):
+            return self._send_text(400, "Bad request")
+        folder = (OUTPUT / slug).resolve()
+        # Same containment guard as _download: the resolved path must sit inside
+        # output/ (blocks e.g. a '..' slug that would escape the tree).
+        if OUTPUT.resolve() not in folder.parents or not folder.is_dir():
+            return self._send_text(404, "Not found")
+        # The subcommand hard-requires both inputs; a partial/failed résumé run
+        # may lack them, so fail friendly here instead of deep in the pipeline.
+        if not (folder / "instance.yaml").is_file() or \
+                not (folder / "job_description.txt").is_file():
+            return self._send_text(
+                400, "That folder is missing the résumé inputs (instance.yaml / "
+                     "job_description.txt) a cover letter is built from.")
+
+        if not _run_lock.acquire(blocking=False):
+            return self._send_text(409, _BUSY_MSG)
+        try:
+            self._run_cover(slug)
+        finally:
+            _run_lock.release()
+
+    # -- streaming plumbing shared by both runs --------------------------------
+    def _open_stream(self):
+        """Begin a header-less streaming response; return an `emit(line)`."""
         self.send_response(200)
         self.send_header("Content-Type", "text/plain; charset=utf-8")
         self.send_header("Cache-Control", "no-cache")
@@ -264,6 +363,51 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.flush()
             except (BrokenPipeError, ConnectionResetError):
                 raise
+        return emit
+
+    def _stream_env(self):
+        """os.environ + our stream-json default (a user's own flags still win)."""
+        env = os.environ.copy()
+        env.setdefault("RESUME_GEN_CLAUDE_FLAGS", _CLAUDE_STREAM_FLAGS)
+        return env
+
+    def _run_narrated(self, cmd, env, emit):
+        """Run `cmd`, narrating its stream-json output; return the exit code."""
+        narrate = make_narrator()
+        proc = subprocess.Popen(
+            cmd, cwd=str(ROOT), stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT, text=True, bufsize=1, env=env,
+        )
+        for line in proc.stdout:            # live stream, line by line
+            phase = narrate(line)
+            if phase:
+                emit(phase + "\n")
+        return proc.wait()
+
+    def _run_cover(self, slug):
+        emit = self._open_stream()
+        cmd = [str(RESUME_GEN), "cover-letter", f"output/{slug}"]
+        result = {"ok": False}
+        try:
+            emit(f"  web │ writing a cover letter for {slug} — a minute or two; "
+                 "watch the steps below.\n\n")
+            code = self._run_narrated(cmd, self._stream_env(), emit)
+            have = [f for f in ARTIFACTS if (OUTPUT / slug / f).is_file()]
+            if code == 0 and (OUTPUT / slug / "cover_letter.pdf").is_file():
+                result = {"ok": True, "slug": slug, "files": have,
+                          "folder": str(OUTPUT / slug)}
+            else:
+                result = {"ok": False, "slug": slug, "code": code}
+        except Exception as e:
+            emit(f"\n  web │ error: {e}\n")
+            result = {"ok": False, "error": str(e)}
+        try:
+            emit("\n__RESULT__ " + json.dumps(result) + "\n")
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+
+    def _run_pipeline(self, jd_text, want_cover=False):
+        emit = self._open_stream()
 
         # Write the pasted JD to a temp file and run the UNMODIFIED pipeline.
         before = _dirs()
@@ -272,20 +416,6 @@ class Handler(BaseHTTPRequestHandler):
         ) as tf:
             tf.write(jd_text + "\n")
             jd_path = tf.name
-
-        # Ask the pipeline's headless Claude for a streaming event log so we can
-        # narrate progress. `--verbose` is required alongside stream-json. We
-        # only set this when the user hasn't supplied their own flags, so a
-        # custom RESUME_GEN_CLAUDE_FLAGS (e.g. Opus for a high-stakes run) still
-        # wins — it just won't show step-by-step phases unless it, too, includes
-        # `--output-format stream-json --verbose`.
-        env = os.environ.copy()
-        env.setdefault(
-            "RESUME_GEN_CLAUDE_FLAGS",
-            "--model claude-sonnet-5 --effort medium "
-            "--permission-mode acceptEdits --allowedTools Bash Read Edit Write "
-            "--output-format stream-json --verbose",
-        )
 
         cmd = [str(RESUME_GEN), jd_path]
         if want_cover:
@@ -296,28 +426,12 @@ class Handler(BaseHTTPRequestHandler):
             kind = "résumé + cover letter" if want_cover else "résumé"
             emit(f"  web │ starting {kind} — this takes a few minutes; "
                  "watch the steps below.\n\n")
-            narrate = make_narrator()
-            proc = subprocess.Popen(
-                cmd,
-                cwd=str(ROOT),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=1,
-                env=env,
-            )
-            for line in proc.stdout:            # live stream, line by line
-                phase = narrate(line)
-                if phase:
-                    emit(phase + "\n")
-            code = proc.wait()
+            code = self._run_narrated(cmd, self._stream_env(), emit)
 
             new = sorted(_dirs() - before)
             slug = new[-1] if new else None
             if code == 0 and slug:
-                have = [f for f in ("resume.pdf", "resume.docx",
-                                    "cover_letter.pdf", "cover_letter.docx")
-                        if (OUTPUT / slug / f).is_file()]
+                have = [f for f in ARTIFACTS if (OUTPUT / slug / f).is_file()]
                 result = {"ok": True, "slug": slug, "files": have,
                           "folder": str((OUTPUT / slug))}
             else:

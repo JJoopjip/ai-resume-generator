@@ -3,99 +3,288 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Resume Generator</title>
+<title>Résumé Generator · GoodLuck Joopjip 🍀</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='42' fill='%2377A088'/></svg>">
 <style>
-  :root { color-scheme: light dark; }
+  /* ======================================================================
+     Résumé Generator — styled to match the Fieldnotes tracker (:8000).
+     Palette + shapes mirror the tracker's styles.css; fonts fall back to the
+     system stack so this page stays fully self-contained (no files served).
+     ====================================================================== */
+  :root {
+    --paper:        #F3F0E8;
+    --surface:      #FCFBF7;
+    --sage:         #77A088;
+    --sage-strong:  #4E7961;
+    --apricot:      #E0A46E;
+    --rose:         #CB929A;
+    --slate:        #2E3A37;
+    --muted:        #6C7772;
+    --sage-tint:    #E7EFE8;
+    --apricot-tint: #F6E7D4;
+    --rose-tint:    #F1E1E3;
+    --line:         #E4DFD3;
+    --radius:       16px;
+    --radius-sm:    11px;
+    --shadow:       0 1px 2px rgba(46,58,55,.05), 0 6px 20px rgba(46,58,55,.06);
+    --shadow-lift:  0 2px 4px rgba(46,58,55,.06), 0 14px 34px rgba(46,58,55,.10);
+  }
   * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    max-width: 820px; margin: 0 auto; padding: 2rem 1.25rem 4rem;
-    line-height: 1.5;
+    margin: 0;
+    background: var(--paper);
+    color: var(--slate);
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
   }
-  h1 { font-size: 1.4rem; margin: 0 0 .25rem; }
-  p.sub { margin: 0 0 1.5rem; opacity: .7; font-size: .9rem; }
-  label { display: block; font-weight: 600; margin-bottom: .4rem; }
+  h1, h2, h3, .band-text, .stat-num {
+    font-family: "Nunito", system-ui, sans-serif;
+    color: var(--slate);
+    letter-spacing: -0.01em;
+  }
+  a { color: var(--sage-strong); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; }
+
+  .wrap { max-width: 940px; margin: 0 auto; padding: 22px 20px 80px; }
+
+  /* --- Top bar (mirrors the tracker; links cross to :8000) --------------- */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .brand {
+    font-family: "Nunito", system-ui, sans-serif; font-weight: 800;
+    font-size: 20px; display: flex; align-items: center; gap: 9px;
+    color: var(--slate);
+  }
+  .brand:hover { text-decoration: none; }
+  .brand .dot {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--sage); box-shadow: 0 0 0 4px var(--sage-tint);
+  }
+  .topbar-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+  /* --- Buttons ----------------------------------------------------------- */
+  .btn {
+    font-family: "Inter", system-ui, sans-serif; font-size: 14px; font-weight: 600;
+    border: none; border-radius: 999px; padding: 10px 18px; min-height: 42px;
+    cursor: pointer; background: var(--surface); color: var(--slate);
+    box-shadow: var(--shadow);
+    transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+    display: inline-flex; align-items: center; gap: 7px; text-decoration: none;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-lift); text-decoration: none; }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: .5; cursor: default; transform: none; box-shadow: var(--shadow); }
+  .btn-primary { background: var(--sage); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: var(--sage-strong); }
+  .btn-ghost { background: transparent; box-shadow: none; color: var(--muted); }
+  .btn-ghost:hover { background: var(--surface); box-shadow: var(--shadow); }
+  .btn-sm { font-size: 13px; padding: 8px 14px; min-height: 38px; }
+  .btn-current { background: var(--sage-tint); color: var(--sage-strong); box-shadow: none; }
+
+  :focus-visible { outline: 3px solid var(--sage); outline-offset: 2px; border-radius: 8px; }
+
+  /* --- Hero band (the tracker's signature element) ---------------------- */
+  .band {
+    background: linear-gradient(135deg, var(--sage) 0%, var(--sage-strong) 100%);
+    color: #fff; border-radius: 22px; padding: 26px 28px; margin-bottom: 26px;
+    box-shadow: var(--shadow-lift);
+  }
+  .band-label {
+    font-size: 12.5px; text-transform: uppercase; letter-spacing: .12em;
+    opacity: .8; margin-bottom: 6px; font-weight: 600;
+  }
+  .band-text {
+    font-weight: 700; font-size: clamp(20px, 3.4vw, 27px); line-height: 1.3; color: #fff;
+    margin: 0;
+  }
+  .band-sub { margin: 10px 0 0; font-size: 14px; opacity: .92; max-width: 60ch; }
+
+  /* --- Panel (the form card) -------------------------------------------- */
+  .panel {
+    background: var(--surface); border-radius: var(--radius);
+    padding: 22px 22px 24px; box-shadow: var(--shadow);
+  }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 13px; font-weight: 600; color: var(--muted); }
   textarea {
-    width: 100%; min-height: 260px; padding: .75rem; font-size: .95rem;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    border: 1px solid rgba(128,128,128,.5); border-radius: 8px; resize: vertical;
-    background: transparent; color: inherit;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px;
+    padding: 12px 14px; border-radius: var(--radius-sm); border: 1px solid var(--line);
+    background: var(--paper); color: var(--slate); width: 100%; min-height: 260px;
+    resize: vertical; line-height: 1.5;
   }
-  .row { display: flex; gap: .75rem; align-items: center; margin-top: 1rem; }
-  .check { display: flex; align-items: center; gap: .35rem; font-size: .9rem; color: #444; cursor: pointer; user-select: none; }
-  button {
-    font-size: 1rem; font-weight: 600; padding: .6rem 1.4rem; border: 0;
-    border-radius: 8px; background: #2563eb; color: #fff; cursor: pointer;
+  textarea:focus {
+    outline: none; border-color: var(--sage); background: var(--surface);
+    box-shadow: 0 0 0 3px var(--sage-tint);
   }
-  button:disabled { opacity: .5; cursor: default; }
-  .status { font-size: .9rem; opacity: .8; }
+
+  .row { display: flex; gap: 14px; align-items: center; margin-top: 18px; flex-wrap: wrap; }
+  .check {
+    display: flex; align-items: center; gap: .4rem; font-size: 13.5px;
+    color: var(--muted); cursor: pointer; user-select: none;
+  }
+  .check input { accent-color: var(--sage); width: 16px; height: 16px; }
+
+  .status { font-size: 13.5px; color: var(--muted); }
+
+  /* --- Live log ---------------------------------------------------------- */
   pre#log {
-    margin-top: 1.5rem; padding: 1rem; border-radius: 8px; max-height: 380px;
-    overflow: auto; white-space: pre-wrap; word-break: break-word;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .82rem;
-    background: rgba(128,128,128,.12); display: none;
+    margin-top: 22px; padding: 16px 18px; border-radius: var(--radius);
+    max-height: 380px; overflow: auto; white-space: pre-wrap; word-break: break-word;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px;
+    line-height: 1.6; background: var(--surface); border: 1px solid var(--line);
+    box-shadow: var(--shadow); color: var(--slate); display: none;
   }
-  #result { margin-top: 1.5rem; display: none; }
-  #result h2 { font-size: 1.1rem; margin: 0 0 .75rem; }
+
+  /* --- Result card ------------------------------------------------------- */
+  #result {
+    margin-top: 22px; display: none; background: var(--surface);
+    border-radius: var(--radius); padding: 22px 22px 24px; box-shadow: var(--shadow);
+  }
+  #result h2 { font-size: 18px; font-weight: 700; margin: 0 0 14px; }
   .dl {
-    display: inline-block; margin: 0 .6rem .6rem 0; padding: .55rem 1rem;
-    border: 1px solid #2563eb; border-radius: 8px; text-decoration: none;
-    color: #2563eb; font-weight: 600;
+    display: inline-flex; align-items: center; margin: 0 .55rem .55rem 0;
+    padding: 10px 16px; border-radius: 999px; text-decoration: none;
+    background: var(--sage-tint); color: var(--sage-strong); font-weight: 600;
+    font-size: 14px; box-shadow: var(--shadow);
+    transition: transform .12s ease, box-shadow .12s ease;
   }
-  .folder { font-size: .82rem; opacity: .7; margin-top: .5rem; word-break: break-all; }
-  .err { color: #dc2626; font-weight: 600; }
+  .dl:hover { transform: translateY(-1px); box-shadow: var(--shadow-lift); text-decoration: none; }
+  .folder {
+    font-size: 12.5px; color: var(--muted); margin-top: 12px; word-break: break-all;
+    background: var(--paper); padding: 10px 14px; border-radius: var(--radius-sm);
+  }
+  .err { color: #8f5a63; font-weight: 600; }
+
+  /* --- Spinner ----------------------------------------------------------- */
   .spin {
     display: inline-block; width: 14px; height: 14px; border-radius: 50%;
-    border: 2px solid rgba(128,128,128,.4); border-top-color: #2563eb;
+    border: 2px solid var(--line); border-top-color: var(--sage);
     animation: spin .8s linear infinite; vertical-align: -2px;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 720px) {
+    .band { padding: 22px 20px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, .btn, .dl { transition: none !important; animation: none !important; }
+  }
 </style>
 </head>
 <body>
-  <h1>Resume Generator</h1>
-  <p class="sub">Paste a job description, click Generate. Takes a few minutes —
-    the live log below shows progress. Files are saved to <code>output/</code>
-    automatically; the download buttons just copy them out.</p>
+  <div class="wrap">
+    <header class="topbar">
+      <a href="http://127.0.0.1:8000/" class="brand"><span class="dot"></span> 🍀 GoodLuck Joopjip ✨🎉</a>
+      <div class="topbar-actions">
+        <a class="btn btn-ghost btn-sm" href="http://127.0.0.1:8000/board">Board</a>
+        <a class="btn btn-ghost btn-sm" href="http://127.0.0.1:8000/review">Inbox</a>
+        <a class="btn btn-ghost btn-sm" href="http://127.0.0.1:8000/settings">Settings</a>
+        <a class="btn btn-primary btn-sm" href="http://127.0.0.1:8000/">📋 Application Tracker ↗</a>
+        <span class="btn btn-current btn-sm">✨ Résumé generator</span>
+      </div>
+    </header>
 
-  <label for="jd">Job description</label>
-  <textarea id="jd" placeholder="Paste the full job posting here…"></textarea>
+    <div class="band">
+      <div class="band-label">Tailor a résumé</div>
+      <p class="band-text">Paste a job posting — get a one-page résumé built from your history.</p>
+      <p class="band-sub">Takes a few minutes; the live log shows each step. Files are saved to
+        <code>output/</code> automatically — the download buttons just copy them out.</p>
+    </div>
 
-  <div class="row">
-    <button id="go">Generate</button>
-    <label class="check"><input type="checkbox" id="cover"> Also write a cover letter</label>
-    <span class="status" id="status"></span>
+    <div class="panel">
+      <div class="field">
+        <label for="jd">Job description</label>
+        <textarea id="jd" placeholder="Paste the full job posting here…"></textarea>
+      </div>
+
+      <div class="row">
+        <button id="go" class="btn btn-primary">Generate</button>
+        <label class="check"><input type="checkbox" id="cover"> Also write a cover letter now (same run)</label>
+        <span class="status" id="status"></span>
+      </div>
+    </div>
+
+    <pre id="log"></pre>
+
+    <div id="result"></div>
   </div>
-
-  <pre id="log"></pre>
-
-  <div id="result"></div>
 
 <script>
 const $ = (id) => document.getElementById(id);
 const go = $("go"), jd = $("jd"), status = $("status"), log = $("log"), result = $("result"), cover = $("cover");
 
-go.addEventListener("click", async () => {
+go.addEventListener("click", () => {
   const text = jd.value.trim();
   if (!text) { status.textContent = "Paste a job description first."; return; }
+  stream("/generate" + (cover.checked ? "?cover=1" : ""), text, "Generating…");
+});
 
+// The "Generate cover letter" button is injected into #result after a résumé
+// finishes, so listen via delegation. It reuses the just-made résumé folder —
+// no re-run — mirroring `resume-gen cover-letter output/<slug>`.
+result.addEventListener("click", (ev) => {
+  const coverBtn = ev.target.closest("#make-cover");
+  if (coverBtn) {
+    stream("/cover?slug=" + encodeURIComponent(coverBtn.dataset.slug), null,
+           "Writing your cover letter…");
+    return;
+  }
+  const trackBtn = ev.target.closest("#to-tracker");
+  if (trackBtn) { addToTracker(trackBtn); return; }
+});
+
+// Send the finished folder to the tracker (a quick JSON call — not a long
+// pipeline run), and show a link straight to the new/updated application.
+async function addToTracker(btn) {
+  const out = $("tracker-out");
+  btn.disabled = true;
+  out.innerHTML = '<span class="spin"></span> Adding to tracker…';
+  try {
+    const resp = await fetch("/to-tracker?slug=" + encodeURIComponent(btn.dataset.slug),
+                             { method: "POST" });
+    const r = await resp.json();
+    if (r.ok) {
+      const verb = r.created ? "Added to" : "Updated in";
+      let msg = `✓ ${verb} tracker — <a href="${r.url}" target="_blank" rel="noopener">open the application ↗</a>`;
+      if (r.warning) msg += `<br><span class="err">Note: ${escapeHtml(r.warning)}</span>`;
+      out.innerHTML = msg;
+      btn.textContent = "Added ✓";
+    } else {
+      out.innerHTML = '<span class="err">' + escapeHtml(r.error || "Tracker rejected the request.") + '</span>';
+      btn.disabled = false;
+    }
+  } catch (e) {
+    out.innerHTML = '<span class="err">Couldn\'t reach the tracker: ' + escapeHtml(e.message) + '</span>';
+    btn.disabled = false;
+  }
+}
+
+// Drive one streaming run (résumé or cover letter) into the shared log/result
+// UI. `body` null => no request body (the cover route reads its slug from the
+// query string).
+async function stream(url, body, startMsg) {
   go.disabled = true;
   result.style.display = "none";
   result.innerHTML = "";
   log.style.display = "block";
   log.textContent = "";
-  status.innerHTML = '<span class="spin"></span> Generating…';
+  status.innerHTML = '<span class="spin"></span> ' + startMsg;
 
   try {
-    const resp = await fetch("/generate" + (cover.checked ? "?cover=1" : ""), {
-      method: "POST",
-      headers: { "Content-Type": "text/plain; charset=utf-8" },
-      body: text,
-    });
+    const opts = { method: "POST",
+                   headers: { "Content-Type": "text/plain; charset=utf-8" } };
+    if (body != null) opts.body = body;
+    const resp = await fetch(url, opts);
     if (!resp.ok) {
       // e.g. 409 busy or 400 empty — body is a short plain-text message.
       const msg = await resp.text();
-      status.innerHTML = '<span class="err">' + (msg || ('Error ' + resp.status)) + '</span>';
+      status.innerHTML = '<span class="err">' + escapeHtml(msg || ('Error ' + resp.status)) + '</span>';
       log.style.display = "none";
       go.disabled = false; return;
     }
@@ -122,10 +311,10 @@ go.addEventListener("click", async () => {
     status.textContent = "Done.";
     go.disabled = false;
   } catch (e) {
-    status.innerHTML = '<span class="err">Error: ' + e.message + '</span>';
+    status.innerHTML = '<span class="err">Error: ' + escapeHtml(e.message) + '</span>';
     go.disabled = false;
   }
-});
+}
 
 // Render the running step history and lift the most recent step into the
 // prominent status line so "where are we now" is always visible at a glance.
@@ -159,6 +348,19 @@ function finish(r) {
     }
     if (!r.files || !r.files.length) {
       html += "<p>Run finished but no PDF/DOCX was found in the output folder.</p>";
+    }
+    // Offer a matching cover letter only when the résumé is on disk and one
+    // wasn't produced already — this reuses the folder, no résumé re-run.
+    const hasResume = (r.files || []).some(f => f.startsWith("resume"));
+    if (r.slug && hasResume && !hasCover) {
+      html += `<div class="row"><button id="make-cover" class="btn btn-primary" data-slug="${escapeHtml(r.slug)}">Generate cover letter</button>`
+        + `<span class="check">Draft a matching cover letter from this résumé — no re-run needed.</span></div>`;
+    }
+    // Push this application (résumé + cover letter + JD) into the tracker.
+    if (r.slug && hasResume) {
+      html += `<div class="row"><button id="to-tracker" class="btn" data-slug="${escapeHtml(r.slug)}">Add to tracker</button>`
+        + `<span class="check">Send this résumé, cover letter &amp; job description to your application tracker.</span></div>`
+        + `<div id="tracker-out" class="folder"></div>`;
     }
     html += `<div class="folder">Saved on disk at: ${r.folder || "output/" + (r.slug || "")}</div>`;
     result.innerHTML = html;
