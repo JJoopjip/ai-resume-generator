@@ -1,12 +1,18 @@
 # Tailored Resume Generator
 
-**An AI orchestration pipeline that turns a job posting into a polished, one-page resume — automatically.**
+**A headless Claude (Anthropic) agent, wrapped in deterministic guardrails,
+that turns a job posting into a polished, one-page resume — automatically.**
 
 You give it a job description. It reads your career history, decides which of
 your achievements best match that specific job, writes them up, lays them out
 as a professional PDF and Word document, and checks that everything fits on one
 page — trimming intelligently if it doesn't. The result is a draft ready for you
 to review and send.
+
+This is not a chatbot wrapper. There is no chat window anywhere in the loop:
+Claude runs headless as an autonomous agent inside the pipeline — the same
+agent technology that powers AI coding tools — reading files, running the
+renderer, and reacting to its verdicts on its own.
 
 ---
 
@@ -122,7 +128,7 @@ different things:
 ## 2. What this project actually does
 
 This is a portfolio piece demonstrating **AI orchestration** — designing a
-pipeline where an AI agent does the judgment-heavy creative work, while
+pipeline where a headless Claude agent does the judgment-heavy creative work, while
 deterministic (non-AI) software does the exact, repeatable work, and the two
 hand off to each other cleanly.
 

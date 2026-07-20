@@ -106,41 +106,41 @@ def _tool_phase(block, state):
         fp = str(inp.get("file_path", ""))
         low = fp.lower()
         if "master.yaml" in low:
-            return "  📖  reading your career history"
+            return "  📖  agent reads your career history"
         if "job_description" in low or low.endswith(".txt"):
-            return "  📖  reading the job description"
+            return "  📖  agent reads the job description"
         if "tailor_cover_letter" in low:
-            return "  📖  reading the cover-letter instructions"
+            return "  📖  agent reads the cover-letter instructions"
         if "tailor_resume" in low or "/prompts/" in low:
-            return "  📖  reading the tailoring instructions"
-        return f"  📖  reading {os.path.basename(fp) or 'a file'}"
+            return "  📖  agent reads the tailoring instructions"
+        return f"  📖  agent reads {os.path.basename(fp) or 'a file'}"
     if name in ("Write", "Edit"):
         fp = str(inp.get("file_path", "")).lower()
         if "cover_letter.yaml" in fp:
-            return "  ✍️  writing your cover letter"
+            return "  ✍️  agent writes your cover letter"
         if "instance.yaml" in fp:
-            return "  ✍️  choosing and writing your tailored content"
+            return "  ✍️  agent chooses and writes your tailored content"
         if "omitted" in fp:
-            return "  📝  writing the omissions report (what was left out)"
+            return "  📝  agent writes the omissions report (what was left out)"
         if "job_description" in fp:
-            return "  🗂️  saving a copy of the job description"
-        return f"  ✍️  writing {os.path.basename(fp) or 'a file'}"
+            return "  🗂️  agent saves a copy of the job description"
+        return f"  ✍️  agent writes {os.path.basename(fp) or 'a file'}"
     if name == "Bash":
         cmd = str(inp.get("command", ""))
         if "cover --letter" in cmd or "resume-gen cover " in cmd:
             state["cover_render"] += 1
             if state["cover_render"] == 1:
-                return "  🖨️  rendering the cover letter …"
-            return f"  🖨️  re-rendering the cover letter (attempt {state['cover_render']}) …"
+                return "  🖨️  agent renders the cover letter …"
+            return f"  🖨️  agent re-renders the cover letter (attempt {state['cover_render']}) …"
         if "resume-gen render" in cmd or "render --instance" in cmd:
             state["render"] += 1
             if state["render"] == 1:
-                return "  🖨️  rendering the PDF …"
-            return f"  🖨️  re-rendering after trimming (attempt {state['render']}) …"
+                return "  🖨️  agent renders the PDF …"
+            return f"  🖨️  agent re-renders after trimming (attempt {state['render']}) …"
         if "validate" in cmd:
-            return "  🔎  validating the draft …"
+            return "  🔎  agent runs the fact-check validator …"
         if cmd.startswith("mkdir") or " mkdir " in cmd:
-            return "  📁  creating the output folder"
+            return "  📁  agent creates the output folder"
         return None  # other shell commands: keep quiet
     return None
 
@@ -158,7 +158,7 @@ def make_narrator():
             return text  # not JSON (e.g. the launcher's banner) — show as-is
         etype = ev.get("type")
         if etype == "system" and ev.get("subtype") == "init":
-            return "  ⚙️  starting the tailoring engine …"
+            return "  ⚙️  Claude agent starting — headless, no chat window …"
         if etype == "assistant":
             out = []
             for block in ev.get("message", {}).get("content", []):
@@ -182,7 +182,7 @@ def make_narrator():
                 pages = int(m.group(1))
                 if pages <= 1:
                     return "  ✅  it fits on one page"
-                return f"  ✂️  {pages} pages — trimming to fit one page …"
+                return f"  ✂️  {pages} pages — agent trims to fit one page …"
             return None
         return None  # result/rate-limit/thinking-token events: skip
 
