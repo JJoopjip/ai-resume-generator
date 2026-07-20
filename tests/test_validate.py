@@ -17,6 +17,8 @@ SCHEMA_PATH = REPO_ROOT / "schema" / "instance.schema.json"
 
 @pytest.fixture(scope="module")
 def master():
+    if not MASTER_PATH.exists():
+        pytest.skip("master.yaml is private and not checked in (fresh/CI checkout)")
     return v.load_yaml(MASTER_PATH)
 
 

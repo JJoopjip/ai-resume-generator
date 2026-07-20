@@ -1,0 +1,25 @@
+# Minimal CI: the unit tests guard the scorer/validator logic (they run
+# against the real fixture content, no Docker needed), and the image build
+# catches a broken Dockerfile before a render run would.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt pytest
+      - run: python3 -m pytest tests/ -q
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t resume-gen .

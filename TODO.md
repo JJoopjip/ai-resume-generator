@@ -132,26 +132,127 @@ Also resolved while writing the spec (previously listed under "Gaps"):
 
 ## Gaps found while compiling this list (not yet in PRD/Tech Spec — decide before or during Phase 1)
 
-- [ ] **Repo hygiene**: no `.gitignore` yet. `output/` will contain generated
-  PDFs/DOCXs/instance files per application — decide whether these are
-  committed (application audit trail) or gitignored (repo stays clean, trail
-  lives only locally). `master.yaml` itself contains PII (phone, email) —
-  confirm this repo is/stays private before any push to a remote, especially
-  if it's ever made public or shared.
-- [ ] **Dependency manifest**: PRD lists packages (`pyyaml`, `jinja2`,
-  `python-docx`, `jsonschema`) but there's no `requirements.txt`/`pyproject.toml`
-  yet — needed before the Dockerfile can be written.
+- [x] **Repo hygiene**: `.gitignore` exists and covers `output/` AND
+  `master.yaml` itself — verified (2026-07-19) that neither has ever been
+  committed, so no PII lives in git history. The application trail is
+  local-only by design.
+- [x] **Dependency manifest**: `requirements.txt` written (Phase 3 / TECH_SPEC
+  §8).
 - [x] **README.md**: written — quick start (Docker + no-Docker), normal
   workflow, CLI/exit-code reference, repo layout.
-- [ ] **Claude CLI auth/model config**: PRD doesn't yet say which Claude
-  model/version the tailoring step should invoke, or how API auth is
-  supplied (env var, config file) — needs to land in the Tech Spec.
+- [x] **Claude CLI auth/model config**: resolved in Phase 4 — user's existing
+  Claude Code login, flags pinned in `resume-gen`, overridable via
+  `RESUME_GEN_CLAUDE_FLAGS`.
 - [ ] **Test job descriptions**: no sample JDs checked in yet for repeatable
-  manual/automated dry runs — worth adding 2-3 real (or realistic) JDs across
-  bd/pm/dm profiles to `tests/fixtures/` or similar.
+  manual/automated dry runs — folded into Phase 5 (eval harness) below.
 - [ ] **Versioning discipline**: `master.yaml` has `schema_version: 1.0` but
   the instance schema and the prompt file have no version markers — if
   `master.yaml`'s shape changes later, nothing currently forces the prompt or
   validator to be checked for compatibility. Worth a lightweight convention
   (e.g. instance.yaml echoes `schema_version` and the script asserts it
   matches what it was built against).
+
+---
+
+# Improvement roadmap (planned 2026-07-19)
+
+Four phases, ordered by leverage. Each is independently shippable; 5 → 6 → 7 →
+8 is the recommended order (5 and 6 share fixtures; 8 touches everything so it
+goes last). Prerequisite quick wins first.
+
+## Phase 4.5 — Quick wins (before any new phase)
+
+- [ ] **Fix the `-se` stemmer bug** in `scripts/coverage.py:_stem`: the
+  sibilant check tests the *stripped stem* (`t[:-2].endswith(("s",…))`), so
+  singular nouns ending in `-se` mangle their plurals — `cases → cas` but
+  `case → case`; same for database/release/expense/license/purchase. Fix:
+  test the token's own suffix instead — strip `es` only for
+  `sses/xes/zes/ches/shes` (keeps `processes → process`, `boxes → box`,
+  `matches → match`; `cases` then falls to the `-s` rule → `case`). Add these
+  pairs to `test_stemmer_unifies_singular_and_plural`.
+- [ ] **Commit the pending working-tree changes** (coverage scorer overhaul,
+  Opus 4.8 default, prompt guidance) once the stemmer fix lands, and
+  **rebuild the Docker image** — `coverage.py` runs baked in the image, so
+  renders keep scoring with the old code until then.
+- [ ] **CI**: `.github/workflows/ci.yml` (repo has none) — `pytest -q` on
+  push, plus `docker build` so a broken Dockerfile can't sit unnoticed.
+  (Only worthwhile if/when the repo gets a GitHub remote; skip until then.)
+
+## Phase 5 — Eval harness: make selection quality measurable
+
+Motivation: the default just moved Sonnet/medium → Opus/high (≈2× cost) on the
+*belief* that bullet selection improves. Nothing measures that today, and
+scorer changes (like the Phase-4.5 fixes) can shift every score silently.
+
+- [ ] **Fixture JDs**: copy 3–5 real postings from `output/*/job_description.txt`
+  into `tests/fixtures/jds/` (public postings — no PII concern). Cover at
+  least two different profiles.
+- [ ] **Keyphrase snapshot tests**: golden file per fixture JD
+  (`tests/fixtures/keyphrases/<jd>.txt`) holding `extract_keyphrases` output;
+  a test asserts exact match. Scorer changes then show up as reviewable
+  golden-file diffs, not surprises. Include a regen helper
+  (`python3 -m tests.regen_snapshots` or a pytest `--regen` flag).
+- [ ] **`scripts/eval_run.py` + `resume-gen eval <jd> [--flags-a … --flags-b …]`**:
+  run the tailor stage twice on the same JD (two model/effort settings) into
+  scratch output dirs; collect per-run coverage score, render attempts,
+  page-fit result, and cost (reuse `scripts/session_cost.py`); emit a
+  side-by-side `eval.md` table. Answers "is Opus worth 2×?" with data.
+- [ ] **Optional LLM-judge**: a headless prompt given the JD + both
+  instance.yamls, scoring each selection against a short rubric (relevance,
+  specificity, seniority match) and picking a preference with rationale.
+  Advisory only — never gates anything.
+
+## Phase 6 — Content-gap digest: what to add to master.yaml next
+
+Motivation: the strategy is to raise coverage by enriching `master.yaml` with
+real experience, never by gaming the scorer — but each run's `content_gap`
+list currently dies in its folder.
+
+- [ ] **`scripts/gap_digest.py`** (pure stdlib + PyYAML, runs on host — no
+  Docker): walk `output/*/` folders that have `job_description.txt` +
+  `instance.yaml`; **recompute** coverage against the *current* `master.yaml`
+  (don't parse stale `coverage.md` — the bank evolves, so old reports
+  overstate gaps); aggregate `content_gap` terms across runs.
+- [ ] **Output `output/gap_digest.md`**: terms ranked by how many postings
+  wanted them, each with the list of slugs that asked. Top of file: "these
+  N terms recur and the bank has nothing on them — if they're truly part of
+  your experience, write them up." Honor the no-faking rule in the wording.
+- [ ] **Wire in**: `resume-gen gaps` subcommand + a line in README. Tests with
+  two synthetic run folders under `tests/fixtures/`.
+
+## Phase 7 — Application tracker: from generator to job-search tool
+
+Motivation: `output/` folders are already per-application audit trails; the
+web UI already serves resumes. Missing: one place to see status across all
+applications.
+
+- [ ] **Per-folder `status.yaml`** (`status: draft|applied|interview|rejected|
+  offer`, `applied_on`, `notes`) — keeps each folder self-contained and
+  git-ignored with the rest of `output/`.
+- [ ] **Web UI `/applications` page** (extend `web/app.py`): table of slug,
+  date, coverage %, page count, status (editable dropdown → POST writes
+  `status.yaml`), links to resume/cover PDFs and `coverage.md`.
+- [ ] **Outcome-vs-score view** (later, once ≥ ~15 applications have
+  outcomes): simple table/plot of status against coverage score — real-world
+  check of whether the keyword screen predicts anything.
+
+## Phase 8 — Publishable repo: portfolio-ready without PII
+
+Motivation: README is written as a portfolio piece but the repo can't be
+shared while it assumes a private `master.yaml` beside it. Verified: neither
+`master.yaml` nor `output/` was ever committed, so **no git-history rewrite is
+needed** — this phase is relocation + example content only.
+
+- [ ] **Master path indirection**: `RESUME_GEN_MASTER` env var (default
+  `./master.yaml` for full back-compat) threaded through `resume-gen`, the
+  tailor prompt text, and `scripts/generate_resume.py`. Real bank moves to
+  e.g. `~/.config/resume-gen/master.yaml`.
+- [ ] **`master.example.yaml`**: fictional persona, realistic shape (3 roles,
+  2 profiles, variants, themes, skills). Must pass `validate` and render to
+  one page — CI/pytest asserts this so the example never rots.
+- [ ] **Sample output**: one rendered `docs/sample/` (resume.pdf +
+  coverage.md from the example persona + a fixture JD) checked in so a
+  visitor sees the result without running anything.
+- [ ] **README polish**: swap personal references for the example persona,
+  add a demo GIF/asciinema of `./resume-gen jd.txt`, keep the privacy note
+  ("your real master.yaml lives outside the repo").
