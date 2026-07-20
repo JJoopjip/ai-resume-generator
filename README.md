@@ -60,14 +60,24 @@ target company's culture.
 | Use the most powerful AI for a high-stakes application | see below |
 | Just re-build the PDF from an existing draft (no AI) | `./resume-gen render --instance output/<folder>/instance.yaml` |
 | Check a draft is valid without building anything | `./resume-gen validate --instance output/<folder>/instance.yaml` |
+| Compare two AI settings head-to-head on one posting | `./resume-gen eval jd.txt` (see below) |
 
-**Dialing the AI up for an important application.** By default the tool uses a
-fast, cost-effective model. For your dream job, switch to the most capable one:
+**Dialing the AI down for a routine application.** By default the tool uses the
+most capable model (Opus 4.8, high effort) — bullet selection is the one
+judgment call nothing downstream can repair. To roughly halve the cost on a
+routine posting, drop to the lighter setting:
 
 ```sh
-RESUME_GEN_CLAUDE_FLAGS="--model claude-opus-4-8 --effort high \
+RESUME_GEN_CLAUDE_FLAGS="--model claude-sonnet-5 --effort medium \
   --permission-mode acceptEdits --allowedTools Bash Read Edit Write" ./resume-gen jd.txt
 ```
+
+**Is the expensive model actually better?** Measure instead of guessing:
+`./resume-gen eval jd.txt` runs the tailor stage twice on the same posting (by
+default Sonnet/medium vs Opus/high — both cost real money), then writes a
+side-by-side `output/eval-<jd>-<date>/eval.md` comparing coverage, page fit, and
+cost. Add `--judge` for a blind AI preference read (`judge.md`) that scores the
+two drafts without knowing which model made which.
 
 **One-time setup.** The AI step uses the `claude` command-line tool (it signs in
 with your existing Claude account — no separate API key needed). The build step

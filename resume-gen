@@ -21,6 +21,12 @@
 #                                              image (build once:
 #                                              docker build -t resume-gen .)
 #
+#   resume-gen eval <job-description-file>     A/B the tailor stage: run it twice
+#                                              at two model/effort settings and
+#                                              write a side-by-side eval.md
+#                                              (coverage, pages, cost). See
+#                                              scripts/eval_run.py --help.
+#
 # Cover letters are OFF by default so a resume-only posting never pays for the
 # extra drafting/render loop. Opt in with `--cover`, the `cover-letter`
 # subcommand, or RESUME_GEN_COVER=1.
@@ -41,13 +47,22 @@ case "${1:-}" in
       -v resume-gen-tectonic-cache:/home/appuser/.cache/Tectonic \
       resume-gen "$@"
     ;;
+  eval)
+    shift
+    exec python3 scripts/eval_run.py "$@"
+    ;;
   -h|--help)
-    sed -n '2,30p' "$0"
+    sed -n '2,36p' "$0"
     exit 0
     ;;
 esac
 
 TODAY="$(date +%F)"
+
+# Optional slug suffix, threaded into the task prompt. The eval harness sets
+# this (e.g. "-opus-high") so two tailor runs on the SAME posting on the SAME
+# day land in distinct output/ folders instead of fighting over one slug.
+SLUG_SUFFIX="${RESUME_GEN_SLUG_SUFFIX:-}"
 
 # Model/effort pinned for reproducibility: Opus 4.8 / high. Bullet selection is
 # the one judgment call in this pipeline that nothing downstream can repair —
@@ -176,7 +191,7 @@ file: $JD
 
 Do all of this without asking any questions:
 1. Read prompts/tailor_resume.md, master.yaml, and the job description ($JD).
-2. Pick an output slug '<company>-<role>-$TODAY' and create output/<slug>/.
+2. Pick an output slug '<company>-<role>-$TODAY$SLUG_SUFFIX' and create output/<slug>/.
 3. Copy $JD to output/<slug>/job_description.txt (audit trail).
 4. Write output/<slug>/instance.yaml per the prompt: choose the profile, select
    and order bullets/highlights/skills, and include priority_order. Aim to fit

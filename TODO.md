@@ -162,7 +162,7 @@ goes last). Prerequisite quick wins first.
 
 ## Phase 4.5 — Quick wins (before any new phase)
 
-- [ ] **Fix the `-se` stemmer bug** in `scripts/coverage.py:_stem`: the
+- [x] **Fix the `-se` stemmer bug** in `scripts/coverage.py:_stem`: the
   sibilant check tests the *stripped stem* (`t[:-2].endswith(("s",…))`), so
   singular nouns ending in `-se` mangle their plurals — `cases → cas` but
   `case → case`; same for database/release/expense/license/purchase. Fix:
@@ -170,13 +170,13 @@ goes last). Prerequisite quick wins first.
   `sses/xes/zes/ches/shes` (keeps `processes → process`, `boxes → box`,
   `matches → match`; `cases` then falls to the `-s` rule → `case`). Add these
   pairs to `test_stemmer_unifies_singular_and_plural`.
-- [ ] **Commit the pending working-tree changes** (coverage scorer overhaul,
+- [x] **Commit the pending working-tree changes** (coverage scorer overhaul,
   Opus 4.8 default, prompt guidance) once the stemmer fix lands, and
   **rebuild the Docker image** — `coverage.py` runs baked in the image, so
   renders keep scoring with the old code until then.
-- [ ] **CI**: `.github/workflows/ci.yml` (repo has none) — `pytest -q` on
-  push, plus `docker build` so a broken Dockerfile can't sit unnoticed.
-  (Only worthwhile if/when the repo gets a GitHub remote; skip until then.)
+- [x] **CI**: `.github/workflows/ci.yml` — `pytest -q` on push, plus
+  `docker build`. (The repo turned out to already have a GitHub remote.)
+  Tests that need the private `master.yaml` skip on a fresh checkout.
 
 ## Phase 5 — Eval harness: make selection quality measurable
 
@@ -184,23 +184,23 @@ Motivation: the default just moved Sonnet/medium → Opus/high (≈2× cost) on 
 *belief* that bullet selection improves. Nothing measures that today, and
 scorer changes (like the Phase-4.5 fixes) can shift every score silently.
 
-- [ ] **Fixture JDs**: copy 3–5 real postings from `output/*/job_description.txt`
-  into `tests/fixtures/jds/` (public postings — no PII concern). Cover at
-  least two different profiles.
-- [ ] **Keyphrase snapshot tests**: golden file per fixture JD
-  (`tests/fixtures/keyphrases/<jd>.txt`) holding `extract_keyphrases` output;
-  a test asserts exact match. Scorer changes then show up as reviewable
-  golden-file diffs, not surprises. Include a regen helper
-  (`python3 -m tests.regen_snapshots` or a pytest `--regen` flag).
-- [ ] **`scripts/eval_run.py` + `resume-gen eval <jd> [--flags-a … --flags-b …]`**:
+- [x] **Fixture JDs**: the 4 distinct real postings from
+  `output/*/job_description.txt` copied into `tests/fixtures/jds/` (public
+  postings — no PII concern).
+- [x] **Keyphrase snapshot tests**: golden `.tsv` per fixture JD under
+  `tests/fixtures/keyphrases/` (display + stems per line); regen via
+  `python3 -m tests.regen_snapshots`, then review the git diff.
+- [x] **`scripts/eval_run.py` + `resume-gen eval <jd> [--a …] [--b …]`**:
   run the tailor stage twice on the same JD (two model/effort settings) into
   scratch output dirs; collect per-run coverage score, render attempts,
   page-fit result, and cost (reuse `scripts/session_cost.py`); emit a
   side-by-side `eval.md` table. Answers "is Opus worth 2×?" with data.
-- [ ] **Optional LLM-judge**: a headless prompt given the JD + both
-  instance.yamls, scoring each selection against a short rubric (relevance,
-  specificity, seniority match) and picking a preference with rationale.
-  Advisory only — never gates anything.
+- [x] **Optional LLM-judge** (`--judge`): headless session applies
+  `prompts/eval_judge.md` to the two instances presented blind, in random
+  order (candidate_1/candidate_2), and writes `judge.md`. Advisory only.
+- [ ] **First live eval run**: `./resume-gen eval <jd> --judge` on a real
+  posting to answer "is Opus/high worth 2×?" — not run yet (costs real
+  money; user's call when).
 
 ## Phase 6 — Content-gap digest: what to add to master.yaml next
 

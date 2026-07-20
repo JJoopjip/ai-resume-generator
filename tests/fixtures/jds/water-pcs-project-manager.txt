@@ -1,0 +1,86 @@
+PROJECT MANAGER TW
+ 
+
+Job ID: 64306
+Job Category: Project Management
+Division & Section: Toronto Water, Technology & Customer Experience
+Work Location: 435 Kipling Avenue
+Job Type & Duration: Full-Time, Temporary Vacancy (18 months)
+Salary Range: $96,566.00 - $132,880.00
+Hiring Zone: $106,063.00 - $114,994.00
+Shift Information: Monday to Friday, 35 hours per week
+Affiliation: Non-Union
+Number of Positions Open: 1
+Posting Period: 07-Jul-2026 to 28-Jul-2026
+
+
+Job Description:
+As a member of Toronto Water's Technology & Customer Experience Team, the Project Manager in the PCS Unit is responsible to provide project management and specialized technical support related to complex process control systems involving high level of process automation in the water plants, wastewater treatment plants, distribution/collection environment, and solid waste processing facilities.
+
+
+Reporting to the Senior Project Manager, the Project Manager oversees, reviews, and directs the work of staff and engineering consultants related to compliance and implementation of PCS. The Project Manager is fully accountable for ensuring reliable, effective/efficient services in the design, construction, commissioning, and daily operation of PCS and SCADA (Supervisory Control and Data Acquisition) equipment, as well as data management systems within Toronto Water and Solid Waste Management Services. The project manager also manages Toronto Water PCS and SCADA projects, vendor contracts, track consultant assignments, and administer payments.
+
+
+Major Responsibilities:
+Participates in and carries out varied assignments related to Process Control Systems and process automation within a broad field of Municipal infrastructure design and construction.
+Manages and provides leadership for assigned projects from inception to completion. Assesses funding, schedule, scope requirements, develops Terms of Reference, fully defines project deliverables, and manages change conditions. Ensures effective teamwork, communication, high standards of work quality, organizational performance, documentation, and continuous learning.
+Oversees and evaluates the work performance of external service providers with respect to quality, timeline, cost, and completion of required tasks. Finalizes contract payments, implements quality control/quality assurance, ensures project expenditures are controlled and maintained within approved budgets.
+Acts as first point of contact, providing Process Control System / SCADA support and coordination to the various water, wastewater, and distribution/collection projects within Toronto Water.
+As subject matter expert, provide Process Control System, SCADA and Cyber security support and coordination to Solid Waste Management Services Division
+Collect, track and update Process Control System/ SCADA assets data and related record documentations.
+Administers, coordinates, and provides guidance to process automation projects including planning, design, installation, and commissioning.
+Conducts investigations, both business and technical, for the analysis and evaluation of existing and proposed PCS modifications, including written and oral assessments of performance, cost benefit analysis, legislated requirements, and recommends changes accordingly.
+Provides support to the capital works budgeting process, and assist in controlling expenditures of consultants, contractors, and internal staff.
+Troubleshoots and provides guidance to facility staff in investigations related to PCS usage and performance.
+Maintains an up-to-date level of expertise in water and wastewater process control automation, SCADA/PCS programming, and related technologies.
+Oversees the integration of complex technical and process equipment installations; testing and acceptance/approvals, including guidance of assigned internal and external resources.
+Investigates and prepares analysis/recommendations concerning PCS and SCADA problems of varying complexity and/or assists unit Manager, Senior Project Manager, or Senior Engineer to resolve more complex automation performance issues.
+Ensures quality assurance procedures and quality control measures are adhered to in the management of PCS design and construction activities. Ensures that the PCS performance objectives comply with the established Toronto Water `Goals of Automation.
+Reviews and participates in testing and implementation of design concepts to meet functional requirements including participation as the PCS lead during Factory Acceptance Testing (FAT) & Site Acceptance Testing (SAT) of control systems.
+Tracks procedures and policy compliance associated with PCS deliverables and contractual documentation.
+Participates in preliminary design, detailed design, and implementation of capital work projects, and works with City of Toronto staff, consultants and contractors during construction and commissioning stages to ensure quality workmanship and compliance with Toronto Water's PCS goals and guidelines.
+Provides input and supports the development/implementation of technical standards and policies associated with management and stewardship of PCS through routine review and audit reports.
+Liaises and coordinates with divisional and corporate support sections as well as other facility representatives; Managers, Supervisors, EI Specialists, Engineers, IT System Analysts, and Operational/Maintenance staff.
+Understands programming and maintenance of a variety of process control system elements, PLC, OIT, SCADA, and other computerized equipment.
+Utilizes process operations, sampling, and laboratory analysis results to interpret equipment functionality as it relates to programmable logic controllers (PLC) / SCADA performance.
+Understands computerized software systems, such as programmable logic controllers (PLC), Supervisory Control and Data Acquisition (as well as a Computerized Maintenance Management System (CMMS), Work Management System (WMS), Toronto Water SCADA Data reporting system eRIS and other related technology for support and analytical purposes.
+Coordinates related work between various stakeholders; Engineering and Construction Services, Capital Works Delivery, Electrical & Instrumentation Specialists, Contracted Services, and Integrated Technology Management Support staff related to investigations, modifications and improvements of the PLC and HMI systems for the facility.
+Prepares estimates to assist in preparation of capital budget.
+Leads project teams and supervises/directs project team members, consultants, and contractors.
+Provides specialized design services, technical advice, and expertise to support the units of the Division/Cluster/Corporation.
+Modifies established guidelines, standards, and processes, devises new approaches, applies existing criteria in innovative ways and draws conclusions from comparative situations.
+Identifies, evaluates, and provides technical expertise and recommendations for the resolution of issues with assigned projects. Ensures compliance within guidelines by acting as a signing authority.
+Reviews drawings, purchasing documents and specifications prepared by staff, contractors, and consultants.
+Assists with the preparation of Committee and Council reports, presentations, purchasing documents, contract plans, specifications, and estimates.
+Evaluates proposals and/or bids and makes recommendations for award of contracts.
+Establishes and maintains linkages to other units in the City to co-ordinate input and ensure effective partnership.
+ 
+
+Key Qualifications:
+Possession of a university degree in engineering, or the approved equivalent combination of education and electrical/controls experience. Designation as a Professional Engineer in good standing and licensed to practice in Ontario is highly desired.
+Must possess a valid Province of Ontario Class "G" Driver's License and have daily access to a vehicle to travel to various work locations and construction sites in a timely and efficient manner.
+Considerable experience in the application of the principles and practices of instrumentation, process control, PLC, and SCADA systems as applied to municipal water treatment, wastewater treatment or distribution/collection systems or solid waste processing facilities.
+Demonstrated ability to interpret engineering drawings, Factory Acceptance Testing (FAT) / Site Acceptance Testing (SAT) documentation, equipment/instrumentation layouts/schematics, specifications, process diagrams, process control narratives, and programming ladder/function block logic.
+Experience in the application of design principles and implementation processes related to process control systems throughout the preliminary design, detailed design, and construction/commissioning phases.
+Knowledge of the maintenance, repair, and troubleshooting of programmable logic controllers, remote terminal units, and data communications.
+Knowledge of operation technology cyber security technologies, management, standards and practices in critical infrastructure and industrial control systems.
+Sound working knowledge of relevant processes, equipment used in water and wastewater treatment operations, or solid waste management systems.
+
+You must also have:
+Demonstrated critical thinking skills, ability to communicate both orally and in writing, and develop constructive internal and external work relationships.
+Demonstrated ability to implement process automation solutions.
+Strong interpersonal skills with ability to establish effective working relationships with all stakeholders, employees, client departments, outside agencies or other levels of government.
+Demonstrated ability to manage multiple assignments and conflicting priorities.
+Demonstrated ability to communicate effectively both verbally and in writing at all organizational levels.
+Thorough knowledge, experience, and ability to work in an environment using hazardous chemicals associated with water/wastewater treatment and solid waste processing facilities.
+Project Management experience in an Engineering environment, preferably within municipal infrastructure design and construction.
+Possession of PMP certification from the Project Management Extensive (PMI) would be an asset.
+Working knowledge of government legislation in the areas of employment, labour, human rights, the Occupational Health and Safety Act, and City policies and procedures.
+ 
+
+Equity, Diversity and Inclusion
+The City is an equal opportunity employer, dedicated to creating a workplace culture of inclusiveness that reflects the diverse residents that we serve. Learn more about the City’s commitment to employment equity.
+
+
+Accommodation
+The City of Toronto is committed to creating an accessible and inclusive organization. We are committed to providing barrier-free and accessible employment practices in compliance with the Accessibility for Ontarians with Disabilities Act (AODA). Should you require Code-protected accommodation through any stage of the recruitment process, please make them known when contacted and we will work with you to meet your needs. Disability-related accommodation during the application process is available upon request. Learn more about the City’s Hiring Policies and Accommodation Process.
