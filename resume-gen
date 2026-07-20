@@ -49,13 +49,16 @@ esac
 
 TODAY="$(date +%F)"
 
-# Model/effort pinned for reproducibility: Sonnet 5 / medium is a strong,
-# cost-effective default for JD->selection work (the validator guards
-# correctness regardless of model). Bump to `--model claude-opus-4-8 --effort
-# high` for the sharpest selection, or drop to `--effort low` to trade a little
-# selection quality for speed. Perms pre-authorize the tools the headless run
-# needs so it runs unattended. Override the whole set via RESUME_GEN_CLAUDE_FLAGS.
-CLAUDE_FLAGS="${RESUME_GEN_CLAUDE_FLAGS:---model claude-sonnet-5 --effort medium --permission-mode acceptEdits --allowedTools Bash Read Edit Write}"
+# Model/effort pinned for reproducibility: Opus 4.8 / high. Bullet selection is
+# the one judgment call in this pipeline that nothing downstream can repair —
+# validate.py proves the result is *truthful* and coverage.py scores its keyword
+# fit, but neither can tell whether the five bullets chosen were the five most
+# persuasive ones for this posting. That call is worth paying for; a run costs
+# roughly a couple of dollars against the value of the application it produces.
+# Drop to `--model claude-sonnet-5 --effort medium` (the previous default) to
+# halve the cost at some selection quality. Perms pre-authorize the tools the
+# headless run needs so it runs unattended. Override via RESUME_GEN_CLAUDE_FLAGS.
+CLAUDE_FLAGS="${RESUME_GEN_CLAUDE_FLAGS:---model claude-opus-4-8 --effort high --permission-mode acceptEdits --allowedTools Bash Read Edit Write}"
 
 # Run the headless Claude session, then record what it cost into the run's
 # output folder (scripts/session_cost.py reads the session transcript). Best

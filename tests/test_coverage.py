@@ -22,6 +22,8 @@ MASTER_PATH = REPO_ROOT / "master.yaml"
 
 @pytest.fixture(scope="module")
 def master():
+    if not MASTER_PATH.exists():
+        pytest.skip("master.yaml is private and not checked in (fresh/CI checkout)")
     return v.load_yaml(MASTER_PATH)
 
 
@@ -129,3 +131,77 @@ def test_render_markdown_has_sections(master):
     assert "# JD coverage — acme-analyst-2026-01-01" in md
     assert "## Covered" in md
     assert "not in your master.yaml" in md
+
+
+# ---------------------------------------------------------------------------
+# Keyphrase extraction — regressions for four scoring bugs that made the JD
+# screen report near-zero coverage on resumes that genuinely matched, and fed
+# the tailoring agent junk `selection_gap` terms to chase.
+# ---------------------------------------------------------------------------
+# A JD long enough to offer far more bigrams than the term budget, which is the
+# condition under which every one of these bugs surfaced.
+_JD = """
+Business Analyst, Finance and Treasury. The successful candidate conducts
+research and evaluates corporate policies. Considerable experience with
+business process and business operations is required. Develops project plans
+and detailed action plans. Reports to the Management Division at 799 Islington
+Avenue, 35 hours/week, for 18 months. Provides administrative support and
+ensures effective stakeholder reporting across various committees. Strong
+analytical skills required. Prepares and reviews financial reporting and
+maintains budget procedures.
+"""
+
+
+def test_unigrams_are_never_starved_by_bigrams():
+    """The bug: bigrams were ranked first and `return`ed on hitting the limit,
+    so a real JD (hundreds of bigrams) left zero unigram slots and one-word
+    terms scored 0 no matter how often the resume said them."""
+    phrases = cov.extract_keyphrases(_JD, limit=25)
+    unigrams = [p for p in phrases if len(p.stems) == 1]
+    assert unigrams, "unigrams were starved out by bigrams"
+    assert len(unigrams) >= 5
+
+
+def test_stopword_set_is_stemmed_so_plurals_do_not_leak():
+    """The bug: stopwords were stored unstemmed but tested against stemmed
+    tokens, so 'requirements' -> 'requirement' leaked in as a content word."""
+    assert all(cov._stem(w) in cov._STOPWORDS for w in cov._STOPWORDS_RAW)
+    displays = {p.display for p in cov.extract_keyphrases(_JD, limit=25)}
+    assert not any("requirement" in d for d in displays)
+
+
+def test_stemmer_unifies_singular_and_plural():
+    """The bug: a blanket '-es' strip mapped 'policies'->'polici' but
+    'policy'->'policy', so a JD term never matched the resume's own wording."""
+    for singular, plural in [
+        ("policy", "policies"), ("take", "takes"),
+        ("process", "processes"), ("system", "systems"),
+        # Singulars that themselves end in a sibilant-looking '-se': the fix's
+        # first cut stripped 'es' whenever the *stem* ended in a sibilant
+        # letter, so 'cases' -> 'cas' while 'case' -> 'case' — the exact
+        # silent-miss class the stemmer exists to prevent.
+        ("case", "cases"), ("database", "databases"), ("release", "releases"),
+        ("expense", "expenses"), ("license", "licenses"), ("phase", "phases"),
+        # True sibilant + es plurals must still strip the full 'es'.
+        ("box", "boxes"), ("match", "matches"),
+    ]:
+        assert cov._stem(singular) == cov._stem(plural), (singular, plural)
+    assert cov._stem("business") == "business"  # …ss is not a plural
+
+
+def test_bigrams_rank_by_salience_not_alphabetically():
+    """The bug: ~98% of a single JD's bigrams occur once, so the count sort tied
+    and fell through to an alphabetical tiebreak — the term list was the front
+    of the alphabet ('account developments', 'act professionally'), not the job."""
+    displays = [p.display for p in cov.extract_keyphrases(_JD, limit=25)]
+    assert "business analyst" in displays
+    # Pure-numeric scaffolding must never score: address, hours, contract length.
+    assert not any(t in " ".join(displays) for t in ("799", "35", "18"))
+
+
+def test_salient_unigram_scores_when_the_resume_says_it():
+    """End to end: the screen must credit a one-word JD term the resume uses.
+    This is what reported 0% before — 'reporting' could not reach the term list."""
+    phrases = cov.extract_keyphrases(_JD, limit=25)
+    bag = cov.token_set("Stakeholder reporting and budget analysis for business operations")
+    assert any(p.covered_by(bag) for p in phrases)

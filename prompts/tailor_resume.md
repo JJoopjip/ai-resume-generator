@@ -234,6 +234,14 @@ Read the exit code and the JSON on stdout:
   invent a bullet to cover them. A large `profile.suggested`-vs-your-`profile`
   disagreement is worth a second look at your profile choice. Coverage is a
   nudge, not a gate — never sacrifice truthfulness or the one-page rule for it.
+
+  Swap only when the bullet you are adding is *genuinely* the better evidence
+  for this role. Never trade a stronger bullet for a weaker one to make a term
+  appear: the screen matches words, it cannot see relevance, and a resume that
+  reads worse but scores higher is a worse resume. Some `selection_gap` entries
+  are single generic words ("process", "plans") — those are the least worth
+  chasing. If no omitted bullet is a real improvement, change nothing and stop;
+  leaving a term uncovered is a perfectly good outcome.
 - **Exit 1**: validation failure — `errors[]` names the id/field mismatch.
   Fix `instance.yaml` (you likely copied a locked field wrong or altered
   bullet text) and re-run. This does not count against the overflow retry

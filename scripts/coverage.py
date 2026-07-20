@@ -30,7 +30,11 @@ from typing import Any, Iterable
 # -----------------------------------------------------------------------------
 # A compact, domain-neutral stopword set. Kept small on purpose: over-filtering
 # hides real JD terms, and the frequency ranking already suppresses filler.
-_STOPWORDS = {
+#
+# Written unstemmed for readability; `_STOPWORDS` below is the stemmed set that
+# callers actually test against. Membership is always checked on a stemmed
+# token, so an unstemmed plural here would never match (see _STOPWORDS).
+_STOPWORDS_RAW = {
     "a", "an", "the", "and", "or", "but", "if", "of", "to", "in", "on", "for",
     "with", "at", "by", "from", "as", "is", "are", "was", "were", "be", "been",
     "being", "this", "that", "these", "those", "it", "its", "will", "would",
@@ -45,7 +49,33 @@ _STOPWORDS = {
     "year", "including", "ability", "strong", "excellent", "including",
     "responsibilities", "requirements", "qualifications", "preferred",
     "plus", "new", "key", "including", "including",
+    # Survives tokenization as one token because of the internal slash.
+    "and/or",
 }
+
+# JD connective tissue: words a posting uses to *phrase* a duty rather than to
+# name a skill. Without these, frequency ranking surfaces "considerable
+# experience" and "conducts research" as top terms and a resume gets scored on
+# whether it echoes the posting's prose style. Kept to words that carry no
+# domain meaning on their own — anything a reader could mistake for a skill
+# ("analysis", "budget", "compliance") stays out of this set.
+_BOILERPLATE = {
+    # Evaluative filler — grades a skill, never names one.
+    "considerable", "various", "detailed", "specific", "effective",
+    "effectively", "related", "relevant", "appropriate", "necessary",
+    "successful", "proven", "demonstrated", "general", "overall", "strong",
+    # Weak verbs. Dropping these is what lets the *object* surface on its own:
+    # "conducts research" stops eating a slot, and "research" scores as a
+    # unigram instead. Stronger verbs a resume genuinely echoes — prepare,
+    # review, maintain, support, analyze, manage — are deliberately absent.
+    "ensure", "ensuring", "conduct", "conducted", "conducting",
+    "take", "taken", "taking", "provide", "provided", "providing",
+    "perform", "performed", "performing", "considered",
+    # Posting scaffolding: hiring-process prose, not the job.
+    "duties", "assigned", "candidate", "applicant", "applicable", "please",
+    "apply", "employment", "equity", "diversity", "accommodation",
+}
+_STOPWORDS_RAW |= _BOILERPLATE
 
 # A token starts and ends on an alphanumeric, so trailing sentence punctuation
 # ("chains." -> "chains") never sticks. Internal +#/&.'- keep "modern-trade",
@@ -67,15 +97,38 @@ def _fold(text: str) -> str:
 
 def _stem(token: str) -> str:
     """Crude, deterministic plural fold. Applied to BOTH the JD side and the
-    resume side, so it need not be linguistically correct — only *consistent*:
-    'processes' -> 'process', 'systems' -> 'system', while 'business' (…ss) and
-    short tokens are left alone."""
+    resume side.
+
+    Being applied to both sides is not enough on its own — the fold must also
+    map a word and its plural to the *same* stem, or a JD term never matches the
+    resume's own wording of it. A blanket "…es" -> strip-two rule failed that:
+    'policies' -> 'polici' while 'policy' -> 'policy', and 'takes' -> 'tak'
+    while 'take' -> 'take', so those pairs silently scored as misses. Hence the
+    'ies' -> 'y' rule, and stripping 'es' only after a sibilant, where English
+    actually adds it ('processes' -> 'process').
+
+    The sibilant test must look at the token's own suffix, not at whether the
+    stripped stem happens to end in a sibilant letter: 'cases'[:-2] is 'cas',
+    which ends in 's' — but that 's' belongs to 'case', so stripping two gave
+    'cas' while 'case' stayed 'case' (same for database/release/expense/
+    license). Matching the explicit sibilant+es suffixes lets those fall
+    through to the plain '-s' rule instead.
+    """
     t = token.lower()
-    if len(t) > 4 and t.endswith("es") and not t.endswith("ss"):
-        return t[:-2]
+    if len(t) > 4 and t.endswith("ies"):
+        return t[:-3] + "y"                       # policies -> policy
+    if len(t) > 4 and t.endswith(("sses", "xes", "zes", "ches", "shes")):
+        return t[:-2]                             # processes -> process, boxes -> box
     if len(t) > 3 and t.endswith("s") and not t.endswith("ss"):
-        return t[:-1]
+        return t[:-1]                             # systems -> system, takes -> take
     return t
+
+
+# Stopwords are tested against *stemmed* tokens, so the set itself must be
+# stemmed. Without this, every plural entry silently leaked back in as a content
+# word ("requirements" stems to "requirement", which was not in the raw set), and
+# JD boilerplate scored as a key term.
+_STOPWORDS = {_stem(w) for w in _STOPWORDS_RAW}
 
 
 def tokens(text: str) -> list[str]:
@@ -107,17 +160,32 @@ class Keyphrase:
         return all(s in bag for s in self.stems)
 
 
-def extract_keyphrases(jd_text: str, limit: int = 25) -> list[Keyphrase]:
-    """Rank the JD's most salient terms: bigrams of adjacent content words first
-    (they're specific — 'business analysis', 'acceptance testing'), then single
-    content words by frequency. A unigram already contained in a chosen bigram
-    is skipped to avoid double-counting."""
+def extract_keyphrases(
+    jd_text: str, limit: int = 25, unigram_share: float = 0.4
+) -> list[Keyphrase]:
+    """Rank the JD's most salient terms: bigrams of adjacent content words
+    (they're specific — 'business analysis', 'acceptance testing') alongside
+    single content words by frequency.
+
+    Both kinds get a reserved share of `limit` — `unigram_share` of the slots go
+    to unigrams — and whichever side runs out first donates its unused slots to
+    the other. This split is load-bearing: ranking bigrams ahead of unigrams and
+    filling to `limit` sounds equivalent, but a real JD offers hundreds of
+    bigrams, so unigrams never survived the cut and salient one-word terms
+    ('stakeholder', 'reporting', 'budget') scored zero no matter how often the
+    resume said them.
+    """
     folded = _fold(jd_text)
     matches = list(_TOKEN_RE.finditer(folded))
     lowered = [m.group().lower() for m in matches]
     stemmed = [_stem(m.group()) for m in matches]
 
     def is_content(i: int) -> bool:
+        # Pure numbers are posting scaffolding, never a skill: they gave us
+        # "799 islington" (the office address), "35 hours/week", "18 months".
+        # Alphanumerics survive, so "p3", "iso9001", and "sql" still count.
+        if stemmed[i].isdigit():
+            return False
         return stemmed[i] not in _STOPWORDS and len(stemmed[i]) > 1
 
     def adjacent(i: int) -> bool:
@@ -150,22 +218,37 @@ def extract_keyphrases(jd_text: str, limit: int = 25) -> list[Keyphrase]:
     # whose partner word is absent shouldn't hide the salient word's own
     # coverage (e.g. "distribution" must still count even under "manage
     # distribution").
-    ranked_bigrams = sorted(bigram_counts.items(), key=lambda kv: (-kv[1], bigram_display[kv[0]]))
+    # Rank bigrams by their own count, then by how salient their two words are
+    # on their own (summed unigram frequency). The second key does nearly all
+    # the work: in a single posting ~98% of bigrams occur exactly once, so
+    # count alone is a near-universal tie. That tie used to fall through to an
+    # alphabetical tiebreak, which is why the term list read "account
+    # developments, act professionally, and/or operations" — the front of the
+    # alphabet rather than the heart of the job. Weighting by constituent
+    # salience puts "business analyst" and "analytical skills" on top instead.
+    def _bigram_rank(kv: tuple[tuple[str, str], int]) -> tuple:
+        (a, b), count = kv
+        return (-count, -(unigram_counts[a] + unigram_counts[b]), bigram_display[(a, b)])
+
+    ranked_bigrams = sorted(bigram_counts.items(), key=_bigram_rank)
     ranked_unigrams = sorted(unigram_counts.items(), key=lambda kv: (-kv[1], kv[0]))
-    for key, _ in ranked_bigrams:
+
+    # Reserve each side its share, then let the shorter side's leftovers go to
+    # the other so a JD that is all prose (or all jargon) still fills `limit`.
+    want_uni = min(len(ranked_unigrams), max(1, round(limit * unigram_share)))
+    want_big = min(len(ranked_bigrams), limit - want_uni)
+    want_uni = min(len(ranked_unigrams), limit - want_big)
+
+    for key, _ in ranked_bigrams[:want_big]:
         if key in seen:
             continue
         phrases.append(Keyphrase(bigram_display[key], key))
         seen.add(key)
-        if len(phrases) >= limit:
-            return phrases
-    for stem, _ in ranked_unigrams:
+    for stem, _ in ranked_unigrams[:want_uni]:
         if (stem,) in seen:
             continue
         phrases.append(Keyphrase(unigram_display[stem], (stem,)))
         seen.add((stem,))
-        if len(phrases) >= limit:
-            break
     return phrases
 
 
