@@ -117,6 +117,31 @@ relevance is thin — the point is that its dates sit in the timeline. On overfl
 (§6), prefer trimming `boots` down to a single bullet before removing the role
 entirely, so the dates stay visible.
 
+### 3b. Canadian experience — the thaifest role (always included)
+
+`master.yaml` has a `thaifest` role (Public Relations Intern, Thai Festival
+Toronto Foundation, Toronto — May 2026 – Present). **Include it on every resume,
+regardless of the JD's topical fit.** It is her current, Canadian-based role, and
+a Canadian recruiter reads local experience as a signal in its own right — that
+signal is the point, so it is never dropped for low keyword overlap the way an
+ordinary role would be. Keep it in the main **Experience** section (never
+`additional`).
+
+Scale *how much* of it appears to the JD, but never below one bullet:
+
+- **JD is relevant** (marketing, communications, PR, partnerships, BD, events,
+  stakeholder/vendor coordination, program/process setup): select 2–4 bullets
+  and pick the profile variant that matches, as you would for any strong role.
+- **JD is unrelated** (e.g. a pharma reimbursement or lab role): keep just the
+  **single strongest / most transferable** bullet — `tf_infrastructure`
+  (systems/process/CRM) or `tf_partnerships` (stakeholder coordination) usually
+  travel furthest — so the role and its current Canadian dates still appear
+  without spending page space on off-topic detail.
+
+This is the same treatment as `boots` in §3a (timeline-load-bearing, trimmed not
+dropped), applied here for Canadian-experience continuity. On overflow (§6),
+trim `thaifest` toward one bullet before ever removing it.
+
 ## 4. Summary guidance
 
 Start from the closest-matching `summaries` entry for your chosen dominant
@@ -260,7 +285,10 @@ Read the exit code and the JSON on stdout:
      from that role's `bullets` list (and remove it from `priority_order` too).
      Use judgment on *which* role to trim from if multiple roles have
      low-priority bullets left: prefer trimming the role least central to the
-     chosen profile.
+     chosen profile. **Never remove the last remaining bullet of `boots` (§3a)
+     or `thaifest` (§3b)** — those roles are timeline- and Canadian-experience-
+     load-bearing; trim them down to one bullet, but keep the role and its dates
+     visible.
   3. If still overflowing and the impact line is present, dropping a `highlights`
      entry (or the whole `highlights` key) is a low-cost trim before cutting more
      substantive bullets.
