@@ -1,5 +1,8 @@
 output/
-master.yaml
+# The real, private career file lives ONLY at the repo root and must never be
+# committed. Anchor to root so synthetic test fixtures named master.yaml (which
+# the tests need) stay tracked.
+/master.yaml
 jd.txt
 __pycache__/
 *.pyc

@@ -1,0 +1,26 @@
+# Synthetic mini fact bank — fixture for gap_digest tests. No real person.
+# Only the fields coverage.master_text() reads matter here.
+schema_version: 1.0
+profiles:
+  eng: {}
+summaries:
+  - profile: eng
+    text: "Backend engineer building data pipelines in Python."
+experience:
+  - id: acme
+    title: "Software Engineer"
+    company: "Acme"
+    bullets:
+      - id: pipeline
+        themes: [data-pipelines]
+        variants:
+          eng: "Built ETL pipelines in Python processing millions of records daily."
+      - id: api
+        themes: [rest-apis]
+        variants:
+          eng: "Designed REST APIs backed by PostgreSQL for internal services."
+skills:
+  langs:
+    label: "Languages"
+    items: ["Python", "SQL"]
+    profiles: [eng]
