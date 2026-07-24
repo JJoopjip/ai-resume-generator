@@ -208,33 +208,33 @@ Motivation: the strategy is to raise coverage by enriching `master.yaml` with
 real experience, never by gaming the scorer — but each run's `content_gap`
 list currently dies in its folder.
 
-- [ ] **`scripts/gap_digest.py`** (pure stdlib + PyYAML, runs on host — no
-  Docker): walk `output/*/` folders that have `job_description.txt` +
-  `instance.yaml`; **recompute** coverage against the *current* `master.yaml`
-  (don't parse stale `coverage.md` — the bank evolves, so old reports
-  overstate gaps); aggregate `content_gap` terms across runs.
-- [ ] **Output `output/gap_digest.md`**: terms ranked by how many postings
-  wanted them, each with the list of slugs that asked. Top of file: "these
-  N terms recur and the bank has nothing on them — if they're truly part of
-  your experience, write them up." Honor the no-faking rule in the wording.
-- [ ] **Wire in**: `resume-gen gaps` subcommand + a line in README. Tests with
-  two synthetic run folders under `tests/fixtures/`.
+- [x] **`scripts/gap_digest.py`** (pure stdlib + PyYAML, runs on host — no
+  Docker): walks `output/*/` folders that have `job_description.txt` +
+  `instance.yaml`; **recomputes** coverage against the *current* `master.yaml`
+  (never parses stale `coverage.md`); aggregates `content_gap` keyphrases
+  across runs by their stems. One bad folder is skipped with a stderr note,
+  not fatal.
+- [x] **Output `output/gap_digest.md`**: a "Recurring (≥N postings)" table —
+  term, posting count, **total mention count** (real JD hits, the secondary
+  rank key so an oft-repeated ask outranks a passing one), and the slugs that
+  asked — then a "Seen once" list so nothing is lost. Leads with the no-faking
+  guard ("a **to-write** list, not a to-fake list … only if it's truly part of
+  your experience").
+- [x] **Wire in**: `resume-gen gaps` subcommand (host, like `eval`) + README
+  options row and explainer. Tests in `tests/test_gap_digest.py` over two
+  synthetic runs under `tests/fixtures/gap_runs/` (self-contained mini bank —
+  no dependency on the private `master.yaml`): recurring term ranks first with
+  both slugs + mention tally, one-offs stay per-posting, covered bank terms
+  never surface as standalone gaps, and the no-faking wording is present.
+  6 tests; full suite 54 passing.
 
-## Phase 7 — Application tracker: from generator to job-search tool
+## Phase 7 — Application tracker: SKIPPED (2026-07-20)
 
-Motivation: `output/` folders are already per-application audit trails; the
-web UI already serves resumes. Missing: one place to see status across all
-applications.
-
-- [ ] **Per-folder `status.yaml`** (`status: draft|applied|interview|rejected|
-  offer`, `applied_on`, `notes`) — keeps each folder self-contained and
-  git-ignored with the rest of `output/`.
-- [ ] **Web UI `/applications` page** (extend `web/app.py`): table of slug,
-  date, coverage %, page count, status (editable dropdown → POST writes
-  `status.yaml`), links to resume/cover PDFs and `coverage.md`.
-- [ ] **Outcome-vs-score view** (later, once ≥ ~15 applications have
-  outcomes): simple table/plot of status against coverage score — real-world
-  check of whether the keyword screen predicts anything.
+A tracker app already exists as a separate local service on port 8000; the
+web UI already pushes finished résumés to it (`/to-tracker` →
+`http://127.0.0.1:8000/api/import`). Nothing to build here. The one idea
+worth carrying over someday: an outcome-vs-coverage-score view, which
+belongs in the tracker since it owns the status data.
 
 ## Phase 8 — Publishable repo: portfolio-ready without PII
 

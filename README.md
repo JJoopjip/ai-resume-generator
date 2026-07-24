@@ -67,6 +67,7 @@ target company's culture.
 | Just re-build the PDF from an existing draft (no AI) | `./resume-gen render --instance output/<folder>/instance.yaml` |
 | Check a draft is valid without building anything | `./resume-gen validate --instance output/<folder>/instance.yaml` |
 | Compare two AI settings head-to-head on one posting | `./resume-gen eval jd.txt` (see below) |
+| See which skills to add to your bank next | `./resume-gen gaps` (see below) |
 
 **Dialing the AI down for a routine application.** By default the tool uses the
 most capable model (Opus 4.8, high effort) — bullet selection is the one
@@ -84,6 +85,14 @@ default Sonnet/medium vs Opus/high — both cost real money), then writes a
 side-by-side `output/eval-<jd>-<date>/eval.md` comparing coverage, page fit, and
 cost. Add `--judge` for a blind AI preference read (`judge.md`) that scores the
 two drafts without knowing which model made which.
+
+**What should I add to my experience bank next?** Every run records the JD terms
+your `master.yaml` has nothing on. `./resume-gen gaps` walks every past run,
+re-scores each against your *current* bank, and writes
+`output/gap_digest.md` — the terms ranked by how many postings wanted them (with
+the mention count and which postings asked). It's a **to-write** list, not a
+to-fake list: add a recurring term only if it's genuinely part of your
+experience — the score is a keyword screen, never a reason to invent content.
 
 **One-time setup.** The AI step uses the `claude` command-line tool (it signs in
 with your existing Claude account — no separate API key needed). The build step

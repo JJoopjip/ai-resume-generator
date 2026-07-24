@@ -1,0 +1,7 @@
+Senior Backend Engineer
+
+Build data pipelines in Python and own the SQL that powers reporting. Design
+REST APIs on PostgreSQL.
+
+You will operate services on Kubernetes and manage Kubernetes clusters yourself.
+Terraform is required — you will use Terraform to provision cloud infrastructure.

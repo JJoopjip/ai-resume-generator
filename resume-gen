@@ -27,6 +27,15 @@
 #                                              (coverage, pages, cost). See
 #                                              scripts/eval_run.py --help.
 #
+#   resume-gen gaps                            Aggregate the content gaps across
+#                                              every tailored run into
+#                                              output/gap_digest.md — JD terms
+#                                              your master.yaml has nothing on,
+#                                              ranked by how many postings wanted
+#                                              them. A to-write list, not a
+#                                              to-fake list. See
+#                                              scripts/gap_digest.py --help.
+#
 # Cover letters are OFF by default so a resume-only posting never pays for the
 # extra drafting/render loop. Opt in with `--cover`, the `cover-letter`
 # subcommand, or RESUME_GEN_COVER=1.
@@ -51,8 +60,12 @@ case "${1:-}" in
     shift
     exec python3 scripts/eval_run.py "$@"
     ;;
+  gaps)
+    shift
+    exec python3 scripts/gap_digest.py "$@"
+    ;;
   -h|--help)
-    sed -n '2,36p' "$0"
+    sed -n '2,45p' "$0"
     exit 0
     ;;
 esac
@@ -201,12 +214,12 @@ Do all of this without asking any questions:
 5. Render + overflow loop: run
    ./resume-gen render --instance output/<slug>/instance.yaml
    Read the JSON on stdout and the exit code:
-   - Exit 3 (overflow): the JSON's `fit.lines_over` estimates how many lines you
+   - Exit 3 (overflow): the JSON's \`fit.lines_over\` estimates how many lines you
      are past one page — trim about that much in ONE edit (per §6: the
      additional/server role first, then the lowest-priority bullets), not one
      line at a time, then re-run. Cap 5 attempts.
    - Exit 1: fix the reported locked-field/verbatim mismatch and re-run.
-   - Exit 0 (one page): check `fit.lines_free` and `coverage.selection_gap`. If
+   - Exit 0 (one page): check \`fit.lines_free\` and \`coverage.selection_gap\`. If
      there is free room AND the JD has key terms you already cover in master.yaml
      but did not select (selection_gap), swap the most relevant omitted bullet
      back in — copied VERBATIM from master.yaml, never reworded or invented — to

@@ -1,0 +1,7 @@
+Platform Engineer
+
+Build data pipelines in Python and write the SQL that powers reporting. Design
+REST APIs on PostgreSQL.
+
+The platform runs on Kubernetes; you will ship workloads to Kubernetes daily.
+GraphQL matters here — you will design and deliver a production GraphQL layer.

@@ -1,0 +1,17 @@
+# Synthetic tailored instance — fixture for gap_digest tests. No real person.
+# Same bank as run-alpha (both drawn from tests/fixtures/gap_runs/master.yaml).
+schema_version: 1.0
+profile: eng
+summary: "Backend engineer building data pipelines in Python."
+experience:
+  - id: acme
+    title: "Software Engineer"
+    company: "Acme"
+    bullets:
+      - id: pipeline
+        text: "Build ETL data pipelines in Python processing millions of records daily."
+      - id: api
+        text: "Design REST APIs backed by PostgreSQL and the SQL behind reporting."
+skills:
+  - label: "Languages"
+    items: ["Python", "SQL"]
