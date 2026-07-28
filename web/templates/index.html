@@ -4,30 +4,32 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Résumé Generator · GoodLuck Joopjip 🍀</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='42' fill='%2377A088'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='42' fill='%23C4657F'/></svg>">
 <style>
   /* ======================================================================
-     Résumé Generator — styled to match the Fieldnotes tracker (:8000).
-     Palette + shapes mirror the tracker's styles.css; fonts fall back to the
-     system stack so this page stays fully self-contained (no files served).
+     Résumé Generator — "Blush Rosé" pastel-pink theme.
+     Deliberately distinct from the Fieldnotes tracker (:8000), which is
+     sage-green. Shapes/shadows are shared; the palette is pink-forward so the
+     two apps read as siblings, not clones. Fonts fall back to the system
+     stack so this page stays fully self-contained (no files served).
      ====================================================================== */
   :root {
-    --paper:        #F3F0E8;
-    --surface:      #FCFBF7;
-    --sage:         #77A088;
-    --sage-strong:  #4E7961;
-    --apricot:      #E0A46E;
-    --rose:         #CB929A;
-    --slate:        #2E3A37;
-    --muted:        #6C7772;
-    --sage-tint:    #E7EFE8;
-    --apricot-tint: #F6E7D4;
-    --rose-tint:    #F1E1E3;
-    --line:         #E4DFD3;
+    --paper:        #FBF4F6;  /* blush-white page background                   */
+    --surface:      #FFFBFC;  /* card / panel surface, a touch lighter         */
+    --pink:         #C4657F;  /* soft rose — primary, forward motion           */
+    --pink-strong:  #A24862;  /* deeper rose for text/links/emphasis on light  */
+    --peach:        #E6A98C;  /* warm peach — "needs attention" accent         */
+    --rose:         #C98BA0;  /* dusty rose — soft secondary accent            */
+    --slate:        #3A2E33;  /* near-black plum — primary text                */
+    --muted:        #8A6F79;  /* secondary text                                */
+    --pink-tint:    #F8E2EA;  /* pale pink fill                                */
+    --peach-tint:   #F6E7DC;  /* pale peach fill                              */
+    --rose-tint:    #F1E1E6;  /* pale rose fill                              */
+    --line:         #EFDCE3;  /* gentle divider, no harsh borders            */
     --radius:       16px;
     --radius-sm:    11px;
-    --shadow:       0 1px 2px rgba(46,58,55,.05), 0 6px 20px rgba(46,58,55,.06);
-    --shadow-lift:  0 2px 4px rgba(46,58,55,.06), 0 14px 34px rgba(46,58,55,.10);
+    --shadow:       0 1px 2px rgba(58,46,51,.05), 0 6px 20px rgba(58,46,51,.06);
+    --shadow-lift:  0 2px 4px rgba(58,46,51,.06), 0 14px 34px rgba(58,46,51,.10);
   }
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
@@ -45,7 +47,7 @@
     color: var(--slate);
     letter-spacing: -0.01em;
   }
-  a { color: var(--sage-strong); text-decoration: none; }
+  a { color: var(--pink-strong); text-decoration: none; }
   a:hover { text-decoration: underline; }
   code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; }
 
@@ -64,7 +66,7 @@
   .brand:hover { text-decoration: none; }
   .brand .dot {
     width: 12px; height: 12px; border-radius: 50%;
-    background: var(--sage); box-shadow: 0 0 0 4px var(--sage-tint);
+    background: var(--pink); box-shadow: 0 0 0 4px var(--pink-tint);
   }
   .topbar-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 
@@ -80,18 +82,18 @@
   .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-lift); text-decoration: none; }
   .btn:active { transform: translateY(0); }
   .btn:disabled { opacity: .5; cursor: default; transform: none; box-shadow: var(--shadow); }
-  .btn-primary { background: var(--sage); color: #fff; }
-  .btn-primary:hover:not(:disabled) { background: var(--sage-strong); }
+  .btn-primary { background: var(--pink); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: var(--pink-strong); }
   .btn-ghost { background: transparent; box-shadow: none; color: var(--muted); }
   .btn-ghost:hover { background: var(--surface); box-shadow: var(--shadow); }
   .btn-sm { font-size: 13px; padding: 8px 14px; min-height: 38px; }
-  .btn-current { background: var(--sage-tint); color: var(--sage-strong); box-shadow: none; }
+  .btn-current { background: var(--pink-tint); color: var(--pink-strong); box-shadow: none; }
 
-  :focus-visible { outline: 3px solid var(--sage); outline-offset: 2px; border-radius: 8px; }
+  :focus-visible { outline: 3px solid var(--pink); outline-offset: 2px; border-radius: 8px; }
 
   /* --- Hero band (the tracker's signature element) ---------------------- */
   .band {
-    background: linear-gradient(135deg, var(--sage) 0%, var(--sage-strong) 100%);
+    background: linear-gradient(135deg, var(--pink) 0%, var(--pink-strong) 100%);
     color: #fff; border-radius: 22px; padding: 26px 28px; margin-bottom: 26px;
     box-shadow: var(--shadow-lift);
   }
@@ -119,8 +121,8 @@
     resize: vertical; line-height: 1.5;
   }
   textarea:focus {
-    outline: none; border-color: var(--sage); background: var(--surface);
-    box-shadow: 0 0 0 3px var(--sage-tint);
+    outline: none; border-color: var(--pink); background: var(--surface);
+    box-shadow: 0 0 0 3px var(--pink-tint);
   }
 
   .row { display: flex; gap: 14px; align-items: center; margin-top: 18px; flex-wrap: wrap; }
@@ -128,7 +130,7 @@
     display: flex; align-items: center; gap: .4rem; font-size: 13.5px;
     color: var(--muted); cursor: pointer; user-select: none;
   }
-  .check input { accent-color: var(--sage); width: 16px; height: 16px; }
+  .check input { accent-color: var(--pink); width: 16px; height: 16px; }
 
   .status { font-size: 13.5px; color: var(--muted); }
 
@@ -150,7 +152,7 @@
   .dl {
     display: inline-flex; align-items: center; margin: 0 .55rem .55rem 0;
     padding: 10px 16px; border-radius: 999px; text-decoration: none;
-    background: var(--sage-tint); color: var(--sage-strong); font-weight: 600;
+    background: var(--pink-tint); color: var(--pink-strong); font-weight: 600;
     font-size: 14px; box-shadow: var(--shadow);
     transition: transform .12s ease, box-shadow .12s ease;
   }
@@ -164,7 +166,7 @@
   /* --- Spinner ----------------------------------------------------------- */
   .spin {
     display: inline-block; width: 14px; height: 14px; border-radius: 50%;
-    border: 2px solid var(--line); border-top-color: var(--sage);
+    border: 2px solid var(--line); border-top-color: var(--pink);
     animation: spin .8s linear infinite; vertical-align: -2px;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
