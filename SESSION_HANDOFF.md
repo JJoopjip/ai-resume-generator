@@ -19,8 +19,12 @@ this file only summarizes the current front line.
 - Phase 4.5 quick wins: stemmer bug fix, CI (`pytest` + `docker build` on
   push).
 - Phase 5 (eval harness): `resume-gen eval <jd> [--judge]` compares
-  model/effort settings side-by-side. **Not yet run live** (costs real
-  money — user's call when).
+  model/effort settings side-by-side. **Run live 2026-07-28** on two JDs.
+  Low-match `jd.txt` (3 configs): identical output across all tiers — model
+  changed only cost/speed. High-match `jd_highmatch.txt` (`--judge`): Opus/high
+  made a better selection (blind judge 19 vs 16). **Outcome shipped:** kept
+  Opus/high default, added `--fast` (Sonnet 5/medium) for routine/bulk/low-match
+  runs, dropped Opus/medium (worst value). See `resume-gen` model note + Log.
 - Phase 6 (content-gap digest): `resume-gen gaps` aggregates unmatched JD
   terms across past runs into `output/gap_digest.md`. Fully tested (6 tests,
   synthetic fixtures).
@@ -63,9 +67,15 @@ this file only summarizes the current front line.
 
 Highest-leverage remaining items:
 
-1. **Phase 5 — run a real live eval**: `./resume-gen eval <jd> --judge` on an
-   actual posting to answer "is Opus/high worth 2× Sonnet/medium?" Costs
-   real API/subscription usage — confirm with the user before running.
+1. **Phase 5 — DONE + decided + shipped (2026-07-28).** Two evals settled the
+   model default. Low-match JD (`jd.txt`): all tiers produce identical output →
+   Opus/high wasteful there. High-match JD (`jd_highmatch.txt`, `--judge`):
+   Opus/high made a measurably better selection (blind judge 19 vs 16; kept a
+   quantified bullet Sonnet/medium dropped). **Decision: keep Opus/high as the
+   default; added a `--fast` flag (Sonnet 5/medium) for routine/bulk/low-match
+   runs; Opus/medium not offered (worst value).** Implemented in `resume-gen`
+   (arg pre-scan + tier block), README, TECH_SPEC §6. No open follow-ups here.
+   Reports: `output/eval-run{1,2}-*-2026-07-28/`, `output/eval-jd_highmatch-2026-07-28/`.
 2. **Phase 8 leftover (optional)**: a demo GIF/asciinema of `./resume-gen jd.txt`
    for the README. The rest of Phase 8 is done (see What's done). Also possible:
    actually relocate the real bank to `~/.config/resume-gen/master.yaml` via
@@ -80,6 +90,148 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 
 ## Log
 
+- **2026-07-28 (latest)** — **Model default decided + `--fast` flag shipped.**
+  After the two evals (identical output on low-match `jd.txt`; Opus/high
+  judge-preferred on high-match `jd_highmatch.txt`), kept Opus/high as the
+  default and added `--fast`/`RESUME_GEN_FAST=1` → Sonnet 5/medium for
+  routine/bulk/low-match runs (~60% cheaper, ~20% faster, identical output on
+  low-match). Opus/medium deliberately not offered (measured worst value).
+  `resume-gen`: added an arg pre-scan (rotate loop strips `--fast` from `$@` in
+  any position, preserving order/spaces) + a FAST-conditional model-flags block;
+  `RESUME_GEN_CLAUDE_FLAGS` still overrides everything. Verified: default→opus/high,
+  `--fast`→sonnet/medium (incl. with `--cover` and in any position), override
+  wins. Docs synced (README table + "dialing down"; TECH_SPEC §6, which was
+  stale — still claimed sonnet/medium was the default). Launcher-only change,
+  no baked scripts/templates touched → no Docker rebuild. `pytest` 58 passed.
+- **2026-07-28** — **Eval judge run on high-match JD** (`jd_highmatch.txt`,
+  the Brand & BD Manager posting). Scored two locked-fact drafts in
+  `output/eval-jd_highmatch-2026-07-28/` → `judge.md`. **Verdict: candidate_2**
+  (16 vs 19). Decider: c2 keeps `win_engagement` ("100% growth in online
+  engagement... 10K+ followers"), covering the JD's named digital-campaign duty
+  with quantified proof; c1 drops it for `win_ceo`/`ot_access` (qualitative,
+  partly redundant), leaving no digital-marketing evidence. This is follow-up
+  (b) from What's-next #1 — the fair `--judge` eval on a high-match JD.
+- **2026-07-28** — **Tailored run: Brand & Business Development Manager,
+  Consumer Health (high-match JD `jd_highmatch.txt`).** Profile `bd` (blending
+  `dm` variants for the brand/DTC/retention bullets). Output
+  `output/consumerhealthco-brand-bd-manager-2026-07-28-opus-4-8-high/` → **1 page**
+  (exit 0, lines_free 1 / slack 19.7pt — tight). First render overflowed 2 pages
+  / ~12 lines; in one edit dropped the `server` additional role, `win_portfolio`,
+  `lg_xfn_kpi`, `ot_access`, and trimmed `thaifest` to 1 bullet → 1 page. Final:
+  thaifest×1, winnergy×3 (b2c/engagement/retention), lgchem×2, otsuka×1, boots×1;
+  highlights engagement/retention/skus. Coverage 52% (13/25); selection_gap
+  (supply chain, launching/end-to-end product, commercial performance) left
+  uncovered — already conceptually covered by lg_sourcing/ot_launch and no
+  room/no better verbatim swap. `profile.suggested` pm 62 vs bd 58 (4-pt gap,
+  kept bd — JD core is brand/BD/DTC). Draft only; not submitted.
+- **2026-07-28** — **Tailored run: Metrolinx, Project Coordinator, Rail
+  Corridor Extensions (Kitchener Corridor, GO Expansion).** Profile `pm`
+  (`profile.suggested` agrees, pm 52 highest of 40/52/42/47). Output
+  `output/metrolinx-project-coordinator-2026-07-28/` → **1 page** (exit 0,
+  lines_free 1 / slack 19.2pt — tight). First render overflowed by 7 lines;
+  cut `win_team`+`win_ceo`, `lg_stakeholders`, `ot_access` in one edit → still
+  3 lines over; cut `win_portfolio` in a second edit → 1 page. Final: 5 roles /
+  7 bullets — thaifest(1: tf_partnerships), winnergy(1: win_b2c), lgchem(2:
+  lg_sourcing, lg_xfn_kpi), otsuka(2: ot_launch, ot_regulatory), boots(1:
+  boots_frontline); highlights hl_experience + hl_gpa; no projects section
+  (dropped for space, JD doesn't reward tooling/systems work). `yorkta` (FinTech
+  TA) omitted — no relevance to a civil/rail JD. Coverage 20% (5/25);
+  `selection_gap` was generic noise ("during", "go expansion") not worth
+  chasing with only 1 line free; `content_gap` is Metrolinx/rail-specific
+  vocabulary (railway corridor, civil engineering, construction) the bank has
+  nothing on — left uncovered per the truthfulness guard. Cover letter
+  (`cover_letter.yaml`) rendered 1 page on the first attempt — mirrors
+  Metrolinx's public-sector/mission register (equity, "serving with passion,
+  thinking forward, playing as a team"), leans on `ot_launch` (scope/schedule/
+  budget, on-time, full regulatory compliance) and `lg_sourcing`/`lg_xfn_kpi`
+  (contract negotiation, cross-functional coordination, KPI reporting) as
+  proof, and the current `thaifest` role (multi-stakeholder partnership
+  coordination, Toronto-based) for culture fit. Both PDFs are drafts pending
+  human review.
+- **2026-07-28** — **First live eval run (Phase 5), 3 configs on `jd.txt`.**
+  Ran the harness twice (2-arm limit) with opus/high as the shared anchor:
+  sonnet/medium vs opus/high, then opus/medium vs opus/high. All four runs
+  selected the identical resume (7/25 bullets, 5/7 roles, 12% coverage 3/25,
+  22 content gaps, 1 page, pm profile) — so model/effort changed only cost &
+  speed here, not content. Cost: sonnet/medium $1.38, opus/medium $3.32,
+  opus/high $3.70–3.73. Wall: 4m17s / 4m42s / 5m34s–5m59s. Tokens all ~2M
+  (turn-count/context-reread dominated, not model). Takeaways: sonnet/medium
+  = 63% cheaper + 35% faster for identical output; opus/medium = worst value
+  (kill it); the real lever on this JD is the 22 content gaps, not the model
+  (see [[raise-coverage-by-enriching-master]]). Caveat: single low-coverage JD,
+  no `--judge`. Reports under `output/eval-run{1,2}-*-2026-07-28/`. Handoff
+  "What's next" updated with the default-flip decision (awaiting user).
+- **2026-07-28** — **Tailored run (opus-4-8-high): CSA Group, Project
+  Manager – Health Care & Well-being (12-mo contract, bilingual EN/FR).** Profile
+  `pm` (`profile.suggested` agrees, pm 59 highest). Output
+  `output/csa-group-project-manager-2026-07-28-opus-4-8-high/` → 1 page (exit 0,
+  lines_free 2 / slack 27pt). First render overflowed by ~13 lines; one big §6
+  edit dropped `server` (additional role), the `highlights` block, `win_ceo`,
+  `lg_sourcing`, `ot_regulatory`, and trimmed `thaifest` to its single strongest
+  bullet → 1 page, 4 lines free. With real room and `selection_gap` empty, added
+  `ot_regulatory` back (verbatim) since it directly hits this JD's core
+  ("standards development", "health & safety standards", compliance) → still
+  1 page, 2 lines free. Final: 5 roles / 7 bullets — thaifest(1: tf_infrastructure),
+  winnergy(2: win_b2c, win_portfolio), lgchem(1: lg_xfn_kpi), otsuka(2: ot_launch,
+  ot_regulatory), boots(1); no highlights. Coverage reads 12% but that's the
+  bilingual-JD artifact again (content_gap = French stopwords); selection_gap
+  empty, no term-swap. Resume-only (no cover letter requested). Draft only, not
+  submitted. Note: distinct from the earlier `csagroup-…` (no hyphen) opus-4-8
+  medium/high + sonnet-5 runs for this same posting.
+- **2026-07-28** — Tailored-application run for the Toronto Transit
+  Commission's "Operational Planner" posting (Operational Safety and Planning
+  dept.) at `output/ttc-operational-planner-2026-07-28/`. Profile `pm` (JD is
+  construction-project scheduling/rehab coordination — no direct domain overlap
+  in `master.yaml`, but scope/schedule/budget + regulatory-compliance + MS
+  Project/scheduling-software language transfers cleanly; `profile.suggested`
+  agreed, pm 67 highest). `thaifest` trimmed to its single strongest bullet
+  (`tf_partnerships`, per §3b "JD unrelated" branch) since this JD is
+  ops/construction, not marketing/PR — chose the stakeholder-coordination
+  variant over `tf_infrastructure` as more transferable. `yorkta` skipped
+  (FinTech-only, no relevance). First render overflowed by 12 lines — in one
+  edit dropped `server` (additional role, first per §6), then the
+  lowest-priority bullet from each multi-bullet role (`ot_access`, `win_ceo`,
+  `lg_stakeholders`) plus the `highlights` block (low-cost trim, §6 step 3) →
+  1 page, exit 0, 3 lines free. Final: 5 roles / 7 bullets — otsuka(2:
+  ot_launch, ot_regulatory), winnergy(2: win_b2c, win_portfolio), lgchem(1:
+  lg_xfn_kpi), boots(1), thaifest(1); no highlights selected in the final cut.
+  Coverage 12%/thin — `content_gap` is almost entirely TTC-specific/hiring-
+  process boilerplate the bank has nothing on; `selection_gap` terms ("ai
+  tool", "processes", "service") were generic/low-value or ironic to chase
+  (the JD explicitly **prohibits AI-tool use in application materials** — see
+  flag below) — no swap made. Cover letter (pm-grounded, mirrors TTC's
+  public-sector/measured/mission-driven "Moving Toronto, Connecting
+  Communities" register) rendered 1 page on the first attempt. Both
+  `resume.pdf` and `cover_letter.pdf` draft-ready; not submitted anywhere.
+  **Flagged to user in the report:** this specific JD's fine print bars use of
+  any AI tool to generate submitted materials/responses and could disqualify
+  an application that uses them — the human should weigh this carefully
+  before using this draft as a starting point, independent of the repo's
+  standing "draft for human review" rule.
+- **2026-07-28** — **Tailored run (medium): CSA Group, Project Manager – Health
+  Care & Well-being.** Profile `pm`. Output
+  `output/csagroup-project-manager-2026-07-28-opus-4-8-medium/` → 1 page (exit 0,
+  lines_free 0 / slack 9.5pt). First render overflowed 2 pages (~7 lines over);
+  one §6 pass (dropped `server` additional role + `lg_stakeholders` +
+  `win_portfolio`… then restored `win_portfolio` to keep hl_skus reinforced,
+  cut `lg_stakeholders`+`server`) landed it. Final: 5 roles / 7 bullets —
+  thaifest(1), winnergy(2: win_b2c, win_portfolio), lgchem(1: lg_xfn_kpi),
+  otsuka(2: ot_launch, ot_regulatory), boots(1); highlights hl_experience +
+  hl_gpa + hl_skus. Coverage 12% is the bilingual-JD artifact again
+  (content_gap = French stopwords); selection_gap empty, no swap. Draft only.
+  Mirrors the earlier opus-4-8-high run closely (that one used 2 highlights, no
+  hl_skus/win_portfolio); sonnet-5-medium run also exists for this posting.
+- **2026-07-28** — **Tailored run: CSA Group, Project Manager – Health Care &
+  Well-being (12-mo contract, bilingual EN/FR posting).** Profile `pm`. Output
+  `output/csagroup-project-manager-2026-07-28-opus-4-8-high/` → 1 page (exit 0,
+  slack 9.5pt). First render overflowed 2 pages (~12 lines over); one §6 cut
+  pass (dropped `server` additional role, then `win_ceo`, `tf_infrastructure`,
+  `lg_sourcing`) landed it. Final: 5 roles / 7 bullets — thaifest(1),
+  winnergy(2), lgchem(1), otsuka(2), boots(1); highlights hl_experience +
+  hl_gpa. Coverage reads 12% but that's a bilingual-JD artifact (content_gap is
+  mostly French stopwords); `selection_gap` empty, no worthwhile swap. Draft
+  only. Note: a prior sonnet-5-medium run for the same posting already exists
+  (`csagroup-projectmanager-2026-07-28-sonnet-5-medium`).
 - **2026-07-28 (night, later)** — **Built Phase 8 — repo is now portfolio-
   publishable without PII.** (1) `RESUME_GEN_MASTER` env indirection: default
   still `./master.yaml`, threaded through `scripts/generate_resume.py` +

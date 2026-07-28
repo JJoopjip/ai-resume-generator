@@ -295,12 +295,18 @@ assembly script.
   `prompts/tailor_resume.md`, `master.yaml`, and the job description file by
   path — Claude reads all three with its own Read tool. No file content is
   pre-concatenated into the prompt string by a wrapper script.
-- **Model**: pinned in the `resume-gen` launcher to `--model claude-sonnet-5
-  --effort medium` for reproducibility — a strong, cost-effective default for
-  content selection (the validator guards correctness regardless of model).
-  Overridable via `RESUME_GEN_CLAUDE_FLAGS` (e.g. `--model claude-opus-4-8
-  --effort high` for the sharpest selection on a high-stakes application).
-  Interactive sessions still use whatever the invoking session is configured for.
+- **Model**: the `resume-gen` launcher defaults to `--model claude-opus-4-8
+  --effort high` — bullet selection is the one call nothing downstream repairs,
+  and the 2026-07-28 eval showed Opus/high makes a measurably better selection on
+  a well-matched posting (a blind judge preferred it; it kept a quantified bullet
+  Sonnet/medium dropped). On a poorly-matched posting the two tiers produce
+  identical output, so `--fast` (or `RESUME_GEN_FAST=1`) drops to `--model
+  claude-sonnet-5 --effort medium` for routine, bulk, or low-match runs — ~60%
+  cheaper, ~20% faster, same result there. Opus/medium is deliberately not
+  offered (measured worst value: near-Opus/high cost, no benefit). The validator
+  guards correctness regardless of model. `RESUME_GEN_CLAUDE_FLAGS` overrides the
+  whole flag string (model choice and `--fast` alike). Interactive sessions still
+  use whatever the invoking session is configured for.
 - **Job description input**: plain text file, `job_description.txt`, path
   passed to Claude in the prompt; Claude copies it into
   `output/<slug>/job_description.txt` as part of writing `instance.yaml`

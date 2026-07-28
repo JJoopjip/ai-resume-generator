@@ -69,7 +69,7 @@ target company's culture.
 | Generate a resume from a job posting | `./resume-gen jd.txt` |
 | Generate a resume **and** a cover letter | `./resume-gen jd.txt --cover` |
 | Add a cover letter to a resume you already made | `./resume-gen cover-letter output/<folder>` |
-| Use the most powerful AI for a high-stakes application | see below |
+| Use the cheaper/faster AI for a routine or bulk application | `./resume-gen jd.txt --fast` |
 | Just re-build the PDF from an existing draft (no AI) | `./resume-gen render --instance output/<folder>/instance.yaml` |
 | Check a draft is valid without building anything | `./resume-gen validate --instance output/<folder>/instance.yaml` |
 | Compare two AI settings head-to-head on one posting | `./resume-gen eval jd.txt` (see below) |
@@ -77,20 +77,26 @@ target company's culture.
 
 **Dialing the AI down for a routine application.** By default the tool uses the
 most capable model (Opus 4.8, high effort) — bullet selection is the one
-judgment call nothing downstream can repair. To roughly halve the cost on a
-routine posting, drop to the lighter setting:
+judgment call nothing downstream can repair, and on a well-matched posting it
+demonstrably picks better (see below). For a routine, bulk, or weakly-matched
+posting, add `--fast` to drop to Sonnet 5 / medium — roughly 60% cheaper and
+~20% faster:
 
 ```sh
-RESUME_GEN_CLAUDE_FLAGS="--model claude-sonnet-5 --effort medium \
-  --permission-mode acceptEdits --allowedTools Bash Read Edit Write" ./resume-gen jd.txt
+./resume-gen jd.txt --fast          # cheaper/faster tier; combines with --cover
 ```
 
-**Is the expensive model actually better?** Measure instead of guessing:
-`./resume-gen eval jd.txt` runs the tailor stage twice on the same posting (by
-default Sonnet/medium vs Opus/high — both cost real money), then writes a
-side-by-side `output/eval-<jd>-<date>/eval.md` comparing coverage, page fit, and
-cost. Add `--judge` for a blind AI preference read (`judge.md`) that scores the
-two drafts without knowing which model made which.
+**Is the expensive model actually better?** Measured, not guessed. On a
+low-coverage JD the two tiers produced an *identical* resume — so `--fast` loses
+nothing there. On a well-matched JD they diverged: Opus/high kept a quantified,
+on-target bullet that Sonnet/medium dropped, and a blind AI judge preferred it.
+Hence the split: Opus/high is the default (it earns its ~$1.50/run premium on the
+applications that matter), `--fast` for the rest. Re-run the comparison yourself
+with `./resume-gen eval jd.txt` — it runs the tailor stage twice on one posting
+(default Sonnet/medium vs Opus/high, both cost real money) and writes a
+side-by-side `output/eval-<jd>-<date>/eval.md` (coverage, page fit, cost). Add
+`--judge` for a blind preference read (`judge.md`) that scores the two drafts
+without knowing which model made which.
 
 **What should I add to my experience bank next?** Every run records the JD terms
 your `master.yaml` has nothing on. `./resume-gen gaps` walks every past run,

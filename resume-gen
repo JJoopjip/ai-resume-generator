@@ -9,6 +9,12 @@
 #                                              draft a matching cover letter
 #                                              (prompts/tailor_cover_letter.md).
 #
+#   resume-gen <job-description-file> --fast   Same, but use the cheaper Sonnet 5
+#                                              /medium tier instead of the default
+#                                              Opus 4.8/high — for routine, bulk,
+#                                              or low-match runs (RESUME_GEN_FAST=1
+#                                              does the same). Combines with --cover.
+#
 #   resume-gen cover-letter <output-dir>       Draft + render a cover letter for a
 #                                              resume you ALREADY generated — points
 #                                              at that output/<slug>/ folder and
@@ -46,6 +52,19 @@
 
 set -eu
 
+# `--fast` selects the cheaper Sonnet 5 / medium tier for the LLM tailor + cover
+# stages (see the model note below). Pull it out of the args here — before the
+# subcommand dispatch — so it works in any position and nothing downstream has
+# to know about it. RESUME_GEN_FAST=1 does the same. The rotate loop rebuilds
+# "$@" without --fast while preserving the order (and spaces) of every other arg.
+FAST="${RESUME_GEN_FAST:-0}"
+_n=$#
+while [ "$_n" -gt 0 ]; do
+  _a="$1"; shift
+  if [ "$_a" = "--fast" ]; then FAST=1; else set -- "$@" "$_a"; fi
+  _n=$((_n - 1))
+done
+
 # ---- Deterministic (no-LLM) subcommands run in the container -----------------
 case "${1:-}" in
   render|validate|cover|"")
@@ -68,7 +87,7 @@ case "${1:-}" in
     exec python3 scripts/gap_digest.py "$@"
     ;;
   -h|--help)
-    sed -n '2,45p' "$0"
+    sed -n '2,51p' "$0"
     exit 0
     ;;
 esac
@@ -80,16 +99,26 @@ TODAY="$(date +%F)"
 # day land in distinct output/ folders instead of fighting over one slug.
 SLUG_SUFFIX="${RESUME_GEN_SLUG_SUFFIX:-}"
 
-# Model/effort pinned for reproducibility: Opus 4.8 / high. Bullet selection is
-# the one judgment call in this pipeline that nothing downstream can repair —
-# validate.py proves the result is *truthful* and coverage.py scores its keyword
-# fit, but neither can tell whether the five bullets chosen were the five most
-# persuasive ones for this posting. That call is worth paying for; a run costs
-# roughly a couple of dollars against the value of the application it produces.
-# Drop to `--model claude-sonnet-5 --effort medium` (the previous default) to
-# halve the cost at some selection quality. Perms pre-authorize the tools the
-# headless run needs so it runs unattended. Override via RESUME_GEN_CLAUDE_FLAGS.
-CLAUDE_FLAGS="${RESUME_GEN_CLAUDE_FLAGS:---model claude-opus-4-8 --effort high --permission-mode acceptEdits --allowedTools Bash Read Edit Write}"
+# Model/effort: default Opus 4.8 / high. Bullet selection is the one judgment
+# call in this pipeline that nothing downstream can repair — validate.py proves
+# the result is *truthful* and coverage.py scores its keyword fit, but neither
+# can tell whether the bullets chosen were the most persuasive ones for this
+# posting. The 2026-07-28 eval settled that this is worth paying for on the
+# postings that matter: on a well-matched JD, Opus/high kept a quantified,
+# on-target bullet that Sonnet/medium dropped, and a blind judge preferred it
+# (see SESSION_HANDOFF.md). On a poorly-matched JD the two produce identical
+# output — so `--fast` (Sonnet 5 / medium) is the right call for routine, bulk,
+# or low-match runs: ~60% cheaper and ~20% faster for the same result there.
+# (Opus/medium was measured to be the worst value — near-Opus/high cost with no
+# benefit — so it is deliberately not offered.) Perms pre-authorize the tools
+# the headless run needs so it runs unattended. RESUME_GEN_CLAUDE_FLAGS
+# overrides both the model choice and --fast entirely.
+if [ "$FAST" != "0" ]; then
+  _MODEL_FLAGS="--model claude-sonnet-5 --effort medium"
+else
+  _MODEL_FLAGS="--model claude-opus-4-8 --effort high"
+fi
+CLAUDE_FLAGS="${RESUME_GEN_CLAUDE_FLAGS:-$_MODEL_FLAGS --permission-mode acceptEdits --allowedTools Bash Read Edit Write}"
 
 # Run the headless Claude session, then record what it cost into the run's
 # output folder (scripts/session_cost.py reads the session transcript). Best
