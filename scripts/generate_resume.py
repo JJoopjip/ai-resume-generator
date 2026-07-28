@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import traceback
 from pathlib import Path
@@ -31,6 +32,12 @@ import coverage as coverage_mod  # noqa: E402
 
 DEFAULT_SCHEMA_PATH = Path(__file__).resolve().parent.parent / "schema" / "instance.schema.json"
 DEFAULT_LAYOUT_SCHEMA_PATH = Path(__file__).resolve().parent.parent / "schema" / "layout.schema.json"
+
+# Path to the content bank. Defaults to ./master.yaml (full back-compat) but can
+# be pointed elsewhere via RESUME_GEN_MASTER so the real, private bank can live
+# outside the repo (e.g. ~/.config/resume-gen/master.yaml) while the checked-in
+# master.example.yaml is what a fresh clone renders. See README "Your data".
+DEFAULT_MASTER_PATH = os.environ.get("RESUME_GEN_MASTER", "master.yaml")
 
 EXIT_SUCCESS = 0
 EXIT_VALIDATION_FAILURE = 1
@@ -372,7 +379,7 @@ def build_parser() -> argparse.ArgumentParser:
         func=cmd_render,
         subcommand="render",
         instance=None,
-        master="master.yaml",
+        master=DEFAULT_MASTER_PATH,
         out=None,
         schema=str(DEFAULT_SCHEMA_PATH),
         layout=None,
@@ -383,7 +390,7 @@ def build_parser() -> argparse.ArgumentParser:
     render_p = subparsers.add_parser("render")
     render_p.add_argument("--instance", default=None,
                           help="path to instance.yaml (default: newest output/*/instance.yaml)")
-    render_p.add_argument("--master", default="master.yaml",
+    render_p.add_argument("--master", default=DEFAULT_MASTER_PATH,
                           help="path to master.yaml (default: ./master.yaml)")
     render_p.add_argument("--out", default=None,
                           help="output directory (default: the instance file's own folder)")
@@ -400,7 +407,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     validate_p = subparsers.add_parser("validate")
     validate_p.add_argument("--instance", required=True)
-    validate_p.add_argument("--master", default="master.yaml",
+    validate_p.add_argument("--master", default=DEFAULT_MASTER_PATH,
                             help="path to master.yaml (default: ./master.yaml)")
     validate_p.add_argument("--schema", default=str(DEFAULT_SCHEMA_PATH))
     validate_p.set_defaults(func=cmd_validate)

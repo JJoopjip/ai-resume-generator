@@ -24,6 +24,7 @@ Docker) — the same deterministic coverage code the renderer uses.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from collections import Counter
 from pathlib import Path
@@ -187,8 +188,9 @@ def main(argv: list[str] | None = None) -> int:
         description="Aggregate recurring content gaps across all tailored runs.")
     ap.add_argument("--output", default="output", metavar="DIR",
                     help="folder holding the per-run output/<slug>/ dirs (default: ./output)")
-    ap.add_argument("--master", default="master.yaml", metavar="FILE",
-                    help="fact bank to score against (default: ./master.yaml)")
+    ap.add_argument("--master", default=os.environ.get("RESUME_GEN_MASTER", "master.yaml"),
+                    metavar="FILE",
+                    help="fact bank to score against (default: $RESUME_GEN_MASTER or ./master.yaml)")
     ap.add_argument("--min-postings", type=int, default=2, metavar="N",
                     help="terms wanted by ≥N postings are the 'recurring' list (default: 2)")
     args = ap.parse_args(argv)

@@ -1,0 +1,120 @@
+# docs/sample/instance.yaml — a hand-tailored, one-page selection from
+# master.example.yaml against docs/sample/job_description.txt (profile: pm).
+# Checked in so `validate`/`render` are reproducible without the LLM tailor
+# stage, and so tests/test_example_master.py can assert it stays valid + 1 page.
+schema_version: 1.0
+profile: pm
+job_description_ref: job_description.txt
+meta:
+  name: Robin Ellery Santos
+  location: Toronto, ON
+  phone: "+1 (555) 017-4098"
+  email: robin.santos@example.com
+  linkedin: linkedin.com/in/robin-ellery-santos
+  portfolio: robinsantos.example.com
+  taglines:
+    bd:      "Business Development · Partnerships · Market Expansion"
+    pm:      "Project Management · PMP"
+    dm:      "Digital Commerce · Brand Marketing · Channel Growth"
+    general: "Program Delivery · Commercial Strategy · Partnerships"
+summary: >-
+  PMP-certified project manager with six years delivering cross-functional
+  product launches and change initiatives across consumer-health and
+  fintech. Manages scope, schedule, and budget across Agile and Waterfall
+  environments, with a track record of on-time delivery and stakeholder
+  engagement up to executive level. M.S. Management, Riverton University
+  (GPA 3.8), concentration in Business Analysis.
+experience:
+  - id: harborlight
+    company: Harborlight Community Foundation
+    location: Toronto, ON
+    title: Program & Outreach Coordinator
+    start: "Feb 2026"
+    end: "Present"
+    multinational: false
+    part_time: true
+    concurrent: true
+    bullets:
+      - id: hl_outreach
+        text: >-
+          Built a tiered outreach system spanning 9 partner categories and 4
+          engagement stages — standardized templates, a prospect database, and
+          a tracked follow-up cadence.
+  - id: novacare
+    company: NovaCare Consumer Health Inc.
+    location: Toronto, ON
+    title: Business Development & Marketing Manager
+    start: "Jun 2023"
+    end: "Jan 2026"
+    multinational: false
+    bullets:
+      - id: nc_dtc
+        text: >-
+          Delivered a cross-functional program to launch the company's first
+          direct-to-consumer channel, coordinating sourcing, contract
+          negotiation, and rollout across 3 retail chains and a new webstore.
+      - id: nc_team
+        text: >-
+          Led a 6-person cross-functional team (marketing, e-commerce, design,
+          operations), setting priorities, coordinating output, and running the
+          weekly delivery cadence.
+  - id: meridian
+    company: Meridian Financial Technologies
+    location: Toronto, ON
+    title: Business Analyst, Partnerships
+    start: "Jul 2020"
+    end: "May 2023"
+    multinational: true
+    multinational_note: "North American arm of a global fintech group"
+    bullets:
+      - id: me_kpi
+        text: >-
+          Tracked adoption, revenue, and pipeline KPIs through monthly business
+          reviews, translating performance into recommendations that shaped
+          roadmap and resourcing decisions.
+      - id: me_integrations
+        text: >-
+          Coordinated delivery of 8 partner integrations end to end, aligning
+          product, legal, and finance to launch each on schedule.
+highlights:
+  - { id: hl_experience, value: "6 yrs", label: "commercial & program delivery" }
+  - { id: hl_gpa, value: "GPA 3.8", label: "M.S. Management" }
+  - { id: hl_integrations, value: "8", label: "partner integrations closed" }
+education:
+  - id: riverton
+    institution: Riverton University
+    location: Toronto, Canada
+    degree: M.S. Management
+    detail: "Concentration: Business Analysis · GPA 3.8 / 4.0 · Capstone in growth strategy"
+    start: "2024"
+    end: "2026"
+    anchor: true
+  - id: eastbrook
+    institution: Eastbrook College
+    location: Vancouver, Canada
+    degree: B.A. Communications
+    detail: "Minor in Economics · Dean's List"
+    start: "2016"
+    end: "2020"
+certifications:
+  - id: pmp
+    name: "Project Management Professional (PMP)"
+skills:
+  - label: "Project & Program Delivery"
+    items: [Scope / schedule / budget management, Agile & Waterfall delivery, Risk & issue management,
+            Vendor & contract management, Stakeholder management]
+  - label: "Cross-Functional Leadership"
+    items: [Cross-functional program management, Executive synthesis & briefings, KPI design & reporting,
+            Change management, "Business analysis (BABOK-aligned)"]
+  - label: "Commercial & Marketing"
+    items: [Business development, Market expansion, Digital & channel marketing, Partner negotiation]
+  - label: "Tools"
+    items: [Excel & Google Sheets (advanced), Power BI, Tableau, MS Project, "AI tools (ChatGPT, Claude Code)"]
+languages:
+  - { name: English, level: native }
+  - { name: Spanish, level: fluent }
+  - { name: French,  level: basic }
+priority_order:
+  harborlight: [hl_outreach]
+  novacare: [nc_dtc, nc_team]
+  meridian: [me_kpi, me_integrations]

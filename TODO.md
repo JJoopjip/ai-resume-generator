@@ -243,16 +243,20 @@ shared while it assumes a private `master.yaml` beside it. Verified: neither
 `master.yaml` nor `output/` was ever committed, so **no git-history rewrite is
 needed** — this phase is relocation + example content only.
 
-- [ ] **Master path indirection**: `RESUME_GEN_MASTER` env var (default
-  `./master.yaml` for full back-compat) threaded through `resume-gen`, the
-  tailor prompt text, and `scripts/generate_resume.py`. Real bank moves to
-  e.g. `~/.config/resume-gen/master.yaml`.
-- [ ] **`master.example.yaml`**: fictional persona, realistic shape (3 roles,
-  2 profiles, variants, themes, skills). Must pass `validate` and render to
-  one page — CI/pytest asserts this so the example never rots.
-- [ ] **Sample output**: one rendered `docs/sample/` (resume.pdf +
-  coverage.md from the example persona + a fixture JD) checked in so a
-  visitor sees the result without running anything.
-- [ ] **README polish**: swap personal references for the example persona,
-  add a demo GIF/asciinema of `./resume-gen jd.txt`, keep the privacy note
-  ("your real master.yaml lives outside the repo").
+- [x] **Master path indirection**: `RESUME_GEN_MASTER` env var (default
+  `./master.yaml` for full back-compat) threaded through `resume-gen` (launcher
+  prompt + Docker `-e` passthrough), and `scripts/generate_resume.py` +
+  `scripts/gap_digest.py` defaults. Real bank can move to
+  e.g. `~/.config/resume-gen/master.yaml`; default unchanged so nothing breaks.
+- [x] **`master.example.yaml`**: fictional persona "Robin Ellery Santos" —
+  4 roles (one `additional:true`), all 4 profiles, per-bullet variants + themes,
+  summaries, highlights, skills, projects. Passes `validate` and renders to one
+  page (exit 0, 14 lines free). `tests/test_example_master.py` locks it in.
+- [x] **Sample output**: `docs/sample/` holds `instance.yaml` +
+  `job_description.txt` + rendered `resume.pdf`/`resume.docx` + `coverage.md`
+  from the example persona (68% coverage), checked in so a visitor sees the
+  result without running anything.
+- [x] **README polish**: swapped the repo-layout + privacy note for the
+  example-persona reality ("your real master.yaml lives outside the repo",
+  `RESUME_GEN_MASTER`), added a copy-paste "Try it without any setup" block
+  pointing at the sample. _(Optional demo GIF/asciinema still nice-to-have.)_

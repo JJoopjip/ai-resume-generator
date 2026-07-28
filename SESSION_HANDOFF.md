@@ -33,7 +33,12 @@ this file only summarizes the current front line.
   Claude Code session transcripts (`~/.claude/projects/.../*.jsonl`) — 7 roles,
   25 bullets, 80 variants, full `dm` angle, plus `authoring_rules`/`profiles`/
   `projects`. This is the real thing, not a reconstruction; supersedes the
-  earlier output-mined stopgap. See Log.
+  earlier output-mined stopgap. See Log. Also: an out-of-repo auto-synced backup
+  now exists — see [[never-delete-master-yaml]] and `CLAUDE.md` working rules.
+- **Phase 8 done (2026-07-28)**: repo is now portfolio-publishable without PII.
+  `RESUME_GEN_MASTER` env indirection (default `./master.yaml`), fictional
+  `master.example.yaml` + `docs/sample/` rendered sample, `tests/test_example_master.py`,
+  README privacy/"try it" polish. Real bank stays git-ignored. See Log + `TODO.md`.
 - **2026-07-24 security incident, resolved same day**: the real (private)
   `master.yaml` had been force-added and pushed to this public GitHub repo
   across 4 commits (`ad28b68`, `8483748`, `6e7a5e9`, and present in `46a65cb`),
@@ -56,19 +61,15 @@ this file only summarizes the current front line.
 
 ## What's next
 
-Highest-leverage remaining items, in the order `TODO.md` recommends (Phase 8
-last since it touches everything):
+Highest-leverage remaining items:
 
 1. **Phase 5 — run a real live eval**: `./resume-gen eval <jd> --judge` on an
    actual posting to answer "is Opus/high worth 2× Sonnet/medium?" Costs
    real API/subscription usage — confirm with the user before running.
-2. **Phase 8 — make the repo portfolio-publishable without PII**:
-   - `RESUME_GEN_MASTER` env var for master-path indirection (default stays
-     `./master.yaml` for back-compat).
-   - `master.example.yaml`: fictional persona, must pass `validate` and
-     render to one page (add a CI/pytest assertion so it can't rot).
-   - Sample rendered output checked into `docs/sample/`.
-   - README polish: swap personal references for the example persona.
+2. **Phase 8 leftover (optional)**: a demo GIF/asciinema of `./resume-gen jd.txt`
+   for the README. The rest of Phase 8 is done (see What's done). Also possible:
+   actually relocate the real bank to `~/.config/resume-gen/master.yaml` via
+   `RESUME_GEN_MASTER` (indirection is wired; the move itself is untaken).
 3. Two small open items from the original gaps list (`TODO.md` lines ~146,
    148): checked-in sample JDs for repeatable dry runs (mostly superseded by
    the Phase 5 fixtures — verify before treating as still open), and a
@@ -79,6 +80,46 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 
 ## Log
 
+- **2026-07-28 (night, later)** — **Built Phase 8 — repo is now portfolio-
+  publishable without PII.** (1) `RESUME_GEN_MASTER` env indirection: default
+  still `./master.yaml`, threaded through `scripts/generate_resume.py` +
+  `scripts/gap_digest.py` (env-aware `--master` default) and `resume-gen`
+  (launcher `MASTER` var used in the agent prompt + Docker `-e` passthrough).
+  (2) `master.example.yaml`: fictional "Robin Ellery Santos", 4 roles (1
+  `additional:true`), all 4 profiles, per-bullet variants+themes, summaries,
+  highlights, skills, projects. (3) `docs/sample/`: hand-tailored pm-profile
+  `instance.yaml` + fixture `job_description.txt`, rendered to `resume.pdf`/
+  `.docx` + `coverage.md` (exit 0, 1 page, 14 lines free, 68% coverage). (4)
+  `tests/test_example_master.py` (4 tests: shape, no-real-PII tripwire, sample
+  validates, JD coherence) — full suite 58 passed. (5) README: repo-layout +
+  privacy note rewritten to the example-persona reality + a copy-paste "Try it
+  without any setup" block. Real `master.yaml` confirmed still git-ignored/
+  untracked throughout. `TODO.md` Phase 8 checked off.
+- **2026-07-28 (night)** — Tailored-application run for Metrolinx's "Junior
+  Project Coordinator, Environmental Programs and Assessment (EPA)" posting
+  (Toronto, public-sector transit agency) at
+  `output/metrolinx-junior-project-coordinator-2026-07-28/`. No domain overlap
+  in `master.yaml` (no environmental/civil-engineering content) — profile `pm`
+  chosen as closest angle (scope/schedule/budget, regulatory compliance,
+  contractor/vendor/stakeholder coordination all transfer conceptually; JD's
+  own `profile.suggested` agreed, pm 52 highest). thaifest included at 2
+  bullets per §3b ("stakeholder/vendor coordination" JD-relevant category);
+  `yorkta` skipped (FinTech-only, no relevance). First render overflowed by 13
+  lines — cut `server` (additional role, first per §6). Second render still 7
+  over — cut `win_ceo`, `lg_sourcing`, `tf_infrastructure` (lowest-priority per
+  role) in one edit. Third render 3 over — cut `ot_access`. Fourth render: 1
+  page, exit 0, `lines_free: 0` (no slack). Coverage 16%/thin — `content_gap`
+  is almost entirely environmental-domain vocabulary (`environmental
+  assessments`, `mitigation`, `transit`, etc.) the bank genuinely has nothing
+  on; the two `selection_gap` terms ("assessment", "project assessment") had
+  no room to swap for anyway. Cover letter (pm-grounded, mirrors Metrolinx's
+  public-sector/mission-driven "passion, forward thinking, playing as a team"
+  register) rendered 1 page on the first attempt — dropped a claimed metric
+  (20,000+ attendees) from the culture paragraph mid-draft because the bullet
+  carrying it (`tf_outreach`) wasn't in the final `instance.yaml`, only
+  `tf_partnerships` was — a reminder to double check every letter claim against
+  the *final* (post-overflow-cut) instance, not just the master bank. Both
+  `resume.pdf` and `cover_letter.pdf` draft-ready; not submitted anywhere.
 - **2026-07-28 (evening, later)** — Tailored-application run for AstraZeneca's
   "Project Manager, GBS Project Services" posting (Mississauga, ON) at
   `output/astrazeneca-project-manager-2026-07-28/`, this time off the recovered

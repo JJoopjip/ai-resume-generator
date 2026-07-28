@@ -270,7 +270,9 @@ in writing first, then direct the build.**
 ### Repository layout
 
 ```
-master.yaml                    # career content bank — the single source of truth
+master.example.yaml            # fictional persona — what a fresh clone renders
+master.yaml                    # YOUR real content bank (git-ignored; not in this repo)
+docs/sample/                   # a rendered sample (PDF + coverage) from the example
 prompts/
   tailor_resume.md             # the instruction manual for the AI (resume)
   tailor_cover_letter.md       # ditto for the optional cover letter
@@ -288,6 +290,20 @@ output/                        # generated resumes (kept off git — contains pe
 PRD.md, TECH_SPEC.md           # the plain-English specs I wrote first
 ```
 
-> **A privacy note:** `output/` is deliberately kept out of git because generated
-> resumes contain personal contact details. Note that `master.yaml` itself holds
-> a phone number and email in plain text — keep any copy of this repo private.
+> **Your data stays out of the repo.** The real content bank — `master.yaml`,
+> with your name, phone, email, and full history — is **git-ignored and never
+> committed**. It lives beside the repo by default, or anywhere you point
+> `RESUME_GEN_MASTER` (e.g. `~/.config/resume-gen/master.yaml`). What ships in
+> this public repo is `master.example.yaml`, a fully fictional persona, so the
+> project is safe to browse, clone, and share. `output/` is git-ignored too
+> (generated resumes carry contact details).
+>
+> **Try it without any setup:** everything runs against the example out of the
+> box —
+>
+> ```bash
+> ./resume-gen validate --instance docs/sample/instance.yaml --master master.example.yaml
+> ./resume-gen render   --instance docs/sample/instance.yaml --master master.example.yaml --out docs/sample
+> ```
+>
+> A pre-rendered result is checked in at [`docs/sample/resume.pdf`](docs/sample/resume.pdf).

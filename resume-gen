@@ -51,9 +51,12 @@ case "${1:-}" in
   render|validate|cover|"")
     # A named volume backs Tectonic's package/font cache so it survives `--rm`
     # and is shared across every render (the image already ships a warm cache).
+    # Forward RESUME_GEN_MASTER so the containerized render/validate default to
+    # the same bank as the host (default ./master.yaml, mounted under /work).
     exec docker run --rm \
       -v "$(pwd)":/work \
       -v resume-gen-tectonic-cache:/home/appuser/.cache/Tectonic \
+      -e RESUME_GEN_MASTER="${RESUME_GEN_MASTER:-master.yaml}" \
       resume-gen "$@"
     ;;
   eval)
@@ -177,12 +180,16 @@ if [ -z "$JD_INPUT" ] || [ ! -f "$JD_INPUT" ]; then
 fi
 JD="$(realpath "$JD_INPUT")"
 
+# The content bank the headless agent reads. Default ./master.yaml (back-compat);
+# RESUME_GEN_MASTER points the whole pipeline at a bank living elsewhere.
+MASTER="${RESUME_GEN_MASTER:-master.yaml}"
+
 # Cover letter rides the SAME session (it already has the JD and instance in
 # context, so grounding is free). Off unless --cover or RESUME_GEN_COVER=1.
 GEN_COVER="${RESUME_GEN_COVER:-$WANT_COVER}"
 if [ "$GEN_COVER" != "0" ]; then
   COVER_TASK="8. Cover letter — SAME session, reusing the instance.yaml you just wrote as
-   the fact bank (do not re-open master.yaml for facts): read
+   the fact bank (do not re-open $MASTER for facts): read
    prompts/tailor_cover_letter.md and follow it exactly. Read the target
    company's culture from the job description and mirror its register. Write
    output/<slug>/cover_letter.yaml (its schema §5), grounded ONLY in that
@@ -203,14 +210,14 @@ Follow prompts/tailor_resume.md exactly as your specification. Job description
 file: $JD
 
 Do all of this without asking any questions:
-1. Read prompts/tailor_resume.md, master.yaml, and the job description ($JD).
+1. Read prompts/tailor_resume.md, $MASTER, and the job description ($JD).
 2. Pick an output slug '<company>-<role>-$TODAY$SLUG_SUFFIX' and create output/<slug>/.
 3. Copy $JD to output/<slug>/job_description.txt (audit trail).
 4. Write output/<slug>/instance.yaml per the prompt: choose the profile, select
    and order bullets/highlights/skills, and include priority_order. Aim to fit
    one page on the FIRST render (§3) — select conservatively so the overflow
    loop is a fallback, not the plan. Never invent facts; copy every locked field
-   verbatim from master.yaml.
+   verbatim from $MASTER.
 5. Render + overflow loop: run
    ./resume-gen render --instance output/<slug>/instance.yaml
    Read the JSON on stdout and the exit code:
@@ -220,16 +227,16 @@ Do all of this without asking any questions:
      line at a time, then re-run. Cap 5 attempts.
    - Exit 1: fix the reported locked-field/verbatim mismatch and re-run.
    - Exit 0 (one page): check \`fit.lines_free\` and \`coverage.selection_gap\`. If
-     there is free room AND the JD has key terms you already cover in master.yaml
+     there is free room AND the JD has key terms you already cover in $MASTER
      but did not select (selection_gap), swap the most relevant omitted bullet
-     back in — copied VERBATIM from master.yaml, never reworded or invented — to
+     back in — copied VERBATIM from $MASTER, never reworded or invented — to
      raise coverage, then re-render. Keep the swap only if it still fits (exit 0);
      otherwise revert. Stop once there is no worthwhile swap or no room.
 6. Finish at a one-page render (exit 0), or at the 5-attempt cap per §6/§6a.
    Either way your last action must be a render, so output/<slug>/resume.pdf
    always reflects the final instance.yaml and is viewable.
 7. Write output/<slug>/omitted.md per §7: a Markdown table of everything from
-   master.yaml that did NOT make the final resume (bullets, the server role,
+   $MASTER that did NOT make the final resume (bullets, the server role,
    highlights, trimmed skills), with the FULL verbatim text of each omitted
    bullet (never just its id), a never-selected-vs-overflow-cut category, and a
    reason. Reflect the final rendered state.
