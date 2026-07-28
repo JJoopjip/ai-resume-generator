@@ -36,6 +36,20 @@ optimize for "a cold agent can pick up the next task in under a minute."
   Never `git add -f` it, never paste its contents into a commit message, PR
   description, or issue. If you ever find it staged or committed, stop and
   flag it — do not push.
+- **NEVER delete, truncate, or overwrite `master.yaml` destructively.** It is
+  the user's irreplaceable career data and there is no copy in git (by design).
+  Standing user instruction (2026-07-28): "do not ever delete my master
+  template." Treat it as read-mostly; edits only to *add* real content the user
+  supplies.
+- **An out-of-repo backup exists and is auto-synced — keep both in step.** The
+  canonical file is `resume_generator/master.yaml`; it is mirrored to
+  `~/.local/share/resume-gen/master.yaml` with versioned snapshots in
+  `~/.local/share/resume-gen/master-backups/`. A systemd user path-unit +
+  timer (`resume-master-backup.{path,timer,service}` → `~/.local/bin/resume-master-sync`)
+  copy the repo file to the backup on every change (the sync script refuses to
+  overwrite the backup with an empty/broken master). If you ever restore
+  `master.yaml`, prefer the backup/snapshots; if you edit it, the backup
+  updates itself, but a manual `resume-master-sync` confirms it.
 - **`output/` is git-ignored** — generated resumes contain personal contact
   details pulled from `master.yaml`.
 - Rebuild the Docker image (`docker build -t resume-gen .`) after changing

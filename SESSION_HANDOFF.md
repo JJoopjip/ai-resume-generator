@@ -79,6 +79,36 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 
 ## Log
 
+- **2026-07-28 (evening, later)** — Tailored-application run for AstraZeneca's
+  "Project Manager, GBS Project Services" posting (Mississauga, ON) at
+  `output/astrazeneca-project-manager-2026-07-28/`, this time off the recovered
+  **real** `master.yaml` (not the 07-24 reduced-bank run). Profile `pm` (JD is
+  project/change-management + customer service in pharma; `profile.suggested`
+  agrees, pm 53). First render overflowed by 12 lines; in one edit cut `server`
+  (additional role, first per §6) plus the lowest-priority bullet of each
+  multi-bullet role (`tf_partnerships`, `win_team`, `lg_stakeholders`,
+  `ot_agile`) → 1 page, exit 0, 3 lines free. Swapped `lg_stakeholders` back
+  (verbatim) to cover the customer-engagement/stakeholder `selection_gap` → still
+  1 page, 1 line free. Final: 7 bullets across thaifest/winnergy/lgchem/otsuka/
+  boots. Remaining gap terms generic ("services", "collaboration") / boilerplate
+  `content_gap` — no further swap. Cover letter (pm-grounded, mirrors AZ's
+  collaborative/communities-of-practice/patient-mission tone) rendered 1 page on
+  the first attempt. Both `resume.pdf` and `cover_letter.pdf` draft-ready; not
+  submitted anywhere.
+- **2026-07-28 (evening)** — Tailored-application run for Attix Pharmaceuticals'
+  "Sales Manager, Inside Sales" posting (`output/attix-pharmaceuticals-sales-manager-2026-07-28/`).
+  Profile `bd` (JD is pharma-distribution sales-team leadership + revenue/pipeline
+  targets — closest fit even though the automated `profile.suggested` reads `pm`,
+  scores were flat: bd 46 / pm 51 / dm 50 / general 49, not a real disagreement).
+  First render overflowed by 10 lines; cut `server` (additional role, first per
+  §6), `win_ceo`, `lg_intelligence`, `ot_clinical`, `tf_infrastructure` in one
+  edit → 1 page, exit 0, `lines_free: 0` (essentially no slack left). Coverage
+  16%/thin — `content_gap` was almost entirely job-posting boilerplate (benefits,
+  "bachelor's degree", company name) master.yaml has nothing on, and the one
+  `selection_gap` term ("time") wasn't worth chasing per §6 guidance — no swap
+  made. Cover letter (bd-grounded, mirrors Attix's results-driven/team-development
+  tone) rendered 1 page on the first attempt. Both `resume.pdf` and
+  `cover_letter.pdf` are draft-ready for human review; not submitted anywhere.
 - **2026-07-28 (later)** — **Recovered the genuine original `master.yaml` from
   Claude Code session transcripts.** User asked to look through old
   conversations where they'd built the master. Scanned all 81 `*.jsonl`
