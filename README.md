@@ -14,6 +14,12 @@ Claude runs headless as an autonomous agent inside the pipeline — the same
 agent technology that powers AI coding tools — reading files, running the
 renderer, and reacting to its verdicts on its own.
 
+![Demo: the deterministic renderer validating and typesetting the example persona to one page](docs/demo.gif)
+
+<sub>A real run of the deterministic renderer against the fictional
+`master.example.yaml` — it validates every fact verbatim, typesets the PDF, and
+confirms it fits one page. (The AI tailoring stage runs the same way, headless.)</sub>
+
 ---
 
 ## 1. How to use it

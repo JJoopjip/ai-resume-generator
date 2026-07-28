@@ -259,4 +259,4 @@ needed** — this phase is relocation + example content only.
 - [x] **README polish**: swapped the repo-layout + privacy note for the
   example-persona reality ("your real master.yaml lives outside the repo",
   `RESUME_GEN_MASTER`), added a copy-paste "Try it without any setup" block
-  pointing at the sample. _(Optional demo GIF/asciinema still nice-to-have.)_
+  pointing at the sample. Demo GIF at `docs/demo.gif` embedded at the top of the README (real deterministic render of the example persona).
