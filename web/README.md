@@ -28,11 +28,20 @@ python3 web/app.py       # or: bash web/start.sh  (also opens the browser)
 Then open <http://127.0.0.1:5000> in your browser.
 
 1. Paste the full job posting into the box.
-2. (Optional) tick **Also write a cover letter** if this posting needs one.
-3. Click **Generate**.
-4. Watch the live log (the run takes a few minutes — same pipeline as the CLI).
-5. When it finishes, use the **Download** buttons — résumé PDF/Word, plus the
-   cover letter PDF/Word when you asked for one.
+2. (Optional) tick **Cover letter too** if this posting needs one, and pick a
+   tier: **Best quality** (Opus/high, the default) or **Fast & cheaper**
+   (Sonnet/medium — the CLI's `--fast`).
+3. Click **Generate** (or press ⌘/Ctrl-Enter in the box).
+4. Watch the five named steps (the run takes a few minutes — same pipeline as
+   the CLI). The raw agent log is still there, collapsed under **Detailed agent
+   log**.
+5. When it finishes you get a file list — résumé PDF/Word, plus the cover letter
+   PDF/Word when you asked for one — and the run's numbers in the right rail:
+   JD coverage, page fit, and estimated cost, read from the `coverage.md`,
+   `resume.aux` and `cost.json` the pipeline already writes.
+
+The **Drafts** tab lists every past run in `output/` with its coverage, page
+count and download links.
 
 Stop the server with `Ctrl-C`.
 
@@ -82,8 +91,9 @@ already serving on 5000, clicking the icon just opens the browser to it.
 
 - Binds to `127.0.0.1` only, so it is not reachable from your network. This
   matters because `master.yaml` holds personal contact info.
-- Uses whatever model the CLI uses. To dial the AI up for a high-stakes
-  application, launch with the same env var the CLI honours:
+- The page's tier switch sets the model itself (Opus/high or Sonnet/medium),
+  because `RESUME_GEN_CLAUDE_FLAGS` overrides the launcher's own choice. Setting
+  that env var before starting the server still wins over both:
   ```sh
   RESUME_GEN_CLAUDE_FLAGS="--model claude-opus-4-8 --effort high \
     --permission-mode acceptEdits --allowedTools Bash Read Edit Write" \

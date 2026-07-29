@@ -39,6 +39,15 @@ this file only summarizes the current front line.
   `projects`. This is the real thing, not a reconstruction; supersedes the
   earlier output-mined stopgap. See Log. Also: an out-of-repo auto-synced backup
   now exists — see [[never-delete-master-yaml]] and `CLAUDE.md` working rules.
+- **Web UI redesign (2026-07-28)**: `web/templates/index.html` rebuilt as a
+  two-column working screen (paste box on top, five named steps instead of a
+  raw log, file list with page count/size, right rail with JD coverage / page
+  fit / cost, collapsible agent log, Drafts tab). `web/app.py` gained the
+  metric readers behind it (`_page_count`/`_coverage`/`_cost`/`_run_meta`,
+  `GET /drafts`) and a `?tier=` switch (`best` = Opus/high, `fast` =
+  Sonnet/medium) — the page has to set the model itself because
+  `RESUME_GEN_CLAUDE_FLAGS` overrides the launcher's own tier. Same palette,
+  same routes otherwise.
 - **Phase 8 done (2026-07-28)**: repo is now portfolio-publishable without PII.
   `RESUME_GEN_MASTER` env indirection (default `./master.yaml`), fictional
   `master.example.yaml` + `docs/sample/` rendered sample, `tests/test_example_master.py`,
@@ -76,11 +85,19 @@ Highest-leverage remaining items:
    runs; Opus/medium not offered (worst value).** Implemented in `resume-gen`
    (arg pre-scan + tier block), README, TECH_SPEC §6. No open follow-ups here.
    Reports: `output/eval-run{1,2}-*-2026-07-28/`, `output/eval-jd_highmatch-2026-07-28/`.
-2. **Phase 8 leftover (optional)**: a demo GIF/asciinema of `./resume-gen jd.txt`
+2. **Web UI follow-ups (from the 2026-07-28 redesign)**: the new screen has not
+   yet been driven through a *real* (paid) run — it was verified with a stub
+   pipeline, so eyeball the step list and the rail on the next genuine
+   generation. Two ideas deliberately left unbuilt, in priority order:
+   (a) a live page-one preview that fills in while the agent writes (the
+   highest-value idea from the design deck — needs a mid-run render or an
+   `instance.yaml` parse); (b) an optional dark "developer view" showing the
+   raw trace with per-step timings, useful when tuning prompts.
+3. **Phase 8 leftover (optional)**: a demo GIF/asciinema of `./resume-gen jd.txt`
    for the README. The rest of Phase 8 is done (see What's done). Also possible:
    actually relocate the real bank to `~/.config/resume-gen/master.yaml` via
    `RESUME_GEN_MASTER` (indirection is wired; the move itself is untaken).
-3. Two small open items from the original gaps list (`TODO.md` lines ~146,
+4. Two small open items from the original gaps list (`TODO.md` lines ~146,
    148): checked-in sample JDs for repeatable dry runs (mostly superseded by
    the Phase 5 fixtures — verify before treating as still open), and a
    versioning-compatibility check between `master.yaml`'s `schema_version`
@@ -90,7 +107,36 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 
 ## Log
 
-- **2026-07-28 (latest)** — **Model default decided + `--fast` flag shipped.**
+- **2026-07-28 (latest)** — **Web UI redesigned (":5000" front end).** Picked
+  the "Blush Rosé, refined" direction from a three-option design deck (the
+  other two — a dark operator console, and a paper/letterpress "atelier" where
+  the résumé preview is the hero — were rejected as too big a break from the
+  tracker sibling / too much new backend for now). Kept the palette; replaced
+  the gradient band that ate the top third with a one-line header, made the
+  paste box the top of the page, turned the streamed log into five named steps
+  (mapping table in the template's JS, driven by `make_narrator()`'s phrases)
+  with the raw log collapsed into the rail, and replaced the identical download
+  pills with a file list carrying page count + size. New right rail shows the
+  run's real numbers — JD coverage (+ the "you have this, it just didn't make
+  the page" terms), page fit, cost — all *read* from files the pipeline already
+  writes (`coverage.md`, `resume.aux`, `cost.json`); nothing is recomputed.
+  Added a Drafts tab over a new read-only `GET /drafts`, a Best-quality/Fast
+  tier switch (`?tier=`), and ⌘/Ctrl-Enter to run. Note the tier switch fixes a
+  real bug: the web app hardcoded `--model claude-sonnet-5 --effort medium` into
+  `RESUME_GEN_CLAUDE_FLAGS`, so every browser run silently used the *fast* tier
+  regardless of the launcher's Opus/high default. Verified with a stub
+  `resume-gen` (no LLM spend): narration → steps, `__RESULT__` payload, meta
+  readers, `/drafts`, tier flags (default→opus/high, `?tier=fast`→sonnet/medium,
+  env override still wins). `pytest` 58 passed. Web image is bind-mounted, so no
+  Docker rebuild. **Not yet seen in a real paid run — check it on the next one.**
+- **2026-07-28** — **Tailored application run: Abbott Trade Marketing
+  Manager (Nutrition), Mississauga.** `output/abbott-trade-marketing-manager-2026-07-28/`
+  — profile `dm`, resume hit 1 page on the second render (started 3 lines over,
+  trimmed `lg_positioning` and `ot_agile`, dropped `server` from the initial
+  draft since the page was already over without it). Cover letter rendered
+  clean on the first attempt. Both are drafts pending human review; nothing
+  submitted. No repo/pipeline changes.
+- **2026-07-28** — **Model default decided + `--fast` flag shipped.**
   After the two evals (identical output on low-match `jd.txt`; Opus/high
   judge-preferred on high-match `jd_highmatch.txt`), kept Opus/high as the
   default and added `--fast`/`RESUME_GEN_FAST=1` → Sonnet 5/medium for

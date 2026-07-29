@@ -59,6 +59,7 @@ DOWNLOADABLE = {
     "cover_letter.pdf": "application/pdf",
     "cover_letter.docx": _DOCX_CTYPE,
     "omitted.md": "text/markdown; charset=utf-8",
+    "coverage.md": "text/markdown; charset=utf-8",
     "instance.yaml": "text/yaml; charset=utf-8",
 }
 SLUG_RE = re.compile(r"^[A-Za-z0-9._-]+$")  # output folder names only
@@ -69,11 +70,18 @@ ARTIFACTS = ("resume.pdf", "resume.docx", "cover_letter.pdf", "cover_letter.docx
 # Flags handed to the pipeline's headless Claude. `--output-format stream-json
 # --verbose` is what lets make_narrator() turn the run into progress lines; we
 # only set this default when the user hasn't supplied their own (see below).
-_CLAUDE_STREAM_FLAGS = (
-    "--model claude-sonnet-5 --effort medium "
-    "--permission-mode acceptEdits --allowedTools Bash Read Edit Write "
-    "--output-format stream-json --verbose"
-)
+#
+# The model/effort half mirrors resume-gen's own two tiers, because setting
+# RESUME_GEN_CLAUDE_FLAGS overrides the launcher's choice (and its --fast flag)
+# entirely — so the page has to name the tier itself. "best" is the launcher's
+# default (Opus/high, the tier the live eval backs); "fast" is `--fast`.
+TIERS = {
+    "best": "--model claude-opus-4-8 --effort high",
+    "fast": "--model claude-sonnet-5 --effort medium",
+}
+_CLAUDE_RUN_FLAGS = ("--permission-mode acceptEdits "
+                     "--allowedTools Bash Read Edit Write "
+                     "--output-format stream-json --verbose")
 
 # One generation at a time. The pipeline drives Docker + a headless Claude
 # session and detects "the new output folder" by diffing output/; two concurrent
@@ -90,6 +98,100 @@ def _dirs():
     if not OUTPUT.exists():
         return set()
     return {p.name for p in OUTPUT.iterdir() if p.is_dir()}
+
+
+# ---- Run metrics -------------------------------------------------------------
+# Everything below reads files the pipeline ALREADY writes into output/<slug>/ —
+# nothing here re-runs or re-computes anything. Each reader returns None (or an
+# empty dict) when its file is missing or in an unexpected shape, so a partial
+# run degrades to "stat not shown" rather than breaking the results page.
+
+def _page_count(folder: Path):
+    """Final page count, from the lastpage macro resume.aux carries.
+
+    Mirrors scripts/render_pdf.extract_page_count() — duplicated (not imported)
+    because that module pulls in jinja2, and web/ stays standard-library only.
+    """
+    aux = folder / "resume.aux"
+    if not aux.is_file():
+        return None
+    m = re.search(r"\\xdef\\lastpage@lastpage\{(\d+)\}",
+                  aux.read_text(encoding="utf-8", errors="replace"))
+    return int(m.group(1)) if m else None
+
+
+_COV_HEAD_RE = re.compile(r"\*\*(\d+)%\*\*.*?\((\d+) of (\d+)\)", re.S)
+_COV_SECTION_RE = re.compile(r"^## Missing — (.+?) \((\d+)\)$", re.M)
+
+
+def _coverage(folder: Path):
+    """Parse coverage.md into {pct, covered, total, gap_terms, gap_count}.
+
+    `gap_terms` are the actionable ones: terms the JD asks for that ARE in
+    master.yaml but weren't selected — the "swap a bullet back in" list, as
+    opposed to terms the master genuinely has nothing for.
+    """
+    md = folder / "coverage.md"
+    if not md.is_file():
+        return None
+    text = md.read_text(encoding="utf-8", errors="replace")
+    head = _COV_HEAD_RE.search(text)
+    if not head:
+        return None
+    out = {"pct": int(head.group(1)), "covered": int(head.group(2)),
+           "total": int(head.group(3)), "gap_terms": [], "gap_count": 0,
+           "absent_count": 0}
+    for m in _COV_SECTION_RE.finditer(text):
+        label, count = m.group(1), int(m.group(2))
+        in_master = "in your master.yaml" in label and "not in" not in label
+        if in_master:
+            out["gap_count"] = count
+            body = text[m.end():]
+            nxt = body.find("\n## ")
+            out["gap_terms"] = re.findall(r"^- (.+)$",
+                                          body[:nxt if nxt != -1 else None], re.M)
+        else:
+            out["absent_count"] = count
+    return out
+
+
+def _cost(folder: Path):
+    """USD estimate the pipeline logged for the run (cost.json), if present."""
+    fp = folder / "cost.json"
+    if not fp.is_file():
+        return None
+    try:
+        return json.loads(fp.read_text(encoding="utf-8")).get("cost_usd")
+    except (ValueError, OSError):
+        return None
+
+
+def _file_rows(folder: Path):
+    """The downloadable artifacts that exist, with size (and pages for the
+    résumé PDF) so the results list can say more than the file name."""
+    rows = []
+    pages = _page_count(folder)
+    for name in ARTIFACTS:
+        fp = folder / name
+        if not fp.is_file():
+            continue
+        row = {"name": name, "bytes": fp.stat().st_size}
+        if name == "resume.pdf" and pages:
+            row["pages"] = pages
+        rows.append(row)
+    return rows
+
+
+def _run_meta(slug):
+    """Everything the results panel shows about a finished output/<slug>/."""
+    folder = OUTPUT / slug
+    return {
+        "pages": _page_count(folder),
+        "coverage": _coverage(folder),
+        "cost_usd": _cost(folder),
+        "reports": [n for n in ("coverage.md", "omitted.md")
+                    if (folder / n).is_file()],
+    }
 
 
 # ---- Progress narration ------------------------------------------------------
@@ -206,6 +308,8 @@ class Handler(BaseHTTPRequestHandler):
                                    "text/html; charset=utf-8")
         if path == "/download":
             return self._download()
+        if path == "/drafts":
+            return self._drafts()
         self._send_text(404, "Not found")
 
     def do_POST(self):
@@ -234,6 +338,28 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def _drafts(self, limit=40):
+        """Past runs, newest first — every output/<slug>/ that has a résumé PDF.
+
+        Read-only and cheap: folder mtime plus the same metric readers the
+        results panel uses. Nothing is re-rendered or re-scored.
+        """
+        runs = []
+        for folder in (p for p in OUTPUT.iterdir() if p.is_dir()) \
+                if OUTPUT.exists() else []:
+            if not (folder / "resume.pdf").is_file():
+                continue          # a failed or half-written run — not a draft
+            cov = _coverage(folder)
+            runs.append({
+                "slug": folder.name,
+                "modified": folder.stat().st_mtime,
+                "files": [f for f in ARTIFACTS if (folder / f).is_file()],
+                "pages": _page_count(folder),
+                "coverage_pct": cov["pct"] if cov else None,
+            })
+        runs.sort(key=lambda r: r["modified"], reverse=True)
+        self._send_json(200, {"ok": True, "drafts": runs[:limit]})
 
     def _to_tracker(self):
         """Push a finished output/<slug>/ into the application tracker. We send
@@ -311,12 +437,16 @@ class Handler(BaseHTTPRequestHandler):
         # the CLI: the resume-only path skips the extra drafting/render loop).
         q = parse_qs(urlparse(self.path).query)
         want_cover = (q.get("cover") or ["0"])[0] == "1"
+        # ?tier=fast picks the cheaper Sonnet tier (the launcher's --fast).
+        tier = (q.get("tier") or ["best"])[0]
+        if tier not in TIERS:
+            tier = "best"
 
         # Refuse a second concurrent run rather than race output-folder detection.
         if not _run_lock.acquire(blocking=False):
             return self._send_text(409, _BUSY_MSG)
         try:
-            self._run_pipeline(jd_text, want_cover)
+            self._run_pipeline(jd_text, want_cover, tier)
         finally:
             _run_lock.release()
 
@@ -365,10 +495,11 @@ class Handler(BaseHTTPRequestHandler):
                 raise
         return emit
 
-    def _stream_env(self):
+    def _stream_env(self, tier="best"):
         """os.environ + our stream-json default (a user's own flags still win)."""
         env = os.environ.copy()
-        env.setdefault("RESUME_GEN_CLAUDE_FLAGS", _CLAUDE_STREAM_FLAGS)
+        env.setdefault("RESUME_GEN_CLAUDE_FLAGS",
+                       f"{TIERS.get(tier, TIERS['best'])} {_CLAUDE_RUN_FLAGS}")
         return env
 
     def _run_narrated(self, cmd, env, emit):
@@ -395,6 +526,7 @@ class Handler(BaseHTTPRequestHandler):
             have = [f for f in ARTIFACTS if (OUTPUT / slug / f).is_file()]
             if code == 0 and (OUTPUT / slug / "cover_letter.pdf").is_file():
                 result = {"ok": True, "slug": slug, "files": have,
+                          "rows": _file_rows(OUTPUT / slug), "meta": _run_meta(slug),
                           "folder": str(OUTPUT / slug)}
             else:
                 result = {"ok": False, "slug": slug, "code": code}
@@ -406,7 +538,7 @@ class Handler(BaseHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError):
             pass
 
-    def _run_pipeline(self, jd_text, want_cover=False):
+    def _run_pipeline(self, jd_text, want_cover=False, tier="best"):
         emit = self._open_stream()
 
         # Write the pasted JD to a temp file and run the UNMODIFIED pipeline.
@@ -424,15 +556,17 @@ class Handler(BaseHTTPRequestHandler):
         result = {"ok": False}
         try:
             kind = "résumé + cover letter" if want_cover else "résumé"
-            emit(f"  web │ starting {kind} — this takes a few minutes; "
-                 "watch the steps below.\n\n")
-            code = self._run_narrated(cmd, self._stream_env(), emit)
+            tier_note = "cheaper/faster tier" if tier == "fast" else "best-quality tier"
+            emit(f"  web │ starting {kind} on the {tier_note} — this takes a few "
+                 "minutes; watch the steps below.\n\n")
+            code = self._run_narrated(cmd, self._stream_env(tier), emit)
 
             new = sorted(_dirs() - before)
             slug = new[-1] if new else None
             if code == 0 and slug:
                 have = [f for f in ARTIFACTS if (OUTPUT / slug / f).is_file()]
                 result = {"ok": True, "slug": slug, "files": have,
+                          "rows": _file_rows(OUTPUT / slug), "meta": _run_meta(slug),
                           "folder": str((OUTPUT / slug))}
             else:
                 result = {"ok": False, "slug": slug, "code": code}

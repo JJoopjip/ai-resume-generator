@@ -12,6 +12,12 @@
      sage-green. Shapes/shadows are shared; the palette is pink-forward so the
      two apps read as siblings, not clones. Fonts fall back to the system
      stack so this page stays fully self-contained (no files served).
+
+     Layout (2026-07-28): the old full-width gradient band + wall-of-log was
+     replaced by a two-column working screen — the paste box is the top of the
+     page, the run shows as five named steps, and the raw agent log collapses
+     into the right rail alongside the run's real numbers (coverage, page fit,
+     cost). See SESSION_HANDOFF.md for the reasoning.
      ====================================================================== */
   :root {
     --paper:        #FBF4F6;  /* blush-white page background                   */
@@ -20,6 +26,8 @@
     --pink-strong:  #A24862;  /* deeper rose for text/links/emphasis on light  */
     --peach:        #E6A98C;  /* warm peach — "needs attention" accent         */
     --rose:         #C98BA0;  /* dusty rose — soft secondary accent            */
+    --sage:         #5E8C6A;  /* muted green — done/verified, so pink stays    */
+                              /* the "in progress" colour                      */
     --slate:        #3A2E33;  /* near-black plum — primary text                */
     --muted:        #8A6F79;  /* secondary text                                */
     --pink-tint:    #F8E2EA;  /* pale pink fill                                */
@@ -42,7 +50,7 @@
     line-height: 1.65;
     -webkit-font-smoothing: antialiased;
   }
-  h1, h2, h3, .band-text, .stat-num {
+  h1, h2, h3, .stat-num {
     font-family: "Nunito", system-ui, sans-serif;
     color: var(--slate);
     letter-spacing: -0.01em;
@@ -51,7 +59,7 @@
   a:hover { text-decoration: underline; }
   code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; }
 
-  .wrap { max-width: 940px; margin: 0 auto; padding: 22px 20px 80px; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 22px 20px 80px; }
 
   /* --- Top bar (mirrors the tracker; links cross to :8000) --------------- */
   .topbar {
@@ -81,9 +89,11 @@
   }
   .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-lift); text-decoration: none; }
   .btn:active { transform: translateY(0); }
-  .btn:disabled { opacity: .5; cursor: default; transform: none; box-shadow: var(--shadow); }
+  .btn:disabled { opacity: .55; cursor: default; transform: none; box-shadow: var(--shadow); }
   .btn-primary { background: var(--pink); color: #fff; }
   .btn-primary:hover:not(:disabled) { background: var(--pink-strong); }
+  .btn-soft { background: var(--pink-tint); color: var(--pink-strong); box-shadow: none; }
+  .btn-soft:hover { box-shadow: var(--shadow); }
   .btn-ghost { background: transparent; box-shadow: none; color: var(--muted); }
   .btn-ghost:hover { background: var(--surface); box-shadow: var(--shadow); }
   .btn-sm { font-size: 13px; padding: 8px 14px; min-height: 38px; }
@@ -91,77 +101,168 @@
 
   :focus-visible { outline: 3px solid var(--pink); outline-offset: 2px; border-radius: 8px; }
 
-  /* --- Hero band (the tracker's signature element) ---------------------- */
-  .band {
-    background: linear-gradient(135deg, var(--pink) 0%, var(--pink-strong) 100%);
-    color: #fff; border-radius: 22px; padding: 26px 28px; margin-bottom: 26px;
-    box-shadow: var(--shadow-lift);
+  /* --- Page header: one line, not a third of the screen ------------------ */
+  .page-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 14px; flex-wrap: wrap; margin-bottom: 16px;
   }
-  .band-label {
-    font-size: 12.5px; text-transform: uppercase; letter-spacing: .12em;
-    opacity: .8; margin-bottom: 6px; font-weight: 600;
-  }
-  .band-text {
-    font-weight: 700; font-size: clamp(20px, 3.4vw, 27px); line-height: 1.3; color: #fff;
-    margin: 0;
-  }
-  .band-sub { margin: 10px 0 0; font-size: 14px; opacity: .92; max-width: 60ch; }
+  .page-head h1 { font-size: 22px; margin: 0; font-weight: 800; }
+  .page-head p { margin: 0; font-size: 13.5px; color: var(--muted); max-width: 64ch; }
 
-  /* --- Panel (the form card) -------------------------------------------- */
-  .panel {
-    background: var(--surface); border-radius: var(--radius);
-    padding: 22px 22px 24px; box-shadow: var(--shadow);
+  /* --- View tabs (Generate / Drafts) ------------------------------------- */
+  .tabs { display: flex; gap: 6px; }
+  .tab {
+    font-size: 13.5px; font-weight: 600; color: var(--muted); background: none;
+    border: none; cursor: pointer; padding: 7px 14px; border-radius: 999px;
+    font-family: inherit;
   }
-  .field { display: flex; flex-direction: column; gap: 6px; }
-  .field label { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .tab[aria-selected="true"] { background: var(--pink-tint); color: var(--pink-strong); }
+
+  /* --- Two-column working area ------------------------------------------ */
+  .cols { display: grid; grid-template-columns: minmax(0,1fr) 264px; gap: 18px; align-items: start; }
+  .main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .rail { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 20px; }
+  @media (max-width: 860px) {
+    .cols { grid-template-columns: 1fr; }
+    .rail { position: static; }
+  }
+
+  /* --- Cards -------------------------------------------------------------- */
+  .card {
+    background: var(--surface); border-radius: var(--radius);
+    padding: 18px 20px 20px; box-shadow: var(--shadow);
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .card h2 { font-size: 16px; font-weight: 700; margin: 0; }
+  .card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+  }
+  .sub { font-size: 12.5px; color: var(--muted); }
+
+  /* --- Form --------------------------------------------------------------- */
   textarea {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13.5px;
     padding: 12px 14px; border-radius: var(--radius-sm); border: 1px solid var(--line);
-    background: var(--paper); color: var(--slate); width: 100%; min-height: 260px;
-    resize: vertical; line-height: 1.5;
+    background: var(--paper); color: var(--slate); width: 100%; min-height: 210px;
+    resize: vertical; line-height: 1.55;
   }
   textarea:focus {
     outline: none; border-color: var(--pink); background: var(--surface);
     box-shadow: 0 0 0 3px var(--pink-tint);
   }
-
-  .row { display: flex; gap: 14px; align-items: center; margin-top: 18px; flex-wrap: wrap; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
   .check {
     display: flex; align-items: center; gap: .4rem; font-size: 13.5px;
     color: var(--muted); cursor: pointer; user-select: none;
   }
   .check input { accent-color: var(--pink); width: 16px; height: 16px; }
 
-  .status { font-size: 13.5px; color: var(--muted); }
-
-  /* --- Live log ---------------------------------------------------------- */
-  pre#log {
-    margin-top: 22px; padding: 16px 18px; border-radius: var(--radius);
-    max-height: 380px; overflow: auto; white-space: pre-wrap; word-break: break-word;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px;
-    line-height: 1.6; background: var(--surface); border: 1px solid var(--line);
-    box-shadow: var(--shadow); color: var(--slate); display: none;
+  /* Segmented control for the model tier. */
+  .seg {
+    display: flex; background: var(--paper); border: 1px solid var(--line);
+    border-radius: 999px; padding: 3px;
+  }
+  .seg button {
+    font-family: inherit; font-size: 12.5px; font-weight: 600; color: var(--muted);
+    background: none; border: none; cursor: pointer; padding: 6px 13px;
+    border-radius: 999px; min-height: 32px;
+  }
+  .seg button[aria-pressed="true"] {
+    background: var(--surface); color: var(--pink-strong);
+    box-shadow: 0 1px 3px rgba(58,46,51,.10);
   }
 
-  /* --- Result card ------------------------------------------------------- */
-  #result {
-    margin-top: 22px; display: none; background: var(--surface);
-    border-radius: var(--radius); padding: 22px 22px 24px; box-shadow: var(--shadow);
+  /* --- Progress: five named steps ---------------------------------------- */
+  .bar { height: 5px; border-radius: 999px; background: var(--pink-tint); overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--pink);
+           border-radius: 999px; transition: width .5s ease; }
+  .steps { display: flex; flex-direction: column; gap: 2px; }
+  .step {
+    display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: start;
+    font-size: 13.5px; color: var(--muted); padding: 4px 0;
   }
-  #result h2 { font-size: 18px; font-weight: 700; margin: 0 0 14px; }
-  .dl {
-    display: inline-flex; align-items: center; margin: 0 .55rem .55rem 0;
-    padding: 10px 16px; border-radius: 999px; text-decoration: none;
-    background: var(--pink-tint); color: var(--pink-strong); font-weight: 600;
-    font-size: 14px; box-shadow: var(--shadow);
+  .step .mark {
+    width: 19px; height: 19px; border-radius: 50%; background: var(--paper);
+    border: 1.5px solid var(--line); display: grid; place-items: center;
+    font-size: 10.5px; color: var(--muted); margin-top: 2px;
+  }
+  .step.done { color: var(--slate); }
+  .step.done .mark { background: var(--sage); border-color: var(--sage); color: #fff; }
+  .step.now { color: var(--pink-strong); font-weight: 600; }
+  .step.now .mark { background: var(--pink); border-color: var(--pink); color: #fff; }
+  .step .detail { display: block; font-weight: 400; font-size: 12.5px; color: var(--muted); }
+
+  /* --- Result file list --------------------------------------------------- */
+  .files { display: flex; flex-direction: column; gap: 8px; }
+  .file {
+    display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+    border-radius: var(--radius-sm); background: var(--paper);
+    color: inherit; text-decoration: none;
     transition: transform .12s ease, box-shadow .12s ease;
   }
-  .dl:hover { transform: translateY(-1px); box-shadow: var(--shadow-lift); text-decoration: none; }
+  .file:hover { transform: translateY(-1px); box-shadow: var(--shadow); text-decoration: none; }
+  .file .ic {
+    width: 30px; height: 37px; border-radius: 4px; background: var(--pink-tint);
+    color: var(--pink-strong); display: grid; place-items: center;
+    font-size: 9px; font-weight: 800; letter-spacing: .04em; flex: none;
+  }
+  .file .nm { flex: 1; font-size: 13.5px; font-weight: 600; }
+  .file .nm small { display: block; font-weight: 400; font-size: 12px; color: var(--muted); }
+  .file .go { font-size: 13px; font-weight: 600; color: var(--pink-strong); }
   .folder {
-    font-size: 12.5px; color: var(--muted); margin-top: 12px; word-break: break-all;
+    font-size: 12.5px; color: var(--muted); word-break: break-all;
     background: var(--paper); padding: 10px 14px; border-radius: var(--radius-sm);
   }
   .err { color: #8f5a63; font-weight: 600; }
+
+  /* --- Rail: the run's real numbers -------------------------------------- */
+  .stat { background: var(--surface); border-radius: var(--radius);
+          padding: 14px 16px; box-shadow: var(--shadow); }
+  .stat .k { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
+             color: var(--muted); font-weight: 600; }
+  .stat-num { font-size: 27px; font-weight: 800; line-height: 1.25;
+              font-variant-numeric: tabular-nums; }
+  .stat-num small { font-size: 13px; color: var(--muted); font-weight: 700; }
+  .stat .note { font-size: 12px; color: var(--muted); line-height: 1.55; }
+  .stat .note.warn { color: #9c6b4e; }
+  .stat .note.good { color: var(--sage); }
+
+  details.logbox {
+    background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 12px 16px; font-size: 13px;
+  }
+  details.logbox summary {
+    cursor: pointer; color: var(--muted); font-size: 12.5px; font-weight: 600;
+    letter-spacing: .04em; list-style: none;
+  }
+  details.logbox summary::-webkit-details-marker { display: none; }
+  details.logbox summary::before { content: "▸ "; }
+  details.logbox[open] summary::before { content: "▾ "; }
+  pre#log {
+    margin: 10px 0 0; padding: 0; max-height: 320px; overflow: auto;
+    white-space: pre-wrap; word-break: break-word;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+    line-height: 1.65; color: var(--muted); background: none;
+  }
+
+  /* --- Drafts view -------------------------------------------------------- */
+  .draft {
+    display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+    border-radius: var(--radius-sm); background: var(--paper); flex-wrap: wrap;
+  }
+  .draft .who { flex: 1; min-width: 220px; font-size: 13.5px; font-weight: 600;
+                word-break: break-word; }
+  .draft .who small { display: block; font-weight: 400; font-size: 12px; color: var(--muted); }
+  .pill {
+    font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+    background: var(--rose-tint); color: var(--pink-strong);
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .pill.good { background: #E4EFE7; color: #46704F; }
+  .pill.warn { background: var(--peach-tint); color: #97653F; }
+  .draft-links { display: flex; gap: 10px; flex-wrap: wrap; }
+  .draft-links a { font-size: 12.5px; font-weight: 600; }
 
   /* --- Spinner ----------------------------------------------------------- */
   .spin {
@@ -170,12 +271,10 @@
     animation: spin .8s linear infinite; vertical-align: -2px;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+  .hidden { display: none !important; }
 
-  @media (max-width: 720px) {
-    .band { padding: 22px 20px; }
-  }
   @media (prefers-reduced-motion: reduce) {
-    *, .btn, .dl { transition: none !important; animation: none !important; }
+    *, .btn, .file, .bar i { transition: none !important; animation: none !important; }
   }
 </style>
 </head>
@@ -192,49 +291,255 @@
       </div>
     </header>
 
-    <div class="band">
-      <div class="band-label">Tailor a résumé</div>
-      <p class="band-text">Paste a job posting — get a one-page résumé built from your history.</p>
-      <p class="band-sub">Takes a few minutes; the live log shows each step. Files are saved to
-        <code>output/</code> automatically — the download buttons just copy them out.</p>
-    </div>
-
-    <div class="panel">
-      <div class="field">
-        <label for="jd">Job description</label>
-        <textarea id="jd" placeholder="Paste the full job posting here…"></textarea>
+    <div class="page-head">
+      <div>
+        <h1>Tailor a résumé</h1>
+        <p>Paste a posting — you get a one-page résumé built only from your own history.
+           Files are saved to <code>output/</code>; the buttons just copy them out.</p>
       </div>
-
-      <div class="row">
-        <button id="go" class="btn btn-primary">Generate</button>
-        <label class="check"><input type="checkbox" id="cover"> Also write a cover letter now (same run)</label>
-        <span class="status" id="status"></span>
+      <div class="tabs" role="tablist">
+        <button class="tab" id="tab-generate" role="tab" aria-selected="true">Generate</button>
+        <button class="tab" id="tab-drafts" role="tab" aria-selected="false">Drafts</button>
       </div>
     </div>
 
-    <pre id="log"></pre>
+    <!-- ================= GENERATE ================= -->
+    <div id="view-generate" class="cols">
+      <div class="main">
+        <div class="card">
+          <div class="card-head">
+            <h2>Job description</h2>
+            <div class="row">
+              <span class="sub" id="wc">no text yet</span>
+              <div class="seg" role="group" aria-label="Quality tier">
+                <button id="tier-best" aria-pressed="true">Best quality</button>
+                <button id="tier-fast" aria-pressed="false">Fast &amp; cheaper</button>
+              </div>
+            </div>
+          </div>
+          <textarea id="jd" placeholder="Paste the full job posting here…"></textarea>
+          <div class="row">
+            <button id="go" class="btn btn-primary">Generate</button>
+            <label class="check"><input type="checkbox" id="cover"> Cover letter too</label>
+            <span class="sub" id="tier-note">Opus, high effort — the default the eval backs.</span>
+          </div>
+          <div class="sub" id="status"></div>
+        </div>
 
-    <div id="result"></div>
+        <!-- Progress: named steps instead of a wall of log -->
+        <div class="card hidden" id="progress">
+          <div class="card-head">
+            <h2 id="progress-title">Building your résumé</h2>
+            <span class="sub" id="elapsed">0:00 elapsed</span>
+          </div>
+          <div class="bar"><i id="bar-fill"></i></div>
+          <div class="steps" id="steps"></div>
+        </div>
+
+        <div class="card hidden" id="result"></div>
+      </div>
+
+      <aside class="rail">
+        <div class="stat hidden" id="stat-coverage">
+          <div class="k">JD coverage</div>
+          <div class="stat-num" id="cov-num">—</div>
+          <div class="note" id="cov-note"></div>
+        </div>
+        <div class="stat hidden" id="stat-pages">
+          <div class="k">Page fit</div>
+          <div class="stat-num" id="pages-num">—</div>
+          <div class="note" id="pages-note"></div>
+        </div>
+        <div class="stat hidden" id="stat-cost">
+          <div class="k">Run cost</div>
+          <div class="stat-num" id="cost-num">—</div>
+          <div class="note" id="cost-note"></div>
+        </div>
+        <details class="logbox hidden" id="logbox">
+          <summary>Detailed agent log</summary>
+          <pre id="log"></pre>
+        </details>
+      </aside>
+    </div>
+
+    <!-- ================= DRAFTS ================= -->
+    <div id="view-drafts" class="hidden">
+      <div class="card">
+        <div class="card-head">
+          <h2>Everything you've generated</h2>
+          <span class="sub" id="drafts-count"></span>
+        </div>
+        <div id="drafts-list" class="files"><span class="sub">Loading…</span></div>
+      </div>
+    </div>
   </div>
 
 <script>
 const $ = (id) => document.getElementById(id);
-const go = $("go"), jd = $("jd"), status = $("status"), log = $("log"), result = $("result"), cover = $("cover");
+const go = $("go"), jd = $("jd"), status = $("status"), log = $("log"),
+      result = $("result"), cover = $("cover");
 
-go.addEventListener("click", () => {
-  const text = jd.value.trim();
-  if (!text) { status.textContent = "Paste a job description first."; return; }
-  stream("/generate" + (cover.checked ? "?cover=1" : ""), text, "Generating…");
+let tier = "best";     // matches the server's default; sent as ?tier=
+let timer = null, started = 0;
+
+/* ---------- Steps -------------------------------------------------------
+   The stream gives us narration lines (make_narrator() in web/app.py). Each
+   step owns the phrases that mean "this stage is underway"; a match lights
+   that step and completes the ones above it. Keeping the mapping in one table
+   beats scattering string tests through the render code. */
+const RESUME_STEPS = [
+  { label: "Reading your history and the posting",
+    match: [/agent starting/, /reads your career history/, /reads the job description/] },
+  { label: "Choosing the experience that fits this job",
+    match: [/tailoring instructions/, /chooses and writes your tailored content/] },
+  { label: "Checking every claim against your history",
+    match: [/fact-check validator/] },
+  { label: "Rendering and fitting it to one page",
+    match: [/renders the PDF/, /re-renders after trimming/, /agent trims to fit/, /fits on one page/] },
+  { label: "Saving the Word copy and the omissions report",
+    match: [/omissions report/, /writes your cover letter/, /renders the cover letter/] },
+];
+const COVER_STEPS = [
+  { label: "Reading the résumé and the posting",
+    match: [/agent starting/, /cover-letter instructions/, /reads the job description/] },
+  { label: "Drafting the letter",
+    match: [/writes your cover letter/] },
+  { label: "Rendering the PDF and Word file",
+    match: [/renders the cover letter/, /re-renders the cover letter/] },
+];
+
+let steps = RESUME_STEPS, stepAt = -1;
+
+function drawSteps(detail) {
+  $("steps").innerHTML = steps.map((s, i) => {
+    const cls = i < stepAt ? "done" : (i === stepAt ? "now" : "");
+    const mark = i < stepAt ? "✓" : (i + 1);
+    const note = (i === stepAt && detail) ? `<span class="detail">${escapeHtml(detail)}</span>` : "";
+    return `<div class="step ${cls}"><span class="mark">${mark}</span>`
+         + `<span>${s.label}${note}</span></div>`;
+  }).join("");
+  const pct = stepAt < 0 ? 3 : Math.min(100, ((stepAt + 0.5) / steps.length) * 100);
+  $("bar-fill").style.width = pct + "%";
+}
+
+// Advance (never rewind) the step pointer from one narration line.
+function advance(line) {
+  for (let i = steps.length - 1; i >= 0; i--) {
+    if (steps[i].match.some((re) => re.test(line))) {
+      if (i > stepAt) stepAt = i;
+      break;
+    }
+  }
+  // Strip the leading indent + status emoji so the detail reads as plain text.
+  drawSteps(line.replace(/^[^A-Za-z0-9]+/, "").trim());
+}
+
+/* ---------- Elapsed clock ---------------------------------------------- */
+function startClock(hint) {
+  started = Date.now();
+  clearInterval(timer);
+  const tick = () => {
+    const s = Math.floor((Date.now() - started) / 1000);
+    $("elapsed").textContent =
+      `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} elapsed · ${hint}`;
+  };
+  tick();
+  timer = setInterval(tick, 1000);
+}
+function stopClock() { clearInterval(timer); timer = null; }
+
+/* ---------- Tier + word count ------------------------------------------ */
+function setTier(t) {
+  tier = t;
+  $("tier-best").setAttribute("aria-pressed", String(t === "best"));
+  $("tier-fast").setAttribute("aria-pressed", String(t === "fast"));
+  $("tier-note").textContent = t === "best"
+    ? "Opus, high effort — the default the eval backs."
+    : "Sonnet, medium effort — cheaper and quicker; good for bulk or low-match runs.";
+}
+$("tier-best").addEventListener("click", () => setTier("best"));
+$("tier-fast").addEventListener("click", () => setTier("fast"));
+
+jd.addEventListener("input", () => {
+  const n = jd.value.trim() ? jd.value.trim().split(/\s+/).length : 0;
+  $("wc").textContent = n ? `${n.toLocaleString()} words` : "no text yet";
 });
 
-// The "Generate cover letter" button is injected into #result after a résumé
-// finishes, so listen via delegation. It reuses the just-made résumé folder —
-// no re-run — mirroring `resume-gen cover-letter output/<slug>`.
+/* ---------- Tabs -------------------------------------------------------- */
+$("tab-generate").addEventListener("click", () => showView("generate"));
+$("tab-drafts").addEventListener("click", () => { showView("drafts"); loadDrafts(); });
+
+function showView(name) {
+  const gen = name === "generate";
+  $("view-generate").classList.toggle("hidden", !gen);
+  $("view-drafts").classList.toggle("hidden", gen);
+  $("tab-generate").setAttribute("aria-selected", String(gen));
+  $("tab-drafts").setAttribute("aria-selected", String(!gen));
+}
+
+async function loadDrafts() {
+  const list = $("drafts-list");
+  list.innerHTML = '<span class="sub"><span class="spin"></span> Loading…</span>';
+  try {
+    const r = await (await fetch("/drafts")).json();
+    const drafts = r.drafts || [];
+    $("drafts-count").textContent = drafts.length ? `${drafts.length} saved in output/` : "";
+    if (!drafts.length) {
+      list.innerHTML = '<span class="sub">Nothing yet — generate your first résumé.</span>';
+      return;
+    }
+    list.innerHTML = drafts.map((d) => {
+      const when = new Date(d.modified * 1000)
+        .toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+      const cov = d.coverage_pct == null ? ""
+        : `<span class="pill ${d.coverage_pct >= 70 ? "good" : (d.coverage_pct >= 40 ? "" : "warn")}">${d.coverage_pct}% match</span>`;
+      const pages = d.pages
+        ? `<span class="pill ${d.pages === 1 ? "good" : "warn"}">${d.pages} page${d.pages > 1 ? "s" : ""}</span>` : "";
+      const links = d.files.map((f) =>
+        `<a href="/download?slug=${encodeURIComponent(d.slug)}&file=${encodeURIComponent(f)}">${LABELS[f] || f}</a>`
+      ).join("");
+      return `<div class="draft"><span class="who">${escapeHtml(d.slug)}<small>${when}</small></span>`
+           + cov + pages + `<span class="draft-links">${links}</span></div>`;
+    }).join("");
+  } catch (e) {
+    list.innerHTML = '<span class="err">Couldn\'t load your drafts: ' + escapeHtml(e.message) + "</span>";
+  }
+}
+
+/* ---------- Running ----------------------------------------------------- */
+go.addEventListener("click", startRun);
+jd.addEventListener("keydown", (ev) => {
+  if ((ev.metaKey || ev.ctrlKey) && ev.key === "Enter") { ev.preventDefault(); startRun(); }
+});
+
+function startRun() {
+  const text = jd.value.trim();
+  if (!text) {
+    status.innerHTML = '<span class="err">Paste a job description first.</span>';
+    jd.focus();
+    return;
+  }
+  steps = RESUME_STEPS;
+  // The last stage covers whatever tail the run has: with --cover that's the
+  // letter, without it the Word copy and the omissions report.
+  steps[steps.length - 1].label = cover.checked
+    ? "Drafting the cover letter and saving the extras"
+    : "Saving the Word copy and the omissions report";
+  $("progress-title").textContent = cover.checked
+    ? "Building your résumé and cover letter" : "Building your résumé";
+  stream("/generate?tier=" + tier + (cover.checked ? "&cover=1" : ""),
+         text, "usually 2–4 minutes");
+}
+
+// The "Write a cover letter" and "Add to tracker" buttons are injected into
+// #result after a run, so listen via delegation.
 result.addEventListener("click", (ev) => {
   const coverBtn = ev.target.closest("#make-cover");
   if (coverBtn) {
+    steps = COVER_STEPS;
+    $("progress-title").textContent = "Writing your cover letter";
     stream("/cover?slug=" + encodeURIComponent(coverBtn.dataset.slug), null,
-           "Writing your cover letter…");
+           "usually about a minute");
     return;
   }
   const trackBtn = ev.target.closest("#to-tracker");
@@ -267,16 +572,21 @@ async function addToTracker(btn) {
   }
 }
 
-// Drive one streaming run (résumé or cover letter) into the shared log/result
+// Drive one streaming run (résumé or cover letter) into the shared step/result
 // UI. `body` null => no request body (the cover route reads its slug from the
 // query string).
-async function stream(url, body, startMsg) {
+async function stream(url, body, timeHint) {
   go.disabled = true;
-  result.style.display = "none";
+  result.classList.add("hidden");
   result.innerHTML = "";
-  log.style.display = "block";
+  for (const id of ["stat-coverage", "stat-pages", "stat-cost"]) $(id).classList.add("hidden");
+  $("progress").classList.remove("hidden");
+  $("logbox").classList.remove("hidden");
   log.textContent = "";
-  status.innerHTML = '<span class="spin"></span> ' + startMsg;
+  stepAt = -1;
+  drawSteps("");
+  startClock(timeHint);
+  status.innerHTML = '<span class="spin"></span> Working — you can leave this tab open.';
 
   try {
     const opts = { method: "POST",
@@ -286,9 +596,11 @@ async function stream(url, body, startMsg) {
     if (!resp.ok) {
       // e.g. 409 busy or 400 empty — body is a short plain-text message.
       const msg = await resp.text();
-      status.innerHTML = '<span class="err">' + escapeHtml(msg || ('Error ' + resp.status)) + '</span>';
-      log.style.display = "none";
-      go.disabled = false; return;
+      status.innerHTML = '<span class="err">' + escapeHtml(msg || ("Error " + resp.status)) + "</span>";
+      $("progress").classList.add("hidden");
+      stopClock();
+      go.disabled = false;
+      return;
     }
 
     const reader = resp.body.getReader();
@@ -310,71 +622,145 @@ async function stream(url, body, startMsg) {
       }
     }
     // Stream ended without a parsed sentinel.
-    status.textContent = "Done.";
+    status.textContent = "The run ended without reporting a result — open the log below.";
+    stopClock();
     go.disabled = false;
   } catch (e) {
-    status.innerHTML = '<span class="err">Error: ' + escapeHtml(e.message) + '</span>';
+    status.innerHTML = '<span class="err">Error: ' + escapeHtml(e.message) + "</span>";
+    stopClock();
     go.disabled = false;
   }
 }
 
-// Render the running step history and lift the most recent step into the
-// prominent status line so "where are we now" is always visible at a glance.
+// Keep the raw log (collapsed by default) and drive the step list from its
+// newest line.
 function showLog(text) {
   log.textContent = text;
   log.scrollTop = log.scrollHeight;
-  const lines = text.split("\n").filter(l => l.trim());
-  const latest = lines.length ? lines[lines.length - 1].trim() : "Working…";
-  status.innerHTML = '<span class="spin"></span> ' + escapeHtml(latest);
+  const lines = text.split("\n").filter((l) => l.trim());
+  if (lines.length) advance(lines[lines.length - 1]);
 }
 
 function escapeHtml(s) {
-  return s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+  return String(s).replace(/[&<>"]/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
+const LABELS = {
+  "resume.pdf": "Résumé — PDF",
+  "resume.docx": "Résumé — Word",
+  "cover_letter.pdf": "Cover letter — PDF",
+  "cover_letter.docx": "Cover letter — Word",
+};
+const SUBS = {
+  "resume.pdf": "ready to send",
+  "resume.docx": "editable copy",
+  "cover_letter.pdf": "ready to send",
+  "cover_letter.docx": "editable copy",
+};
+
+function kb(bytes) {
+  return bytes >= 1048576 ? (bytes / 1048576).toFixed(1) + " MB"
+                          : Math.max(1, Math.round(bytes / 1024)) + " KB";
+}
+
+// Fill the right rail from metrics the pipeline already wrote into the output
+// folder (coverage.md, resume.aux, cost.json) — nothing is recomputed here.
+function showStats(meta, slug) {
+  if (!meta) return;
+  const cov = meta.coverage;
+  if (cov) {
+    $("stat-coverage").classList.remove("hidden");
+    $("cov-num").innerHTML = cov.pct + "<small>%</small>";
+    const bits = [`${cov.covered} of ${cov.total} key terms from the posting.`];
+    if (cov.gap_count) {
+      bits.push(`${cov.gap_count} more sit in your master.yaml but didn't make the page`
+        + (cov.gap_terms.length ? ` — ${escapeHtml(cov.gap_terms.slice(0, 3).join(", "))}.` : "."));
+    }
+    if ((meta.reports || []).includes("coverage.md")) {
+      bits.push(`<a href="/download?slug=${encodeURIComponent(slug)}&file=coverage.md">Full report</a>`);
+    }
+    $("cov-note").innerHTML = bits.join(" ");
+  }
+  if (meta.pages) {
+    $("stat-pages").classList.remove("hidden");
+    $("pages-num").innerHTML = meta.pages + "<small> page" + (meta.pages > 1 ? "s" : "") + "</small>";
+    const note = $("pages-note");
+    note.className = "note " + (meta.pages === 1 ? "good" : "warn");
+    note.textContent = meta.pages === 1
+      ? "Fits on one page."
+      : "Longer than one page — the trim loop hit its attempt cap.";
+  }
+  if (meta.cost_usd != null) {
+    $("stat-cost").classList.remove("hidden");
+    $("cost-num").textContent = "$" + Number(meta.cost_usd).toFixed(2);
+    $("cost-note").textContent = "Estimated from this run's token usage.";
+  }
 }
 
 function finish(r) {
+  stopClock();
   go.disabled = false;
   if (r.ok) {
+    stepAt = steps.length;
+    drawSteps("");
     status.innerHTML = "✓ Done.";
-    const LABELS = {
-      "resume.pdf": "Résumé — PDF",
-      "resume.docx": "Résumé — Word (.docx)",
-      "cover_letter.pdf": "Cover letter — PDF",
-      "cover_letter.docx": "Cover letter — Word (.docx)",
-    };
-    const hasCover = (r.files || []).some(f => f.startsWith("cover_letter"));
-    let html = "<h2>Your résumé" + (hasCover ? " &amp; cover letter are" : " is") + " ready</h2>";
-    for (const f of (r.files || [])) {
-      const label = LABELS[f] || `Download ${f}`;
-      html += `<a class="dl" href="/download?slug=${encodeURIComponent(r.slug)}&file=${encodeURIComponent(f)}">${label}</a>`;
+    const rows = (r.rows && r.rows.length)
+      ? r.rows : (r.files || []).map((f) => ({ name: f }));
+    const hasCover = rows.some((x) => x.name.startsWith("cover_letter"));
+    const hasResume = rows.some((x) => x.name.startsWith("resume"));
+
+    let html = `<div class="card-head"><h2>Your résumé${hasCover ? " and cover letter are" : " is"} ready</h2>`
+             + `<span class="sub">${escapeHtml(r.slug || "")}</span></div>`;
+    if (rows.length) {
+      html += '<div class="files">';
+      for (const row of rows) {
+        const ext = row.name.endsWith(".pdf") ? "PDF" : "DOCX";
+        const facts = [];
+        if (row.pages) facts.push(row.pages + " page" + (row.pages > 1 ? "s" : ""));
+        if (row.bytes) facts.push(kb(row.bytes));
+        if (SUBS[row.name]) facts.push(SUBS[row.name]);
+        html += `<a class="file" href="/download?slug=${encodeURIComponent(r.slug)}&file=${encodeURIComponent(row.name)}">`
+              + `<span class="ic">${ext}</span>`
+              + `<span class="nm">${LABELS[row.name] || row.name}<small>${facts.join(" · ")}</small></span>`
+              + `<span class="go">Download</span></a>`;
+      }
+      html += "</div>";
+    } else {
+      html += "<p>The run finished, but no PDF or Word file turned up in the output folder.</p>";
     }
-    if (!r.files || !r.files.length) {
-      html += "<p>Run finished but no PDF/DOCX was found in the output folder.</p>";
-    }
+
+    html += '<div class="row">';
     // Offer a matching cover letter only when the résumé is on disk and one
     // wasn't produced already — this reuses the folder, no résumé re-run.
-    const hasResume = (r.files || []).some(f => f.startsWith("resume"));
     if (r.slug && hasResume && !hasCover) {
-      html += `<div class="row"><button id="make-cover" class="btn btn-primary" data-slug="${escapeHtml(r.slug)}">Generate cover letter</button>`
-        + `<span class="check">Draft a matching cover letter from this résumé — no re-run needed.</span></div>`;
+      html += `<button id="make-cover" class="btn btn-primary" data-slug="${escapeHtml(r.slug)}">Write a cover letter</button>`;
     }
-    // Push this application (résumé + cover letter + JD) into the tracker.
     if (r.slug && hasResume) {
-      html += `<div class="row"><button id="to-tracker" class="btn" data-slug="${escapeHtml(r.slug)}">Add to tracker</button>`
-        + `<span class="check">Send this résumé, cover letter &amp; job description to your application tracker.</span></div>`
-        + `<div id="tracker-out" class="folder"></div>`;
+      html += `<button id="to-tracker" class="btn btn-soft" data-slug="${escapeHtml(r.slug)}">Add to tracker</button>`;
     }
-    html += `<div class="folder">Saved on disk at: ${r.folder || "output/" + (r.slug || "")}</div>`;
+    if (r.slug && (r.meta && (r.meta.reports || []).includes("omitted.md"))) {
+      html += `<a class="sub" href="/download?slug=${encodeURIComponent(r.slug)}&file=omitted.md">See what was left out</a>`;
+    }
+    html += "</div>";
+    if (r.slug && hasResume) html += '<div id="tracker-out" class="sub"></div>';
+    html += `<div class="folder">Saved at ${escapeHtml(r.folder || "output/" + (r.slug || ""))}</div>`;
+
     result.innerHTML = html;
-    result.style.display = "block";
+    result.classList.remove("hidden");
+    showStats(r.meta, r.slug);
   } else {
-    status.innerHTML = '<span class="err">Generation did not complete'
-      + (r.code != null ? ` (exit ${r.code})` : "") + '.</span>';
-    result.innerHTML = "<p>Check the log above for details."
-      + (r.slug ? ` A partial folder may exist at output/${r.slug}.` : "") + "</p>";
-    result.style.display = "block";
+    status.innerHTML = '<span class="err">The run stopped before it finished'
+      + (r.code != null ? ` (exit ${r.code})` : "") + ".</span>";
+    result.innerHTML = '<h2>The run didn\'t finish</h2><p class="sub">Open the detailed agent log '
+      + "for the last thing it did."
+      + (r.slug ? ` A partial folder may exist at output/${escapeHtml(r.slug)}.` : "") + "</p>";
+    result.classList.remove("hidden");
+    $("logbox").open = true;
   }
 }
+
+drawSteps("");
 </script>
 </body>
 </html>
