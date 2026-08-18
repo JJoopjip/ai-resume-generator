@@ -71,6 +71,16 @@ this file only summarizes the current front line.
     as the real backstop — force-pushing doesn't erase clones/caches made
     during the exposure window. Flag this if it comes up; don't assume it's
     done.
+- **Selection-gap summary nudge (2026-08-17)**: added §4 guidance to
+  `prompts/tailor_resume.md` — before finalizing the summary, check the JD's
+  top terms against near-misses (present in a sibling profile's summary
+  variant or elsewhere in `master.yaml`, just phrased out of the chosen one)
+  and prefer working them in over losing them to a rewrite. Applies to both
+  tiers (`--fast` only swaps model, not prompt). Verified live on
+  `output/sentrex-stakeholder-partnerships-lead-2026-08-17/instance.yaml`:
+  reworded the `bd` summary to keep "industry" (present in `sum_dm` for the
+  same fact) → JD coverage 32%→40% (8→10 of 25 terms), re-rendered, still 1
+  page (~1 line free). See Log.
 
 ## What's next
 
@@ -85,19 +95,107 @@ Highest-leverage remaining items:
    runs; Opus/medium not offered (worst value).** Implemented in `resume-gen`
    (arg pre-scan + tier block), README, TECH_SPEC §6. No open follow-ups here.
    Reports: `output/eval-run{1,2}-*-2026-07-28/`, `output/eval-jd_highmatch-2026-07-28/`.
-2. **Web UI follow-ups (from the 2026-07-28 redesign)**: the new screen has not
+2. **`coverage.py` tokenizer fix (NEW, 2026-07-28 — highest-leverage bug).**
+   Hyphenated/closed compounds are single tokens, so real matches score as
+   misses and one ("medical devices") is wrongly reported as a *content* gap.
+   Proposed: in `token_set()`/`tokens()`, emit a compound both whole and split
+   on its internal punctuation ("market-share" → market-share, market, share),
+   and add a closed-compound fold so "healthcare" also yields health+care.
+   JD-side extraction stays as-is. Regression risk is low (it only ever adds
+   tokens to the bag) but `tests/test_coverage.py` snapshots will move — regen
+   via `tests/regen_snapshots.py`. Verified against
+   `output/abbott-associate-product-manager-2026-07-28/`: 8/25 → 12/25.
+3. **Teach the tailoring prompt the cross-profile variant lever (NEW,
+   2026-07-28).** `validate.py:194` accepts *any* variant of a bullet id, but
+   `prompts/tailor_resume.md` (~line 66) only permits leaving the chosen
+   profile when that profile has **no** variant. The Abbott re-fit showed
+   re-picking a variant that already exists under another profile is a free,
+   truthful coverage gain (3 swaps ≈ +4 terms). Proposed wording: allow picking
+   any variant when it materially better matches the JD's own language, with
+   the chosen profile still the default — and require `omitted.md` to record
+   the swap (which variant, why), as the Abbott run now does.
+   **Discussed with user 2026-07-28; sharpened, not yet written.** Note the
+   prompt contradicts itself today: §2 line 58 says "decide per bullet
+   independently", line 66 frames cross-profile as a *fallback only*. Fix both
+   together. Agreed shape = **anchor with justified exceptions**: dominant
+   profile is the default for every bullet; deviate only when the other variant
+   carries a fact/metric the JD explicitly asks for (not synonym-level gains);
+   prefer `general` over a rival angle (neutral register, no seam); cap ~1/3 of
+   bullets and never two adjacent bullets in one role from different profiles
+   (voice whiplash is most visible there); summary stays anchored (§4 already
+   allows sentence-level blending there — that's the right place for it).
+   Rationale the scorer can't see: variants carry *different metrics*, not just
+   different wording (`master.example.yaml:88` — pm "4 engagement stages",
+   bd "12 new relationships", dm "35% sign-up lift"), so a keyword-driven swap
+   silently changes which achievement the reader sees, and can break §4a's
+   "highlights should reinforce a selected bullet" rule. **Open decision:**
+   user was offered an A/B (one JD, strict-single-profile vs cherry-picked,
+   compare coverage + read both PDFs) to set the cap empirically — awaiting
+   go-ahead before touching the prompt. **User said yes to the A/B (2026-07-28),
+   on a real JD they need anyway so no tokens are spent on a throwaway.**
+   Method agreed — costs *one* paid run: pay for the normal tailor run, then
+   derive both arms from its `instance.yaml` by mechanically re-picking variants
+   (arm A = force dominant profile, `general` only where absent; arm B = per
+   bullet, whichever variant best matches the JD) and `resume-gen render` each
+   (no-LLM subcommand, writes its own `coverage.md`). Selection is held
+   constant so the variant dial is the only variable; both arms stay
+   `validate`-clean since they only substitute real variants of the same id.
+   Watch for arm B overflowing to 2 pages (longer variants) — that's a finding.
+   Pick a **hybrid** posting; a single-angle JD makes both arms identical and
+   the test says nothing. **A/B RUN 2026-07-28 — result in, and it argues
+   AGAINST keyword-driven swapping.** JD: `output/abbott-product-manager-2026-07-28/`
+   (Abbott Diabetes Care, consumer *digital* PM — website/CRO/GA4/SEO).
+   Arm A = the paid run itself, which happened to be a clean strict control
+   (`profile: dm`, dm variant on all 7 bullets that have one, `general` only for
+   `boots_frontline` which has no dm). Arm B = greedy re-pick of every bullet's
+   variant to maximize `coverage.py`'s score, selection/summary/highlights/skills
+   held identical; built free via `resume-gen render` (script:
+   `$CLAUDE_JOB_DIR/tmp/build_arm_b.py`), output `…-armB/`, validate clean, 1 page,
+   2 lines free. **A 6/25 (24%) → B 8/25 (32%).** But both gained terms are
+   junk: `conversion` comes from `boots_frontline`'s bd variant ("sales
+   conversion" — retail pharmacy, not digital CRO), and `conversion rate` is a
+   pure artifact — "conversion" from that Boots bullet + "rate" from
+   `win_retention`'s bd variant ("90% repeat-order **rate**"), two unrelated
+   bullets at two different companies. Meanwhile the `win_retention` dm→bd swap
+   made the resume *substantively worse*: dm reads "customer retention …
+   customer-facing content across product launches", bd reads "repeat-order rate
+   across **hospital and clinic accounts**" — B2B institutional, the wrong
+   direction for a JD about "consumer facing digital ecosystem" and "authentic
+   consumer connections". So the scorer moved +8 pts while the resume got worse.
+   **Conclusion: implement the anchor-with-exceptions rule as specified above,
+   and make the exception test "the variant carries a fact the JD asks for",
+   explicitly NOT "the swap raises coverage."** Caveat before over-generalizing:
+   this JD is a poor match (15 of 25 terms are *content* gaps — GA4, Adobe
+   Analytics, CMS, SEO/GEO, automation platforms), so the variant dial had little
+   real work to do here; the earlier `abbott-associate-product-manager` re-fit
+   did get a genuine +4 from 3 swaps. One JD, one data point.
+4. **`coverage.py` has no adjacency requirement (NEW, 2026-07-28, found during
+   the A/B).** `Keyphrase.covered_by` (`coverage.py:159`) is
+   `all(s in bag for s in self.stems)` against a **whole-resume** token bag, so a
+   multi-word phrase counts as covered when its words appear in unrelated bullets
+   — "conversion rate" scored as covered off "conversion" in a pharmacy bullet
+   plus "rate" in a retention bullet. This is what makes the score gameable and
+   is distinct from the tokenizer fix in item 2 (that one *adds* tokens; this one
+   needs proximity/adjacency, e.g. match bigrams within a single bullet's token
+   sequence rather than bag-wide). Fix both before trusting coverage deltas as
+   evidence for anything.
+5. **Web UI follow-ups (from the 2026-07-28 redesign)**: the new screen has not
    yet been driven through a *real* (paid) run — it was verified with a stub
    pipeline, so eyeball the step list and the rail on the next genuine
-   generation. Two ideas deliberately left unbuilt, in priority order:
+   generation. **2026-08-17: the same real-run check should specifically cover
+   a `--fast`/Sonnet run that overflows**, to confirm the new page-count gate
+   (see Log) actually fires — it's only been exercised with a synthetic 2-page
+   `resume.aux` so far, not a live overflow-cap run. Two ideas deliberately
+   left unbuilt, in priority order:
    (a) a live page-one preview that fills in while the agent writes (the
    highest-value idea from the design deck — needs a mid-run render or an
    `instance.yaml` parse); (b) an optional dark "developer view" showing the
    raw trace with per-step timings, useful when tuning prompts.
-3. **Phase 8 leftover (optional)**: a demo GIF/asciinema of `./resume-gen jd.txt`
+6. **Phase 8 leftover (optional)**: a demo GIF/asciinema of `./resume-gen jd.txt`
    for the README. The rest of Phase 8 is done (see What's done). Also possible:
    actually relocate the real bank to `~/.config/resume-gen/master.yaml` via
    `RESUME_GEN_MASTER` (indirection is wired; the move itself is untaken).
-4. Two small open items from the original gaps list (`TODO.md` lines ~146,
+7. Two small open items from the original gaps list (`TODO.md` lines ~146,
    148): checked-in sample JDs for repeatable dry runs (mostly superseded by
    the Phase 5 fixtures — verify before treating as still open), and a
    versioning-compatibility check between `master.yaml`'s `schema_version`
@@ -106,6 +204,312 @@ Highest-leverage remaining items:
 Full checklist with all sub-items and completion history: **`TODO.md`**.
 
 ## Log
+
+- **2026-08-17** — **Coverage: close free selection gaps via summary wording.**
+  User asked whether all matched JD keywords can fit on one page. Investigated
+  `coverage.py`'s selection_gap vs content_gap split on a live run
+  (sentrex-stakeholder-partnerships-lead): 3 of 25 unmatched terms were
+  selection gaps, 2 real (`industry`, `industry relationships` — the `bd`
+  summary dropped a word the `dm` summary kept for the same fact), 1 a false
+  positive from `coverage.py`'s bag-of-words matching (`client meetings`
+  matched an unrelated `yorkta` bullet's "meeting each deadline", not real
+  content — left alone, not a real gap). Fixed the 2 real ones by rewording
+  that instance's summary (kept truthful, no new claims) and added durable
+  guidance to `prompts/tailor_resume.md` §4 so future runs catch this
+  automatically. Re-rendered: 32%→40% coverage, still 1 page. `master.yaml`
+  untouched (this was a wording fix, not a content-gap fix).
+- **2026-08-17** — **Cover letter: AppLovin, Business Development Associate.**
+  Wrote `cover_letter.yaml` grounded only in that run's `instance.yaml` →
+  `resume-gen cover` exit 0, **1 page** on first render. Addressee "Hiring
+  Team" (JD names no manager). Mirrored AppLovin's fast-moving, "win together /
+  support of others", big-data culture in framing only; narrated the from-
+  scratch B2C channel build (20+ SKUs, 100% engagement / 10K+ followers, 90%
+  repeat-order rate) and the LG Chem market-intelligence/KPI through-line — all
+  metrics verbatim from the instance, no new claims. Draft for human review,
+  not submitted. `master.yaml` untouched.
+
+- **2026-08-17** — **Tailored run: AppLovin, Business Development Associate
+  (Toronto, Consumer/ad-tech performance-marketing team).** Output
+  `output/applovin-business-development-associate-2026-08-17/` → **1 page**
+  (exit 0, lines_free 0 / slack 9.5pt — tight). Profile **bd** (title-driven;
+  `profile.suggested` leaned dm 46 vs bd 41, close/flat — kept bd for the
+  "Business Development Associate" title match, pulling `dm` variants for the
+  Winnergy e-commerce/campaign bullets since the JD explicitly rewards
+  Consumer/e-commerce experience and data-driven campaign work). First render
+  overflowed 2 pages (~7 lines over) from a 12-bullet/5-role first pass; one
+  edit cut the lowest-priority bullet from each of thaifest/winnergy/lgchem/
+  otsuka (`tf_outreach`, `win_portfolio`, `lg_sourcing`, `ot_clinical`) → 1
+  page, exit 0. `server` (additional role) was never included even in the
+  first pass — omitted from the start to stay lean, consistent with it being
+  the lowest-priority content and the final page having 0 lines free. Final:
+  5 roles / 8 bullets — thaifest(1: tf_partnerships), winnergy(3: win_b2c,
+  win_engagement, win_retention), lgchem(2: lg_intelligence, lg_xfn_kpi),
+  otsuka(1: ot_access), boots(1: boots_frontline); highlights hl_engagement/
+  hl_retention/hl_skus; no projects. `yorkta` (FinTech TA) never selected —
+  no relevance to an ad-tech/consumer BD posting. Coverage 32% (8/25);
+  `selection_gap` empty; `content_gap` is almost entirely AppLovin-specific
+  boilerplate (compensation language, company name, "own right" culture
+  copy) the bank has nothing on — left uncovered per the truthfulness guard.
+  `omitted.md` written. Draft only, not submitted. `master.yaml` untouched.
+- **2026-08-17** — **Web UI: close the "fast tier can silently ship a 2-page
+  resume" gap.** User asked to guarantee one-page output even under `--fast`.
+  Root cause: `web/app.py`'s `_run_pipeline` gated `result["ok"]` on the
+  `claude` CLI's own exit code only — but that code reflects whether the
+  headless session *completed*, not whether the §6 overflow-trim loop actually
+  reached one page (`tailor_resume.md` caps at 5 attempts and, if still >1
+  page, just reports that in text — `resume-gen`'s exit code is `claude`'s raw
+  `$rc`, per `resume-gen`'s `run_claude_and_log`). `scripts/eval_run.py`
+  already knew not to trust that exit code for page count — it re-derives
+  `page_count` from a deterministic re-render instead. Applied the same fix to
+  the web UI: `_run_pipeline` now reads the real page count via the existing
+  `_page_count()` (parses `resume.aux`'s `\lastpage@lastpage`) and only marks
+  `ok: true` when it's 1; on overflow it emits an explicit log line and the
+  frontend (`web/templates/index.html`) shows a distinct "Couldn't fit one
+  page" card instead of quietly offering a 2-page download. Verified
+  `_page_count` parsing against a synthetic 2-page `resume.aux` (returns `2`)
+  and `python3 -m py_compile web/app.py`; **not yet exercised against a real
+  overflow-cap run** (see What's next item 5) since that needs a paid `--fast`
+  session that genuinely can't fit one page. Files: `web/app.py`,
+  `web/templates/index.html`.
+- **2026-08-17** — **Tailored run + cover letter: Sentrex Health Solutions,
+  Stakeholder Partnerships Lead (PSP business development, Canada-wide travel).**
+  Output `output/sentrex-stakeholder-partnerships-lead-2026-08-17/` → **1 page**
+  resume (exit 0, lines_free 1 / slack 19.7pt) + **1 page** cover letter (exit 0,
+  first attempt). Profile **bd** (JD is pure BD/partnerships: pharma
+  manufacturer relationships, RFP positioning, conference/industry engagement,
+  CRM & pipeline reporting, executive-level relationship building —
+  `profile.suggested` disagreed, general 77/pm 73 highest, bd 72 close behind;
+  kept bd since the JD's substance is textbook partnerships/BD, not PM
+  delivery). First render overflowed 2 pages (~12 lines over) from a 12-bullet/
+  6-role first pass; one edit dropped `server` (additional role, first per §6)
+  + the lowest-priority bullet from thaifest/winnergy/lgchem/otsuka
+  (`tf_outreach`, `win_ceo`, `lg_intelligence`, `ot_clinical`) → 1 page, exit 0.
+  Final: 5 roles / 7 bullets — thaifest(1: tf_partnerships), winnergy(2:
+  win_b2c, win_b2b), lgchem(2: lg_sourcing, lg_stakeholders), otsuka(1:
+  ot_access), boots(1: boots_frontline); highlights hl_experience (7 yrs) +
+  hl_retention (90%); no projects. `yorkta` (FinTech TA) never selected — no
+  relevance. Coverage 32% (8/25); remaining `selection_gap` ("client meetings",
+  "industry relationships", "industry") is thin/generic and there was only 1
+  line of room, so no swap made. `content_gap` is almost entirely
+  Sentrex/PSP-specific boilerplate (patient support programs, capability
+  presentations, company name) the bank has nothing on. Cover letter mirrors
+  Sentrex's "proudly Canadian", patient-outcomes-mission, collaborative
+  register — proof paragraph leans on `win_b2c`/`win_b2b` (channel + B2B
+  partner sourcing) and `lg_sourcing`/`lg_stakeholders` (international partner
+  sourcing, account growth), reinforced by the 90% retention highlight; fit
+  paragraph connects her Toronto-based `thaifest` partnerships work + two
+  multinational pharma employers to Sentrex's cross-border PSP work. All
+  metrics verbatim. `omitted.md` written. Both PDFs draft-only, not submitted.
+  `master.yaml` untouched.
+- **2026-08-12** — **Cover letter: University of Toronto, Special Projects
+  Consultant (University HR) — ONE PAGE, exit 0 first render.** Wrote
+  `output/university-of-toronto-special-projects-consultant-2026-08-12/cover_letter.yaml`
+  grounded only in that folder's `instance.yaml`. Addressee "Hiring Team" (JD
+  names no manager, only the AVP UHR office). Public-sector/institutional
+  register: measured, service-oriented prose mirroring the JD's political
+  acuity / discretion / consensus-among-senior-stakeholders signal. Proof =
+  Otsuka end-to-end launch (scope/schedule/budget across R&D, regulatory, mfg,
+  marketing, on time in full compliance) + LG Chem KPI business reviews →
+  stakeholder decisions; metrics verbatim (seven years, GPA 3.9, up to CEO
+  level). 1 render attempt, `cover_letter.pdf` (+docx) on disk. DRAFT.
+- **2026-08-12** — **Tailored run: University of Toronto, Special Projects
+  Consultant (University HR) — reached ONE PAGE.** Output
+  `output/university-of-toronto-special-projects-consultant-2026-08-12/`. Profile
+  **pm** (`profile.suggested` agrees, pm 60). JD is a PM-heavy HR admin role
+  (project charters/work plans/milestone tracking, governance, risk & issue
+  mgmt, change mgmt, research, dashboards, PMP preferred). Render 1: 6 roles /
+  9 bullets incl. `server`, 2 pages (~5 lines over); one edit dropped `server`
+  (§6.1) + trimmed thaifest to `tf_infrastructure` → 1 page, 2 lines free
+  (coverage 24%); swapped `lg_intelligence` in verbatim (research/analysis
+  evidence the JD rewards) → still 1 page, 0 lines free, exit 0. Final: thaifest
+  (tf_infrastructure) / winnergy (win_b2c, win_portfolio) / lgchem (lg_xfn_kpi,
+  lg_intelligence, lg_stakeholders) / otsuka (ot_launch) / boots (boots_frontline);
+  highlights 7 yrs + GPA 3.9. `omitted.md` written. 3 render attempts. DRAFT.
+- **2026-08-12** — **Tailored run: Pharma Medica Research (PMRI), Project
+  Manager — reached ONE PAGE.** Output
+  `output/pharmamedica-project-manager-2026-08-12/` (new slug; distinct from the
+  earlier `pmri-project-manager-2026-08-12` cap-stop below). Profile **pm**
+  (`profile.suggested` agrees, pm 44). Same CRO PM JD. **Leaner first pass than
+  the prior run** — 6 roles / 10 bullets on render 1 (~9 lines over, not 18);
+  one edit dropped `server` + `win_ceo` + `lg_stakeholders` + `ot_regulatory`
+  → 1 page, 2 lines free (coverage 32%); swapped `win_ceo` back in verbatim to
+  cover `selection_gap` "progress" (JD's core = keeping clients informed of
+  trial progress) → still 1 page, 1 line free, coverage 36%. 3 renders total,
+  exit 0. Final: 5 roles / 7 bullets — thaifest(1: tf_infrastructure),
+  winnergy(3: win_b2c, win_portfolio, win_ceo), lgchem(1: lg_xfn_kpi),
+  otsuka(1: ot_launch), boots(1: boots_frontline); highlights hl_experience/
+  hl_gpa/hl_skus; no server, no projects. Remaining `selection_gap` "research"
+  left uncovered (only ot_clinical carries it, ~2.5 lines, no room — generic
+  single word per §6). `resume.pdf` + `resume.docx` current; `omitted.md`
+  written. Draft only, not submitted. `master.yaml` untouched.
+- **2026-08-12** — **Tailored run: Pharma Medica Research (PMRI), Project
+  Manager (clinical trials / CRO, client-facing).** Output
+  `output/pmri-project-manager-2026-08-12/` → **stopped at the 5-attempt cap,
+  still 2 pages (~3 lines over)** — first render this run doesn't reach one
+  page (§6/§6a). Profile **pm** (`profile.suggested` agrees, pm 44 highest of
+  30/35/41/44) — JD is CRO project management: client comms on trial progress,
+  study quotations/contracts, GCP, ERB documentation, scheduling/tracking
+  systems, cross-divisional coordination. First render overflowed badly
+  (~18 lines over, 15 bullets/6 roles) — one big edit dropped `server`
+  (additional role) + the lowest-priority bullet from winnergy/lgchem/otsuka
+  → 5 lines over; cut `tf_partnerships` + `hl_gpa` → 3 lines over; cut
+  `win_ceo` → still 3 lines over (unchanged); cut `lg_stakeholders` (5th and
+  final render under the cap) → still 3 lines over, unchanged. **Notable: the
+  last three single-bullet cuts (each ~2-3 lines of source text) left
+  `lines_over`/`overflow_pt` completely unchanged (3 / 27.0pt) across 3
+  consecutive renders** — worth a follow-up look at whether `fit` estimation
+  has a rounding floor or the LaTeX compiler isn't reclaiming space near a
+  page-break boundary; not investigated further this run (out of scope, cap
+  reached). Final content: 5 roles / 8 bullets — thaifest(1: tf_infrastructure),
+  winnergy(2: win_b2c, win_portfolio), lgchem(1: lg_xfn_kpi), otsuka(3:
+  ot_launch, ot_regulatory, ot_access), boots(1: boots_frontline); highlight
+  hl_experience only; no projects section. `resume.pdf` is a viewable 2-page
+  draft reflecting this final `instance.yaml` (§6a honored — last action was
+  a render). `omitted.md` written. Reported to user as "cannot fit one page
+  without further human trimming" per §6. Draft only, not submitted.
+  `master.yaml` untouched.
+- **2026-08-12** — **Cover letter: Precision AQ, Project / Portfolio Manager
+  (HEOR / JCA).** Wrote `output/precisionaq-pm-2026-08-12/cover_letter.yaml` from
+  the tailored `instance.yaml` fact bank → `cover_letter.pdf` **1 page, exit 0 on
+  first render** (no tighten loop needed). Addressee "Hiring Team" (JD names no
+  manager); location omitted (role is Vancouver/London, candidate Toronto).
+  Culture mirrored: "from promises to proof, evidence to access" + start-up pace
+  inside an established global org, client-facing partnership with Directors/VPs.
+  4 paras (hook / proof: ot_launch + win_portfolio 20+ SKUs / fit: CEO-level
+  stakeholders + monthly-and-quarterly reviews / close) — all claims traceable,
+  metrics verbatim. Draft for human review, not submitted.
+
+- **2026-08-12** — **Tailored run: Precision AQ (Precision Medicine Group),
+  Project / Portfolio Manager, Evidence Synthesis & Decision Modelling / HEOR
+  (JCA submissions).** Output `output/precisionaq-pm-2026-08-12/` → **1 page**
+  (exit 0, lines_free 0 / slack 9.5pt — tight). Profile **pm**
+  (`profile.suggested` agrees, pm 72 highest of 54/72/59/62) — JD is
+  client-facing HEOR project/portfolio management: scope/schedule/budget,
+  multi-stakeholder coordination, risk escalation, regulatory/JCA context, PM
+  tools & templates. Coverage 20% (5/25); most `content_gap` terms are
+  HEOR/JCA-specific vocabulary (evidence synthesis, decision modelling, HTA)
+  the bank has nothing on — correctly left uncovered per §6, not invented.
+  First render overflowed 2 pages (~17 lines over); one big §6 edit dropped
+  `server` (additional role, first cut) + `tf_partnerships`, `win_team`,
+  `lg_intelligence`, `ot_access` → still 3 lines over; two more single-bullet
+  cuts (`win_ceo`, then `ot_regulatory`) closed it to 1 page on the 4th render
+  (within the 5-attempt cap). No swap-back attempted — `lines_free` was 0 at
+  exit 0, no room. Final: 5 roles / 7 bullets — thaifest(1: tf_infrastructure),
+  winnergy(2: win_portfolio, win_b2c), lgchem(2: lg_xfn_kpi, lg_stakeholders),
+  otsuka(1: ot_launch), boots(1: boots_frontline); highlights hl_experience/
+  hl_gpa/hl_skus; projects section omitted (no room). Full omissions in
+  `output/precisionaq-pm-2026-08-12/omitted.md`.
+
+- **2026-08-12** — **Tailored run: Eli Lilly Canada, Patient Support Programs
+  (PSP) role (Toronto, flexible/hybrid).** Output
+  `output/lilly-psp-manager-2026-08-12/` → **1 page** (exit 0, lines_free 0 /
+  slack 9.5pt — tight). Profile **pm** (`profile.suggested` agrees, pm 83 highest
+  of 71/83/73/77) — JD is PSP strategy + operational delivery: cross-functional
+  coordination (brand/medical/IT/legal/market access/finance), vendor & contract
+  management, budget/financial tracking, KPI + Quarterly Business Reviews,
+  timelines/dependencies, plus heavy patient-safety/quality/compliance and pharma
+  domain. First render overflowed 2 pages (~12 lines over); one §6 edit dropped
+  `server` (additional role, first cut) + `win_ceo`, `lg_intelligence`,
+  `ot_regulatory` → 1 page. Final: 5 roles / 7 bullets — thaifest(1:
+  tf_partnerships), winnergy(2: win_b2c, win_portfolio), lgchem(2: lg_xfn_kpi,
+  lg_stakeholders), otsuka(1: ot_launch), boots(1: boots_frontline); highlights
+  hl_experience + hl_gpa + hl_skus; no projects (dropped for space). `yorkta`
+  never selected (FinTech, no relevance). Coverage 28% (7/25); `selection_gap` =
+  "cross functional / market access / functional brand" — no room (0 lines free)
+  and weak candidates (cross-functional already conveyed; swapping flagship
+  `ot_launch` for `ot_access` just to surface "market access" would trade
+  stronger evidence for a keyword), so no swap. `content_gap` is Lilly/PSP
+  boilerplate (patient support programs, PSP vendor/strategy, company name,
+  benefit program) the bank has nothing on. Docker Desktop wasn't running at
+  start — launched from WSL, engine up ~20s, image already built. Resume-only (no
+  cover letter requested). `omitted.md` written. Draft only, not submitted.
+  `master.yaml` untouched.
+- **2026-08-04** — **Tailored run: Loblaw Companies Limited, Product Owner,
+  Healthcare Data Products (Brampton, ON).** Output
+  `output/loblaw-product-owner-2026-08-04/` → **1 page** (exit 0, lines_free 0 /
+  slack 9.5pt — tight). Profile **pm** (`profile.suggested` general 57 / pm 56 —
+  flat, no real disagreement; JD is Product Owner + Business Analyst, Agile/Scrum
+  backlog prioritization, cross-functional delivery, regulatory + healthcare, so
+  pm is the right substantive angle — leaned the summary on "business analyst" +
+  "translating business problems into requirements and prioritized delivery" to
+  mirror the PO/BA language). First render overflowed 2 pages (~12 lines over);
+  one §6 edit dropped `server` (additional role, first cut) + `win_ceo`,
+  `ot_regulatory`, `lg_xfn_kpi` → 1 page. Final: 5 roles / 7 bullets —
+  thaifest(1: tf_infrastructure), winnergy(2: win_b2c, win_portfolio), lgchem(1:
+  lg_stakeholders), otsuka(2: ot_launch, ot_access), boots(1: boots_frontline);
+  highlights hl_experience + hl_gpa. Coverage 32% (8/25); `selection_gap` = "data
+  products / healthcare data / digital products / data" — generic and no room to
+  add (0 lines free, 9.5pt slack), so no swap. `content_gap` is Loblaw/PO
+  boilerplate (product owner, product backlog, company name, "top employers") the
+  bank has nothing on. Docker Desktop wasn't running at start — launched it from
+  WSL, waited for the engine, image already built. Cover letter (`cover_letter.yaml`)
+  rendered 1 page on the first attempt — mirrors Loblaw's warm, community/
+  healthcare-mission, CORE-values ("Live Life Well", care/ownership, customer-
+  first) register; leans on `ot_launch` (end-to-end product dev, scope/schedule/
+  budget, on-time, full regulatory compliance, Agile) + `win_portfolio` (20+ SKUs
+  prioritization) as proof, and `lg_stakeholders` + `boots_frontline` (pharmacy-
+  floor context) for fit. `omitted.md` written. Both PDFs draft-only, not
+  submitted. `master.yaml` untouched.
+- **2026-07-28** — **Non-interactive tailoring run: Abbott Diabetes Care —
+  Product Manager (Consumer Digital Ecosystem, Mississauga).** New draft at
+  `output/abbott-product-manager-2026-07-28/` — 1 page, exit 0, `validate` clean,
+  `master.yaml` untouched. Profile **dm** (JD = consumer digital ecosystem,
+  social/influencer, campaigns, content, CRO in a medical-device/regulated
+  context; scorer nudged `bd` on generic-keyword bias but substance is dm). 3
+  renders: first overflowed 2pp (~10 lines over) → cut `server` role +
+  trimmed thaifest/lgchem/otsuka to 1 bullet each (one edit) → 1pp w/ 3 lines
+  free → added `win_ai` back (genuinely-relevant AI-content bullet) → 1pp, 1
+  line free. Final cut: thaifest(tf_outreach), winnergy(win_engagement/b2c/
+  retention/ai), lgchem(lg_intelligence), otsuka(ot_clinical), boots(frontline);
+  highlights engagement/followers/retention. Remaining selection_gap (conversion
+  rate, digital/content performance) is CRO-specific — bank has nothing (all in
+  content_gap), no worthwhile swap. `omitted.md` written. Distinct from the
+  earlier same-day Abbott *Associate PM* run below.
+- **2026-07-28** — **Abbott run re-fitted: JD coverage 32% → 56% (8/25 → 14/25),
+  still 1 page, `validate` clean, `master.yaml` untouched (md5 matches the
+  backup).** No LLM re-run — hand-edited `instance.yaml` + `resume-gen render`.
+  Four changes, all verbatim-legal: (1) three already-selected bullets switched
+  to a *different profile's* variant of the same bullet — `lg_xfn_kpi` dm→pm
+  ("market share" spaced, not "market-share"), `win_engagement` dm→pm ("social
+  programs"), `boots_frontline` general→bd ("promotional cycles, sales
+  conversion"); (2) `win_retention` restored (its "communication plans …
+  product launches" is the bank's only backing for the JD's plan/launch-plan
+  language); (3) `omitted.md` rewritten to match. **All four languages kept** —
+  an initial trim of German/French was reverted on user correction: the template
+  joins languages with `\quad` onto ONE line, so dropping entries frees zero
+  space (`slack_pt` 9.5 either way). Don't propose it again as a fit lever. **Key technique worth reusing:
+  `validate.py:194` accepts ANY variant of a bullet id, not just the chosen
+  profile's — so re-picking a variant is a free, truthful coverage lever the
+  tailoring prompt currently under-uses** (prompt §"If a bullet has no variants
+  entry for your chosen profile…" only covers the *missing*-variant case).
+  Left uncovered on purpose: "product lines" (only backing is `win_b2c`'s bd
+  variant, which would cost the 20+ SKU channel-breadth content — not worth one
+  keyword). Page now has `lines_free: 0` (9.5pt slack). Cover letter left as-is
+  — still truthful, no contradiction.
+
+- **2026-07-28** — **Investigated the Abbott run's 32% JD coverage (8/25).
+  Found a real scorer defect: `coverage.py` tokenizes hyphenated compounds as
+  ONE token**, so a resume saying "market-share KPIs" / "medical-device" never
+  matches the JD's spaced bigrams "market share" / "medical devices". Same for
+  closed vs. open compounds ("healthcare" vs. "health care"). Four of the 25
+  terms are false misses on that alone (market share, share growth, medical
+  devices, health care) — and "medical devices" is *mis-filed as a content gap*
+  ("not in your master.yaml") while appearing twice on the page. Fixing the
+  tokenizer alone → 12/25 = 48%, no content change. Second finding: the
+  `selection_gap` terms (plans, programs, product lines, business/product plan)
+  exist in master only inside **pm-profile variants** of already-selected
+  bullets, so `master_text()` pooling all profiles makes them look swappable
+  when they aren't — matches the ⚠ that the deterministic pick was `pm` but the
+  instance chose `dm`. Page is effectively full (`lines_free: 1`, 19.7pt slack),
+  so any fix is a swap, not an addition. **No code changed yet** — see What's
+  next item 2b for the proposed tokenizer fix.
+
+- **2026-07-28** — **Generated tailored application: Abbott, Associate Product
+  Manager (Coronary), Vascular** → `output/abbott-associate-product-manager-2026-07-28/`.
+  dm profile; 1-page resume (9 bullets / 5 roles) + 1-page cover letter, both
+  exit 0. Overflow loop cut server role + win_portfolio + tf_partnerships to fit;
+  added ot_access back for the market-access/reimbursement theme. Output only — no
+  code changes.
 
 - **2026-07-28 (latest)** — **Web UI redesigned (":5000" front end).** Picked
   the "Blush Rosé, refined" direction from a three-option design deck (the

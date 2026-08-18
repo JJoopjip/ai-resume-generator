@@ -151,6 +151,16 @@ years", GPA, institution name, "PMP certified", etc.) must survive verbatim.
 If blending two profiles' summaries reads better for this JD, you may draw
 sentences from both — but do not introduce a claim that appears in neither.
 
+Before finalizing the summary, scan the JD's most-repeated terms against it.
+If a term is a near-miss — present in a *sibling* profile's summary variant or
+elsewhere in `master.yaml`, just not in the wording you drafted — prefer
+working it in over inventing new phrasing, since it costs nothing extra and
+closes a keyword gap for free. E.g. `sum_bd` may drop a word like "industry"
+that `sum_dm` keeps for the same underlying fact; pull it across rather than
+losing it to a rewrite. This is a wording nudge, not a rule to force every
+JD term in — do not distort a sentence's meaning or pad it just to land a
+keyword.
+
 ## 4a. Highlights — the colored impact line
 
 `master.yaml` has a `highlights` bank of headline KPIs. Select **up to 3** that
