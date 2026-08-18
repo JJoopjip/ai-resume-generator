@@ -750,11 +750,20 @@ function finish(r) {
     result.classList.remove("hidden");
     showStats(r.meta, r.slug);
   } else {
-    status.innerHTML = '<span class="err">The run stopped before it finished'
-      + (r.code != null ? ` (exit ${r.code})` : "") + ".</span>";
-    result.innerHTML = '<h2>The run didn\'t finish</h2><p class="sub">Open the detailed agent log '
-      + "for the last thing it did."
-      + (r.slug ? ` A partial folder may exist at output/${escapeHtml(r.slug)}.` : "") + "</p>";
+    const overPages = r.meta && r.meta.pages && r.meta.pages > 1 ? r.meta.pages : null;
+    status.innerHTML = overPages
+      ? `<span class="err">Stopped at ${overPages} pages — the trim loop couldn't get it to one.</span>`
+      : '<span class="err">The run stopped before it finished'
+        + (r.code != null ? ` (exit ${r.code})` : "") + ".</span>";
+    result.innerHTML = overPages
+      ? `<h2>Couldn't fit one page</h2><p class="sub">The agent hit its trim-attempt cap with `
+        + `resume.pdf still at ${overPages} pages`
+        + (r.slug ? ` in output/${escapeHtml(r.slug)}` : "")
+        + ". Open the folder to trim it by hand, or re-run — a résumé over one page is never "
+        + "offered for download here.</p>"
+      : '<h2>The run didn\'t finish</h2><p class="sub">Open the detailed agent log '
+        + "for the last thing it did."
+        + (r.slug ? ` A partial folder may exist at output/${escapeHtml(r.slug)}.` : "") + "</p>";
     result.classList.remove("hidden");
     $("logbox").open = true;
   }

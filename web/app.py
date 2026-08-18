@@ -563,13 +563,27 @@ class Handler(BaseHTTPRequestHandler):
 
             new = sorted(_dirs() - before)
             slug = new[-1] if new else None
-            if code == 0 and slug:
+            # `claude`'s own exit code (`code`) only reflects whether the headless
+            # session completed — it stays 0 even if the agent hit the §6
+            # overflow-loop cap and stopped at 2+ pages (tailor_resume.md just has
+            # it report that in text). eval_run.py never trusts that exit code for
+            # page count either (scripts/eval_run.py) — it re-derives pages from
+            # the render artifacts. Do the same here so `ok` (and the "fast"
+            # tier's weaker model) can never claim success on an overflowing
+            # resume: gate on the actual rendered page count, not just `code`.
+            pages = _page_count(OUTPUT / slug) if slug else None
+            if code == 0 and slug and (pages is None or pages == 1):
                 have = [f for f in ARTIFACTS if (OUTPUT / slug / f).is_file()]
                 result = {"ok": True, "slug": slug, "files": have,
                           "rows": _file_rows(OUTPUT / slug), "meta": _run_meta(slug),
                           "folder": str((OUTPUT / slug))}
             else:
-                result = {"ok": False, "slug": slug, "code": code}
+                if code == 0 and slug and pages and pages > 1:
+                    emit(f"\n  web │ stopping short of done — {pages}-page resume.pdf "
+                         "(the overflow-trim cap was hit without reaching one page). "
+                         "Open the folder and trim by hand, or re-run.\n")
+                result = {"ok": False, "slug": slug, "code": code,
+                          "meta": _run_meta(slug) if slug else None}
         except Exception as e:  # surface any launcher error into the log
             emit(f"\n  web │ error: {e}\n")
             result = {"ok": False, "error": str(e)}
