@@ -205,3 +205,70 @@ def test_salient_unigram_scores_when_the_resume_says_it():
     phrases = cov.extract_keyphrases(_JD, limit=25)
     bag = cov.token_set("Stakeholder reporting and budget analysis for business operations")
     assert any(p.covered_by(bag) for p in phrases)
+
+
+# ---------------------------------------------------------------------------
+# Requirement-level weighting — a JD term isn't scored the same whether it's
+# a hard requirement, a "nice to have", or not asked for at all.
+# ---------------------------------------------------------------------------
+def _levels(jd_text: str, term_stem: str, limit: int = 25) -> list[tuple[str, float]]:
+    return [
+        (p.level, p.weight)
+        for p in cov.extract_keyphrases(jd_text, limit=limit)
+        if term_stem in p.stems
+    ]
+
+
+def test_mandatory_cue_scores_full_weight():
+    jd = "Fluent French is required for this role. Strong communication skills."
+    levels = _levels(jd, "french")
+    assert levels and all(lvl == "mandatory" and w == 1.0 for lvl, w in levels)
+
+
+def test_preferred_cue_scores_partial_but_not_halved():
+    jd = "French is preferred but not mandatory. Strong communication skills."
+    levels = _levels(jd, "french")
+    assert levels == [("preferred", cov.PREFERRED_WEIGHT)]
+    # "not halved" is the explicit ask — a lighter discount than 50%.
+    assert cov.PREFERRED_WEIGHT > 0.5
+
+
+def test_unmentioned_term_never_enters_scoring():
+    jd = "Strong communication skills across the team."
+    assert _levels(jd, "french") == []
+
+
+def test_explicit_not_required_excludes_from_score():
+    jd = "French is not required for this position. Strong communication skills."
+    levels = _levels(jd, "french")
+    assert levels == [("excluded", 0.0)]
+
+
+def test_nice_to_have_section_heading_covers_its_bullet_list():
+    jd = (
+        "Requirements:\n- English fluency\n- 5 years experience\n\n"
+        "Nice to have:\n- French\n- Docker\n"
+    )
+    assert _levels(jd, "french") == [("preferred", cov.PREFERRED_WEIGHT)]
+    assert _levels(jd, "docker") == [("preferred", cov.PREFERRED_WEIGHT)]
+    assert all(lvl == "mandatory" for lvl, _ in _levels(jd, "english"))
+
+
+def test_coverage_score_weights_preferred_gap_less_than_mandatory_gap(master):
+    """Missing a preferred term should dent the score less than missing a
+    mandatory one, for otherwise-identical JDs."""
+    instance = _bd_instance(master)
+    jd_mandatory = "Channel development. Kubernetes experience is required."
+    jd_preferred = "Channel development. Kubernetes experience is a plus."
+    score_mandatory = cov.coverage_report(jd_mandatory, instance, master)["score"]
+    score_preferred = cov.coverage_report(jd_preferred, instance, master)["score"]
+    assert score_preferred > score_mandatory
+
+
+def test_excluded_term_never_appears_in_gap_lists(master):
+    instance = _bd_instance(master)
+    jd = "Channel development. Kubernetes is not required for this role."
+    report = cov.coverage_report(jd, instance, master)
+    text = " ".join(report["covered"] + report["selection_gap"] + report["content_gap"]).lower()
+    assert "kubernetes" not in text
+

@@ -100,6 +100,38 @@ def _dirs():
     return {p.name for p in OUTPUT.iterdir() if p.is_dir()}
 
 
+def _normalize_jd(text: str) -> str:
+    """Collapse whitespace/case so a re-paste of the same posting (extra blank
+    lines, trailing spaces, a stray capitalization change) still matches."""
+    return re.sub(r"\s+", " ", text).strip().lower()
+
+
+def _find_duplicate_jd(jd_text: str):
+    """Most recent past output/<slug>/ whose job_description.txt normalizes to
+    the same text, or None. O(n) scan of output/ — fine at this app's scale
+    (a single user's local runs), so no index is kept."""
+    if not OUTPUT.exists():
+        return None
+    target = _normalize_jd(jd_text)
+    best = None
+    for folder in OUTPUT.iterdir():
+        if not folder.is_dir():
+            continue
+        jd_file = folder / "job_description.txt"
+        if not jd_file.is_file():
+            continue
+        try:
+            existing = jd_file.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if _normalize_jd(existing) != target:
+            continue
+        mtime = folder.stat().st_mtime
+        if best is None or mtime > best[1]:
+            best = (folder, mtime)
+    return best[0] if best else None
+
+
 # ---- Run metrics -------------------------------------------------------------
 # Everything below reads files the pipeline ALREADY writes into output/<slug>/ —
 # nothing here re-runs or re-computes anything. Each reader returns None (or an
@@ -441,6 +473,19 @@ class Handler(BaseHTTPRequestHandler):
         tier = (q.get("tier") or ["best"])[0]
         if tier not in TIERS:
             tier = "best"
+        # ?force=1 skips the duplicate-JD check below (the "generate again
+        # anyway" path after the warning).
+        force = (q.get("force") or ["0"])[0] == "1"
+
+        if not force:
+            dupe = _find_duplicate_jd(jd_text)
+            if dupe is not None:
+                cov = _coverage(dupe)
+                return self._send_json(409, {
+                    "ok": False, "duplicate": True, "slug": dupe.name,
+                    "modified": dupe.stat().st_mtime,
+                    "coverage_pct": cov["pct"] if cov else None,
+                })
 
         # Refuse a second concurrent run rather than race output-folder detection.
         if not _run_lock.acquire(blocking=False):

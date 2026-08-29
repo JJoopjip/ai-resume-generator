@@ -144,17 +144,165 @@ def token_set(text: str) -> set[str]:
 
 
 # -----------------------------------------------------------------------------
+# Requirement-level detection ("must have" vs "nice to have")
+# -----------------------------------------------------------------------------
+# A JD term isn't automatically worth a full point: a language, tool, or skill
+# listed under "nice to have" matters less to the score than one under
+# "required" — and a term the JD never calls for at all shouldn't be scored
+# against the resume just because it's mentioned in passing. Cue phrases are
+# matched as substrings of a lowercased line, so "require" alone catches
+# require/required/requires/requirement without listing every inflection.
+_NOT_REQUIRED_CUES = (
+    "not required", "not necessary", "not mandatory", "not essential",
+    "no experience necessary", "isn't required", "is not needed",
+)
+_MANDATORY_CUES = (
+    "require", "must have", "must-have", "you must", "essential",
+    "mandatory", "shall have", "minimum qualification",
+)
+_PREFERRED_CUES = (
+    "prefer", "nice to have", "nice-to-have", "a plus", "is a plus",
+    "bonus", "asset", "desirable", "advantageous", "ideally",
+    "beneficial", "good to have", "would be a plus",
+)
+
+# Preferred terms count for less than mandatory ones, but proportionately —
+# not slashed in half. A "nice to have" skill still speaks to fit; it just
+# shouldn't carry the same weight as something the posting flatly requires.
+PREFERRED_WEIGHT = 0.65
+MANDATORY_WEIGHT = 1.0
+NEUTRAL_WEIGHT = 1.0     # no cue nearby at all — unchanged, today's behavior
+EXCLUDED_WEIGHT = 0.0    # JD explicitly says this isn't required
+
+
+def _classify_cue(lowered_line: str) -> str | None:
+    """Requirement level implied by cue phrases on one line/clause, or None if
+    the line carries no such signal.
+
+    Checked in this order on purpose:
+      1. Preferred cues first — "preferred, but not mandatory" is a very
+         common way to phrase "nice to have," and it must read as preferred,
+         not as an outright exclusion just because "not mandatory" also
+         appears in the same clause.
+      2. Not-required cues next, for a clause with no positive framing at
+         all ("French is not required").
+      3. Mandatory cues last, since "require" is a substring of "required"
+         AND of "not required" — checking it first would misfire on #2.
+    """
+    if any(cue in lowered_line for cue in _PREFERRED_CUES):
+        return "preferred"
+    if any(cue in lowered_line for cue in _NOT_REQUIRED_CUES):
+        return "excluded"
+    if any(cue in lowered_line for cue in _MANDATORY_CUES):
+        return "mandatory"
+    return None
+
+
+_SENTENCE_RE = re.compile(r"[^.!?]+")
+
+
+def _requirement_lines(folded_jd: str) -> list[tuple[int, int, str | None]]:
+    """Char spans of `folded_jd`, sentence by sentence, tagged with a
+    requirement level.
+
+    Splitting only on newlines isn't enough — a JD is often one dense
+    paragraph ("...pharmacovigilance is required. Kubernetes experience a
+    plus.") where the mandatory and preferred terms sit in the same line, so
+    each line is further split on sentence boundaries and classified
+    independently.
+
+    A heading line like "Nice to have:" or "Requirements:" also carries its
+    level onto the bullet-list lines that follow it, since JDs routinely put
+    the cue phrase on its own line above the actual terms:
+
+        Nice to have:
+        - French
+        - Docker
+
+    That inherited level is dropped at the next blank line or the next
+    heading (including a plain one, which resets back to no signal)."""
+    lines = folded_jd.split("\n")
+    spans: list[tuple[int, int, str | None]] = []
+    pos = 0
+    section_level: str | None = None
+    for line in lines:
+        line_start, line_end = pos, pos + len(line)
+        pos = line_end + 1
+
+        stripped = line.strip()
+        if not stripped:
+            section_level = None
+            spans.append((line_start, line_end, None))
+            continue
+
+        is_heading = stripped.endswith(":") and len(stripped) < 80
+        is_bullet = bool(re.match(r"^[-*•]|\d+[.)]\s", stripped))
+
+        heading_level: str | None = None
+        for sm in _SENTENCE_RE.finditer(line):
+            actual = _classify_cue(sm.group().lower())
+            level = actual
+            if level is None and is_bullet and section_level is not None:
+                level = section_level
+            spans.append((line_start + sm.start(), line_start + sm.end(), level))
+            if actual is not None:
+                heading_level = actual
+
+        if is_heading:
+            section_level = heading_level
+    return spans
+
+
+def _token_levels(folded_jd: str, matches: list) -> list[str | None]:
+    """Requirement level for each token match, by merging match positions
+    (sorted, from `_TOKEN_RE.finditer`) against line spans (also sorted)."""
+    lines = _requirement_lines(folded_jd)
+    levels: list[str | None] = []
+    li = 0
+    for m in matches:
+        p = m.start()
+        while li < len(lines) - 1 and p >= lines[li][1]:
+            li += 1
+        levels.append(lines[li][2])
+    return levels
+
+
+def _weight_for_levels(levels: set) -> tuple[str, float]:
+    """Aggregate every occurrence's level for one keyphrase into a single
+    (level, weight). An explicit "not required" anywhere wins outright; a
+    mandatory occurrence outweighs a preferred one elsewhere in the same
+    posting; no signal at all is scored exactly as before."""
+    if "excluded" in levels:
+        return "excluded", EXCLUDED_WEIGHT
+    if "mandatory" in levels:
+        return "mandatory", MANDATORY_WEIGHT
+    if "preferred" in levels:
+        return "preferred", PREFERRED_WEIGHT
+    return "neutral", NEUTRAL_WEIGHT
+
+
+# -----------------------------------------------------------------------------
 # JD keyphrase extraction
 # -----------------------------------------------------------------------------
 class Keyphrase:
     """A salient JD term. `display` is human-readable (original casing/words);
-    `stems` are the stemmed tokens matched against a resume's token bag."""
+    `stems` are the stemmed tokens matched against a resume's token bag.
+    `level`/`weight` reflect how the JD asked for it — mandatory, preferred,
+    explicitly not required, or (the common case) no signal either way."""
 
-    __slots__ = ("display", "stems")
+    __slots__ = ("display", "stems", "level", "weight")
 
-    def __init__(self, display: str, stems: tuple[str, ...]):
+    def __init__(
+        self,
+        display: str,
+        stems: tuple[str, ...],
+        level: str = "neutral",
+        weight: float = NEUTRAL_WEIGHT,
+    ):
         self.display = display
         self.stems = stems
+        self.level = level
+        self.weight = weight
 
     def covered_by(self, bag: set[str]) -> bool:
         return all(s in bag for s in self.stems)
@@ -179,6 +327,7 @@ def extract_keyphrases(
     matches = list(_TOKEN_RE.finditer(folded))
     lowered = [m.group().lower() for m in matches]
     stemmed = [_stem(m.group()) for m in matches]
+    token_levels = _token_levels(folded, matches)
 
     def is_content(i: int) -> bool:
         # Pure numbers are posting scaffolding, never a skill: they gave us
@@ -197,18 +346,24 @@ def extract_keyphrases(
 
     bigram_counts: Counter[tuple[str, str]] = Counter()
     bigram_display: dict[tuple[str, str], str] = {}
+    bigram_levels: dict[tuple[str, str], set] = {}
     for i in range(len(matches) - 1):
         if is_content(i) and is_content(i + 1) and adjacent(i) and stemmed[i] != stemmed[i + 1]:
             key = (stemmed[i], stemmed[i + 1])
             bigram_counts[key] += 1
             bigram_display.setdefault(key, f"{lowered[i]} {lowered[i + 1]}")
+            bigram_levels.setdefault(key, set()).update(
+                (token_levels[i], token_levels[i + 1])
+            )
 
     unigram_counts: Counter[str] = Counter()
     unigram_display: dict[str, str] = {}
+    unigram_levels: dict[str, set] = {}
     for i in range(len(matches)):
         if is_content(i):
             unigram_counts[stemmed[i]] += 1
             unigram_display.setdefault(stemmed[i], lowered[i])
+            unigram_levels.setdefault(stemmed[i], set()).add(token_levels[i])
 
     phrases: list[Keyphrase] = []
     seen: set[tuple[str, ...]] = set()
@@ -242,12 +397,14 @@ def extract_keyphrases(
     for key, _ in ranked_bigrams[:want_big]:
         if key in seen:
             continue
-        phrases.append(Keyphrase(bigram_display[key], key))
+        level, weight = _weight_for_levels(bigram_levels.get(key, set()))
+        phrases.append(Keyphrase(bigram_display[key], key, level, weight))
         seen.add(key)
     for stem, _ in ranked_unigrams[:want_uni]:
         if (stem,) in seen:
             continue
-        phrases.append(Keyphrase(unigram_display[stem], (stem,)))
+        level, weight = _weight_for_levels(unigram_levels.get(stem, set()))
+        phrases.append(Keyphrase(unigram_display[stem], (stem,), level, weight))
         seen.add((stem,))
     return phrases
 
@@ -363,25 +520,42 @@ def suggest_profile(jd_text: str, master: dict) -> dict:
 # -----------------------------------------------------------------------------
 # Top-level report
 # -----------------------------------------------------------------------------
+def _annotate(kp: "Keyphrase") -> str:
+    """Flag a gap-list entry as only "preferred" so a reader doesn't chase a
+    missing nice-to-have with the same urgency as a missing requirement."""
+    return f"{kp.display} (preferred)" if kp.level == "preferred" else kp.display
+
+
 def coverage_report(jd_text: str, instance: dict, master: dict, limit: int = 25) -> dict:
     """Full deterministic coverage/gap/depth report for one instance + JD."""
     phrases = extract_keyphrases(jd_text, limit=limit)
     resume_bag = token_set(instance_text(instance))
     master_bag = token_set(master_text(master))
 
+    # Terms the JD explicitly marks as not required (rare) never enter the
+    # score or the gap lists at all — they're not a gap, they're a non-issue.
+    scored_phrases = [kp for kp in phrases if kp.weight > 0]
+
     covered: list[str] = []
     selection_gap: list[str] = []   # in the bank, just not selected — fixable now
     content_gap: list[str] = []     # nowhere in the bank — enrich master.yaml, never fake
-    for kp in phrases:
+    covered_weight = 0.0
+    total_weight = 0.0
+    for kp in scored_phrases:
+        total_weight += kp.weight
         if kp.covered_by(resume_bag):
             covered.append(kp.display)
+            covered_weight += kp.weight
         elif kp.covered_by(master_bag):
-            selection_gap.append(kp.display)
+            selection_gap.append(_annotate(kp))
         else:
-            content_gap.append(kp.display)
+            content_gap.append(_annotate(kp))
 
-    total = len(phrases)
-    score = round(len(covered) / total, 3) if total else None
+    total = len(scored_phrases)
+    # Preferred terms ("nice to have") count toward the score, just at
+    # PREFERRED_WEIGHT rather than a full point, so a missing "nice to have"
+    # dents the score less than a missing hard requirement.
+    score = round(covered_weight / total_weight, 3) if total_weight else None
 
     depth = selection_depth(instance, master)
     # Coarse confidence: "thin" when the keyword screen is low OR the page is
