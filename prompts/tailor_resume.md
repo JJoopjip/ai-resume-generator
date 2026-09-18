@@ -262,21 +262,45 @@ Read the exit code and the JSON on stdout:
 
 - **Exit 0**: done. One page, valid. Before you stop, glance at the
   `coverage` block in the JSON (a deterministic ATS-style keyword screen, also
-  written to `coverage.md`). If `selection_gap` lists JD terms you *do* have
-  content for in `master.yaml` but didn't select, and the page has room, swap a
-  relevant bullet back in (still verbatim) and re-render — this is the cheap way
-  to raise real fit. `content_gap` terms are ones the bank has nothing on: never
-  invent a bullet to cover them. A large `profile.suggested`-vs-your-`profile`
-  disagreement is worth a second look at your profile choice. Coverage is a
-  nudge, not a gate — never sacrifice truthfulness or the one-page rule for it.
+  written to `coverage.md`). `content_gap` terms are ones the bank has nothing
+  on: never invent a bullet to cover them. A large `profile.suggested`-vs-your-
+  `profile` disagreement is worth a second look at your profile choice.
+  Coverage is a nudge, not a gate — never sacrifice truthfulness or the
+  one-page rule for it.
+
+  If `selection_gap` lists JD terms you *do* have content for in `master.yaml`
+  but didn't select, try to close them with one of two moves, in this order:
+
+  1. **Add**, if `fit.lines_free` > 0: swap a relevant omitted bullet back in
+     (still verbatim) using the free space, and re-render.
+  2. **Replace**, if `fit.lines_free` is 0 (the common case on a full page):
+     find an omitted bullet *in the same role* as a currently-selected bullet
+     that is weaker evidence for this JD, and swap the two. Same-role keeps
+     the "never empty a core role" rule (point 2 below) out of danger, and a
+     same-role substitution is usually similar enough in length that it
+     rarely reopens overflow. Re-render to confirm it still fits; if the
+     replacement is longer and now overflows, pick a shorter alternative or
+     revert the swap.
+
+  **Before either move, verify the JD term's literal words actually appear in
+  the candidate bullet's chosen-profile `text`** — not just in its `themes`
+  tag or in a different profile's variant. `themes` and other-profile wording
+  never render, so a bullet can look like it "covers" a term when the
+  rendered resume would not actually gain that word. After re-rendering,
+  check that the term moved into the new `covered` list, not just that the
+  score number changed — if it didn't, the swap did nothing and should be
+  reverted.
 
   Swap only when the bullet you are adding is *genuinely* the better evidence
   for this role. Never trade a stronger bullet for a weaker one to make a term
   appear: the screen matches words, it cannot see relevance, and a resume that
   reads worse but scores higher is a worse resume. Some `selection_gap` entries
   are single generic words ("process", "plans") — those are the least worth
-  chasing. If no omitted bullet is a real improvement, change nothing and stop;
-  leaving a term uncovered is a perfectly good outcome.
+  chasing. Cap coverage-driven swap experiments at 2 extra re-renders beyond
+  whatever the overflow loop already used (still inside the overall 5-attempt
+  cap below); if no omitted bullet is a real improvement within that budget,
+  change nothing and stop — leaving a term uncovered is a perfectly good
+  outcome.
 - **Exit 1**: validation failure — `errors[]` names the id/field mismatch.
   Fix `instance.yaml` (you likely copied a locked field wrong or altered
   bullet text) and re-run. This does not count against the overflow retry
@@ -295,10 +319,13 @@ Read the exit code and the JSON on stdout:
      from that role's `bullets` list (and remove it from `priority_order` too).
      Use judgment on *which* role to trim from if multiple roles have
      low-priority bullets left: prefer trimming the role least central to the
-     chosen profile. **Never remove the last remaining bullet of `boots` (§3a)
-     or `thaifest` (§3b)** — those roles are timeline- and Canadian-experience-
-     load-bearing; trim them down to one bullet, but keep the role and its dates
-     visible.
+     chosen profile. **Never remove the last remaining bullet of any role in
+     `experience`** — including `winnergy`, `lgchem`, and `otsuka`, not just
+     `boots` (§3a) and `thaifest` (§3b). Dropping a core role's last bullet
+     removes the role's header and dates too, silently opening an unexplained
+     employment gap — worse than a denser page. Trim every role down to one
+     bullet before touching a role's last one, and keep the role and its dates
+     visible no matter how tight the page gets.
   3. If still overflowing and the impact line is present, dropping a `highlights`
      entry (or the whole `highlights` key) is a low-cost trim before cutting more
      substantive bullets.
