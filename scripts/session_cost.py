@@ -26,6 +26,7 @@ from pathlib import Path
 # cache read = 0.1× input. Keyed by a substring of the model id; first match
 # wins, so order most-specific first. Unknown models fall back to Sonnet 5.
 _PRICING = [
+    ("claude-opus-5", 5.0, 25.0),
     ("claude-opus-4-8", 5.0, 25.0),
     ("claude-opus-4-7", 5.0, 25.0),
     ("claude-opus-4-6", 5.0, 25.0),
@@ -56,9 +57,25 @@ def _project_dir(cwd: str) -> Path:
     return Path.home() / ".claude" / "projects" / mangled
 
 
-def _pick_transcript(project_dir: Path, since: float | None) -> Path | None:
+def _pick_transcript(project_dir: Path, since: float | None,
+                      session_id: str | None = None) -> Path | None:
+    """The transcript for this run.
+
+    When session_id is known (the normal case now -- run_and_capture.py reads
+    it straight off the session's own stream), the transcript is just
+    `<session_id>.jsonl`: no guessing needed, and correct even with sibling
+    sessions writing to the same project dir at the same time. `since` is
+    ignored in that case; it's only a fallback signal for the old heuristic.
+
+    Without a session_id (manual/back-compat use), fall back to "newest
+    transcript modified at/after --since" -- best-effort, and only safe when
+    nothing else is writing to this project dir concurrently.
+    """
     if not project_dir.is_dir():
         return None
+    if session_id:
+        candidate = project_dir / f"{session_id}.jsonl"
+        return candidate if candidate.is_file() else None
     files = [p for p in project_dir.glob("*.jsonl")
              if since is None or p.stat().st_mtime >= since]
     return max(files, key=lambda p: p.stat().st_mtime) if files else None
@@ -125,7 +142,12 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="session-cost")
     ap.add_argument("--out", required=True, help="resume output folder to write cost.json into")
     ap.add_argument("--since", type=float, default=None,
-                    help="only accept a transcript modified at/after this epoch time")
+                    help="only accept a transcript modified at/after this epoch time "
+                         "(ignored when --session-id is given; that's exact)")
+    ap.add_argument("--session-id", default=None,
+                    help="this run's Claude Code session id (from run_and_capture.py) -- "
+                         "picks the transcript by name instead of guessing by mtime, which "
+                         "is what makes this safe with concurrent runs")
     ap.add_argument("--project-dir", default=None, help="override the transcripts dir")
     ap.add_argument("--cwd", default=os.getcwd(), help="cwd used to locate the transcripts dir")
     args = ap.parse_args(argv)
@@ -133,7 +155,7 @@ def main(argv: list[str] | None = None) -> int:
     out_dir = Path(args.out)
     try:
         project_dir = Path(args.project_dir) if args.project_dir else _project_dir(args.cwd)
-        transcript = _pick_transcript(project_dir, args.since)
+        transcript = _pick_transcript(project_dir, args.since, args.session_id)
         if transcript is None:
             print(f"  resume-gen │ (no session transcript found in {project_dir}; skipping cost.json)",
                   file=sys.stderr)

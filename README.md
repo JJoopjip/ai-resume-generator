@@ -76,7 +76,7 @@ target company's culture.
 | See which skills to add to your bank next | `./resume-gen gaps` (see below) |
 
 **Dialing the AI down for a routine application.** By default the tool uses the
-most capable model (Opus 4.8, high effort) — bullet selection is the one
+most capable model (Opus 5, high effort) — bullet selection is the one
 judgment call nothing downstream can repair, and on a well-matched posting it
 demonstrably picks better (see below). For a routine, bulk, or weakly-matched
 posting, add `--fast` to drop to Sonnet 5 / medium — roughly 60% cheaper and

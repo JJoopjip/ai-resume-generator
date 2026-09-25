@@ -95,7 +95,7 @@ already serving on 5000, clicking the icon just opens the browser to it.
   because `RESUME_GEN_CLAUDE_FLAGS` overrides the launcher's own choice. Setting
   that env var before starting the server still wins over both:
   ```sh
-  RESUME_GEN_CLAUDE_FLAGS="--model claude-opus-4-8 --effort high \
+  RESUME_GEN_CLAUDE_FLAGS="--model claude-opus-5 --effort high \
     --permission-mode acceptEdits --allowedTools Bash Read Edit Write" \
     python3 web/app.py
   ```

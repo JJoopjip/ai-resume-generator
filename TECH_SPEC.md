@@ -295,9 +295,10 @@ assembly script.
   `prompts/tailor_resume.md`, `master.yaml`, and the job description file by
   path — Claude reads all three with its own Read tool. No file content is
   pre-concatenated into the prompt string by a wrapper script.
-- **Model**: the `resume-gen` launcher defaults to `--model claude-opus-4-8
+- **Model**: the `resume-gen` launcher defaults to `--model claude-opus-5
   --effort high` — bullet selection is the one call nothing downstream repairs,
-  and the 2026-07-28 eval showed Opus/high makes a measurably better selection on
+  and the 2026-07-28 eval (run on Opus 4.8, the tier available at the time)
+  showed Opus/high makes a measurably better selection on
   a well-matched posting (a blind judge preferred it; it kept a quantified bullet
   Sonnet/medium dropped). On a poorly-matched posting the two tiers produce
   identical output, so `--fast` (or `RESUME_GEN_FAST=1`) drops to `--model

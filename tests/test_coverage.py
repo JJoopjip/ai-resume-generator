@@ -207,6 +207,88 @@ def test_salient_unigram_scores_when_the_resume_says_it():
     assert any(p.covered_by(bag) for p in phrases)
 
 
+def test_hyphenated_resume_term_matches_the_jds_split_wording():
+    """The bug (fifth in this section): a JD writing a term as two words
+    ('medical devices' -> bigram stems ('medical', 'device')) never matched a
+    resume/master that wrote the SAME term hyphenated ('medical-devices'),
+    because token_set() turned the hyphenated form into one joined token
+    ('medical-device') and nothing else — a real match scored as a content
+    gap. Fixed by also emitting the split parts alongside the whole token."""
+    jd = "Experience with medical devices manufacturing and regulatory affairs."
+    phrases = cov.extract_keyphrases(jd, limit=25)
+    target = next(p for p in phrases if p.stems == ("medical", "device"))
+    bag = cov.token_set("Led teams across medical-devices manufacturing sites.")
+    assert target.covered_by(bag)
+
+
+def test_closed_compound_healthcare_folds_to_health_and_care():
+    """No separator to split on, so this needs the small lookup table rather
+    than the hyphen/slash regex — 'healthcare' (JD or resume) must match
+    'health care' (resume or JD) in either direction."""
+    bag = cov.token_set("Experience across the healthcare sector.")
+    assert "health" in bag and "care" in bag
+
+
+def test_compound_split_is_additive_not_replacing():
+    """Splitting must never remove the whole-word token — a JD term that
+    itself matches the joined spelling verbatim must still work too."""
+    bag = cov.token_set("modern-trade retail execution")
+    assert "modern" in bag and "trade" in bag
+    assert any(t.startswith("modern-trad") for t in bag)
+
+
+# ---------------------------------------------------------------------------
+# Bigram adjacency — a multi-word JD phrase must actually appear as a phrase
+# on the resume, not just have both its words present somewhere.
+# ---------------------------------------------------------------------------
+def test_bigram_from_two_unrelated_bullets_is_not_covered(master):
+    """The bug (found during the 2026-07-28 A/B, item 4): `covered_by` tested
+    a bigram against a whole-resume token bag, so 'conversion' in one bullet
+    plus 'rate' in a totally different, unrelated bullet scored 'conversion
+    rate' as covered — a resume that never says that phrase got credit for
+    it, and the deterministic score moved while the actual resume didn't
+    improve (that's exactly what let the A/B's keyword-driven swap look like
+    a win when it was a loss)."""
+    instance = {
+        "summary": "", "experience": [
+            {"id": "boots", "title": "T", "company": "C", "bullets": [
+                {"id": "b1", "text": "Drove sales conversion across retail pharmacy locations."}]},
+            {"id": "winnergy", "title": "T2", "company": "C2", "bullets": [
+                {"id": "b2", "text": "Achieved a 90% repeat-order rate through loyalty programs."}]},
+        ],
+    }
+    jd = "Looking for someone to improve conversion rate across our funnel."
+    report = cov.coverage_report(jd, instance, master)
+    lowered_covered = [c.lower() for c in report["covered"]]
+    assert "conversion rate" not in lowered_covered
+    # The individual words still score on their own merits (unigrams are
+    # unaffected by this fix) — only the bigram claim is wrong.
+    assert "conversion" in lowered_covered
+    assert "rate" in lowered_covered
+
+
+def test_bigram_actually_adjacent_in_one_bullet_is_covered(master):
+    """Positive control for the fix above — a real phrase must still score,
+    or the fix would just be breaking coverage rather than tightening it."""
+    instance = {
+        "summary": "", "experience": [
+            {"id": "x", "title": "T", "company": "C", "bullets": [
+                {"id": "b1", "text": "Improved conversion rate by 20% via A/B testing."}]},
+        ],
+    }
+    jd = "Looking for someone to improve conversion rate across our funnel."
+    report = cov.coverage_report(jd, instance, master)
+    assert "conversion rate" in [c.lower() for c in report["covered"]]
+
+
+def test_bigram_pairs_honors_the_compound_split_fix():
+    """Item 4's stricter adjacency must not silently undo item 2's compound-
+    token fix — a JD bigram ('medical devices') must still match a resume
+    that writes the same term as one hyphenated token ('medical-devices')."""
+    pairs = cov.bigram_pairs("Led teams across medical-devices manufacturing.")
+    assert ("medical", "device") in pairs
+
+
 # ---------------------------------------------------------------------------
 # Requirement-level weighting — a JD term isn't scored the same whether it's
 # a hard requirement, a "nice to have", or not asked for at all.

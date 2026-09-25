@@ -76,21 +76,25 @@ ARTIFACTS = ("resume.pdf", "resume.docx", "cover_letter.pdf", "cover_letter.docx
 # entirely — so the page has to name the tier itself. "best" is the launcher's
 # default (Opus/high, the tier the live eval backs); "fast" is `--fast`.
 TIERS = {
-    "best": "--model claude-opus-4-8 --effort high",
+    "best": "--model claude-opus-5 --effort high",
     "fast": "--model claude-sonnet-5 --effort medium",
 }
 _CLAUDE_RUN_FLAGS = ("--permission-mode acceptEdits "
                      "--allowedTools Bash Read Edit Write "
                      "--output-format stream-json --verbose")
 
-# One generation at a time. The pipeline drives Docker + a headless Claude
-# session and detects "the new output folder" by diffing output/; two concurrent
-# runs would race that diff. A non-blocking acquire lets a second request fail
-# fast with a friendly "busy" instead of queuing or corrupting detection.
-_run_lock = threading.Lock()
+# Up to this many generations at once. Each run's own output-folder and
+# session-id detection now comes from parsing that run's own stdout stream
+# (make_narrator()'s state["slug"], and run_and_capture.py's --info-file on
+# the resume-gen side) rather than diffing output/ or picking "the newest"
+# shared file -- so concurrent runs no longer race each other's detection.
+# A non-blocking acquire lets a request past the cap fail fast with a friendly
+# "busy" instead of queuing.
+_RUN_SLOTS = int(os.environ.get("RESUME_WEB_CONCURRENCY", "2"))
+_run_lock = threading.Semaphore(_RUN_SLOTS)
 
-_BUSY_MSG = ("A résumé or cover letter is already being generated. Please wait "
-             "for it to finish, then try again.")
+_BUSY_MSG = (f"Already generating {_RUN_SLOTS} résumé(s)/cover letter(s) at once. "
+             "Please wait for one to finish, then try again.")
 
 
 def _dirs():
@@ -233,9 +237,31 @@ def _run_meta(slug):
 # many render attempts so far) so it can say "attempt 2" during the overflow
 # trim loop. Non-JSON lines (the launcher's own banners) pass through unchanged.
 
+_SLUG_IN_PATH_RE = re.compile(r"\boutput/([A-Za-z0-9._-]+)/")
+
+
+def _hunt_slug(inp: dict, state: dict):
+    """First output/<slug>/ mention in a tool call's input -- Read/Write/Edit's
+    file_path, or a Bash command -- becomes this run's slug. The agent picks
+    the slug once (tailor_resume.md step 2) and every artifact after that
+    lives under it, so the first hit is reliable and we stop looking once
+    state["slug"] is set. This is what replaces diffing output/ to find "the
+    new folder": it's read straight off THIS run's own tool calls, so it can't
+    be confused by a sibling run's folder appearing at the same time."""
+    if state.get("slug"):
+        return
+    for v in inp.values():
+        if isinstance(v, str):
+            m = _SLUG_IN_PATH_RE.search(v)
+            if m:
+                state["slug"] = m.group(1)
+                return
+
+
 def _tool_phase(block, state):
     name = block.get("name", "")
     inp = block.get("input", {}) or {}
+    _hunt_slug(inp, state)
     if name == "Read":
         fp = str(inp.get("file_path", ""))
         low = fp.lower()
@@ -280,7 +306,7 @@ def _tool_phase(block, state):
 
 
 def make_narrator():
-    state = {"render": 0, "cover_render": 0}
+    state = {"render": 0, "cover_render": 0, "slug": None}
 
     def narrate(line):
         text = line.rstrip("\n")
@@ -320,6 +346,7 @@ def make_narrator():
             return None
         return None  # result/rate-limit/thinking-token events: skip
 
+    narrate.state = state  # callers read narrate.state["slug"] once the run ends
     return narrate
 
 
@@ -394,9 +421,9 @@ class Handler(BaseHTTPRequestHandler):
         self._send_json(200, {"ok": True, "drafts": runs[:limit]})
 
     def _to_tracker(self):
-        """Push a finished output/<slug>/ into the application tracker. We send
-        the tracker only the folder path + JD text (it reads the files off this
-        shared filesystem itself) and relay its JSON answer back to the page."""
+        """Manual "Add to tracker" button: push output/<slug>/ and relay the
+        tracker's JSON answer back to the page. Shares its core with the
+        automatic post-generate push in _import_to_tracker()."""
         q = parse_qs(urlparse(self.path).query)
         slug = (q.get("slug") or [""])[0]
         if not SLUG_RE.match(slug):
@@ -404,7 +431,25 @@ class Handler(BaseHTTPRequestHandler):
         folder = (OUTPUT / slug).resolve()
         if OUTPUT.resolve() not in folder.parents or not folder.is_dir():
             return self._send_json(404, {"ok": False, "error": "No such output folder."})
+        data = self._import_to_tracker(slug)
+        return self._send_json(200 if data.get("ok") else 400, data)
 
+    def _import_to_tracker(self, slug):
+        """Push output/<slug>/ into the application tracker (its /api/import —
+        we send only the folder path + JD text; it reads the files itself off
+        this shared filesystem) and, if that created a brand-new tracker row,
+        advance it exactly one step to "applied".
+
+        Only a freshly created row starts at "wishlist", so only a freshly
+        created row gets auto-advanced — re-pushing an existing application
+        (already tracked, maybe already in screening/interview/etc.) never
+        touches its status. That would silently regress real progress.
+
+        Best-effort throughout: any tracker-side failure is returned in the
+        dict, never raised, so a tracker outage never fails the résumé run
+        itself.
+        """
+        folder = (OUTPUT / slug).resolve()
         jd_file = folder / "job_description.txt"
         jd_text = jd_file.read_text(encoding="utf-8") if jd_file.is_file() else ""
         payload = json.dumps({"folder": str(folder), "jd_text": jd_text}).encode("utf-8")
@@ -420,15 +465,28 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 data = {"ok": False, "error": f"Tracker error (HTTP {e.code})."}
         except urllib.error.URLError as e:
-            return self._send_json(502, {"ok": False, "error":
-                f"Couldn't reach the tracker at {TRACKER_URL} — is it running? ({e.reason})"})
+            return {"ok": False, "error":
+                    f"Couldn't reach the tracker at {TRACKER_URL} — is it running? ({e.reason})"}
         except Exception as e:
-            return self._send_json(502, {"ok": False, "error": f"Tracker call failed: {e}"})
+            return {"ok": False, "error": f"Tracker call failed: {e}"}
 
         # Turn the tracker's relative URL into one the browser can click.
         if data.get("ok") and data.get("url", "").startswith("/"):
             data["url"] = TRACKER_URL.rstrip("/") + data["url"]
-        return self._send_json(200 if data.get("ok") else 400, data)
+
+        if data.get("ok") and data.get("created") and data.get("app_id"):
+            try:
+                adv_req = urllib.request.Request(
+                    TRACKER_URL.rstrip("/") + f"/applications/{data['app_id']}/advance",
+                    data=b"", method="POST")
+                with urllib.request.urlopen(adv_req, timeout=30):
+                    pass
+                data["marked_applied"] = True
+            except Exception as e:
+                data["warning"] = (
+                    (data.get("warning") + " ") if data.get("warning") else ""
+                ) + f"Imported, but couldn't mark it applied: {e}"
+        return data
 
     def _send_file(self, fp: Path, ctype: str):
         if not fp.is_file():
@@ -548,7 +606,9 @@ class Handler(BaseHTTPRequestHandler):
         return env
 
     def _run_narrated(self, cmd, env, emit):
-        """Run `cmd`, narrating its stream-json output; return the exit code."""
+        """Run `cmd`, narrating its stream-json output; return (exit_code, state)
+        where state["slug"] is this run's own output/<slug>/ (or None if the
+        stream never mentioned one -- see _hunt_slug)."""
         narrate = make_narrator()
         proc = subprocess.Popen(
             cmd, cwd=str(ROOT), stdout=subprocess.PIPE,
@@ -558,7 +618,8 @@ class Handler(BaseHTTPRequestHandler):
             phase = narrate(line)
             if phase:
                 emit(phase + "\n")
-        return proc.wait()
+        code = proc.wait()
+        return code, narrate.state
 
     def _run_cover(self, slug):
         emit = self._open_stream()
@@ -567,12 +628,21 @@ class Handler(BaseHTTPRequestHandler):
         try:
             emit(f"  web │ writing a cover letter for {slug} — a minute or two; "
                  "watch the steps below.\n\n")
-            code = self._run_narrated(cmd, self._stream_env(), emit)
+            code, _state = self._run_narrated(cmd, self._stream_env(), emit)
             have = [f for f in ARTIFACTS if (OUTPUT / slug / f).is_file()]
             if code == 0 and (OUTPUT / slug / "cover_letter.pdf").is_file():
                 result = {"ok": True, "slug": slug, "files": have,
                           "rows": _file_rows(OUTPUT / slug), "meta": _run_meta(slug),
                           "folder": str(OUTPUT / slug)}
+                tracker = self._import_to_tracker(slug)
+                result["tracker"] = tracker
+                if tracker.get("ok"):
+                    note = "added to the tracker and marked applied" \
+                        if tracker.get("marked_applied") else "already in the tracker"
+                    emit(f"\n  web │ {note} — {tracker.get('url', '')}\n")
+                else:
+                    emit(f"\n  web │ tracker push skipped: "
+                         f"{tracker.get('error', 'unknown error')}\n")
             else:
                 result = {"ok": False, "slug": slug, "code": code}
         except Exception as e:
@@ -587,7 +657,6 @@ class Handler(BaseHTTPRequestHandler):
         emit = self._open_stream()
 
         # Write the pasted JD to a temp file and run the UNMODIFIED pipeline.
-        before = _dirs()
         with tempfile.NamedTemporaryFile(
             "w", suffix=".txt", prefix="jd-", delete=False, encoding="utf-8"
         ) as tf:
@@ -598,16 +667,25 @@ class Handler(BaseHTTPRequestHandler):
         if want_cover:
             cmd.append("--cover")
 
+        before = _dirs()  # only consulted by the fallback below
         result = {"ok": False}
         try:
             kind = "résumé + cover letter" if want_cover else "résumé"
             tier_note = "cheaper/faster tier" if tier == "fast" else "best-quality tier"
             emit(f"  web │ starting {kind} on the {tier_note} — this takes a few "
                  "minutes; watch the steps below.\n\n")
-            code = self._run_narrated(cmd, self._stream_env(tier), emit)
+            code, state = self._run_narrated(cmd, self._stream_env(tier), emit)
 
-            new = sorted(_dirs() - before)
-            slug = new[-1] if new else None
+            # This run's own slug, read straight off its own stream (see
+            # _hunt_slug) -- not a diff of output/, which two concurrent runs
+            # would race. Fall back to the diff only if the stream never
+            # mentioned one (e.g. the agent errored out before creating
+            # anything); that fallback is best-effort and not concurrency-safe,
+            # but by then there's nothing better to attribute the run to anyway.
+            slug = state.get("slug")
+            if slug is None:
+                new = sorted(_dirs() - before)
+                slug = new[-1] if new else None
             # `claude`'s own exit code (`code`) only reflects whether the headless
             # session completed — it stays 0 even if the agent hit the §6
             # overflow-loop cap and stopped at 2+ pages (tailor_resume.md just has
@@ -622,6 +700,15 @@ class Handler(BaseHTTPRequestHandler):
                 result = {"ok": True, "slug": slug, "files": have,
                           "rows": _file_rows(OUTPUT / slug), "meta": _run_meta(slug),
                           "folder": str((OUTPUT / slug))}
+                tracker = self._import_to_tracker(slug)
+                result["tracker"] = tracker
+                if tracker.get("ok"):
+                    note = "added to the tracker and marked applied" \
+                        if tracker.get("marked_applied") else "already in the tracker"
+                    emit(f"\n  web │ {note} — {tracker.get('url', '')}\n")
+                else:
+                    emit(f"\n  web │ tracker push skipped: "
+                         f"{tracker.get('error', 'unknown error')}\n")
             else:
                 if code == 0 and slug and pages and pages > 1:
                     emit(f"\n  web │ stopping short of done — {pages}-page resume.pdf "

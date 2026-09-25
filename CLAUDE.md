@@ -27,6 +27,19 @@ When you finish a task (or a meaningful chunk of one):
 Keep entries terse. This file is a relay baton, not a changelog for humans —
 optimize for "a cold agent can pick up the next task in under a minute."
 
+**Exception — automated `resume-gen` tailor/cover-letter runs (headless, via
+the web UI or CLI) do NOT hand-edit this file.** With concurrent runs enabled
+(`RESUME_WEB_CONCURRENCY`), two of those agents editing the same file at the
+same time is a read-modify-write race — whichever writes second silently
+overwrites the first's entry. `scripts/append_handoff_log.py` appends their
+Log line instead, under a real file lock (`.session_handoff.lock`), so
+concurrent runs queue instead of racing. Their TASK prompt (see `resume-gen`)
+tells them this explicitly. This exception is narrow: it covers only that one
+automated Log line for that one call path. Every other agent — including an
+interactive Claude Code session like the one reading this file right now —
+still follows the mandatory rule above in full, including the richer "What's
+done"/"What's next" updates the automated path never touches.
+
 ## Working rules specific to this repo
 
 - **`master.yaml` (repo root) is private and must never be committed.** It

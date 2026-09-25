@@ -55,17 +55,48 @@ judgment of which angle(s) it rewards:
 - Ambiguous, generalist, or none of the above dominate → **general**, or
   blend.
 
-**Do not commit to one profile for the whole resume.** Decide per bullet and
-for the summary independently — that's what `variants` is built for. A
-resume can pull `bd` wording for one role's bullets and `pm` wording for
-another's, if that's what best mirrors the posting. Still record one label in
-`instance.yaml`'s top-level `profile` field — the dominant angle, used for
-the tagline and output-folder naming — even when individual bullets draw
-from other profiles.
+**Anchor to your dominant profile, with narrow, justified exceptions.** Use
+that profile's variant for every bullet by default — record it in
+`instance.yaml`'s top-level `profile` field. (The summary is a separate,
+looser case — see §4, which already has its own blending rule; nothing below
+tightens that.) This is deliberate, not laziness: variants carry different
+**metrics**, not just different wording (e.g. one bullet's `pm` variant states "4 engagement
+stages" while its `bd` variant states "12 new relationships" for the same
+underlying work) — swapping variants just to echo more of the JD's own
+keywords changes which achievement the reader actually sees, and can break
+§4a's "highlights should reinforce a selected bullet" rule. Chasing the
+deterministic coverage score this way was tried and measured: it moved the
+score up while making the resume read worse (see `SESSION_HANDOFF.md`'s
+2026-07-28 A/B if you want the specifics) — do not repeat that mistake.
 
-If a bullet has no `variants` entry for your chosen profile, fall back to
-`general` if present, otherwise pick whichever variant is closest and use it
-unedited.
+Deviate from the anchor profile for a specific bullet **only** when a
+sibling profile's variant states a fact or metric the job description
+explicitly asks for, **and your anchor variant doesn't contain it.** That is
+the whole test. "This variant reads slightly better," "this uses the JD's
+exact word," and "this would raise the coverage score" are each, on their
+own, **not** sufficient reasons. When you do deviate:
+
+- Prefer `general`'s variant over a rival profile's, if `general` also
+  carries the needed fact — its neutral register blends into an anchored
+  resume without a voice seam, where a rival profile's distinct voice is
+  more noticeable next to your anchor-profile bullets.
+- Cap it at roughly **1/3** of your selected bullets. Reaching for more than
+  that is a signal the JD probably calls for a different dominant profile —
+  reconsider that choice first, rather than patching it bullet by bullet.
+- Never let two **adjacent** bullets within the same role both come from a
+  non-anchor profile — that's where a voice shift is most jarring to a
+  reader. (An anchor-profile bullet next to a single deviation is fine; two
+  deviations back to back are not, even from the same sibling profile.)
+- Record it in `omitted.md` (§7) — the anchor profile's own variant for that
+  bullet, marked `cross-profile-swap`, with the specific JD fact that
+  justified using the other variant instead. A reviewer should be able to
+  see exactly what you set aside and why.
+
+The rule above governs a *choice* between variants that both exist. It's a
+different case entirely when your anchor profile has no `variants` entry for
+a bullet at all — that's a mandatory fallback, not a judgment call, and does
+not count against the 1/3 cap: fall back to `general` if present, otherwise
+pick whichever variant is closest and use it unedited.
 
 ## 3. Bullet-selection guidance
 
@@ -378,17 +409,22 @@ used (your chosen profile, else `general`, else the closest, per §2). Columns:
 - **Full text (verbatim)**: for a bullet, the whole variant sentence; for a
   highlight, its `value` + `label` (e.g. `100% — online-engagement growth`);
   for a role, its title + company + dates; for a skill, the item text.
-- **Category**: `never-selected` (didn't make the relevance cut in §3) vs
-  `overflow-cut` (was selected, then dropped by the §6 loop to reach one page).
-  Keep these distinct — the reviewer treats them differently.
+- **Category**: `never-selected` (didn't make the relevance cut in §3),
+  `overflow-cut` (was selected, then dropped by the §6 loop to reach one
+  page), or `cross-profile-swap` (§2 — your anchor profile had its own
+  variant for this bullet, but you used a sibling profile's variant instead;
+  this row is the anchor variant you passed over, full text and all). Keep
+  all three distinct — the reviewer treats them differently.
 - **Reason**: one concrete phrase (e.g. "low JD relevance — no ops keywords",
   "cut first per §6 additional-role rule", "duplicate metric already shown by
-  `hl_experience`").
+  `hl_experience`"; for `cross-profile-swap`, the specific JD-required fact
+  the other variant had that this one didn't).
 
 Cover every omitted item in these classes: experience bullets not in the final
-`instance.yaml`, the `server` role if dropped, highlights not selected, and any
-skills items you trimmed out of an included group. If nothing was omitted in a
-class, you may skip its rows, but the file must always exist.
+`instance.yaml`, the `server` role if dropped, highlights not selected, any
+skills items you trimmed out of an included group, and every bullet where you
+used a non-anchor-profile variant per §2's exception test. If nothing was
+omitted in a class, you may skip its rows, but the file must always exist.
 
 ## 8. Before you finish
 

@@ -82,6 +82,22 @@ _STOPWORDS_RAW |= _BOILERPLATE
 # "e.g", and "r&d" intact.
 _TOKEN_RE = re.compile(r"[a-zA-Z0-9]+(?:[+#/&.'\-][a-zA-Z0-9]+)*")
 
+# Word-joining separators worth splitting a compound token on, in ADDITION to
+# keeping the whole joined token. Deliberately narrow: '-' and '/' join two
+# independent words ("modern-trade" = modern + trade, "and/or" = and + or),
+# while '+', '#', '&', '.', "'" join symbols/abbreviations where splitting
+# would produce garbage ("c++" -> "c", "", "don't" -> "don", "t").
+_COMPOUND_SPLIT_RE = re.compile(r"[-/]")
+
+# Closed compounds -- no separator at all, so splitting needs a lookup rather
+# than a regex. Deliberately small: only words where the JD/resume are known
+# to disagree on "one word" vs "two words" for the SAME term. Add to this as
+# real gaps turn up; over-splitting a word that never varies this way just
+# adds unused tokens to the bag, which is harmless but pointless.
+_CLOSED_COMPOUNDS = {
+    "healthcare": ("health", "care"),
+}
+
 # Cosmetic character folds shared with validate._normalize's intent: we compare
 # on meaning, not on which flavor of quote/dash a document happened to use.
 _COSMETIC_MAP = {
@@ -133,14 +149,91 @@ _STOPWORDS = {_stem(w) for w in _STOPWORDS_RAW}
 
 def tokens(text: str) -> list[str]:
     """Ordered, stemmed content tokens (stopwords kept here so bigrams stay
-    positional; callers drop stopwords as needed)."""
-    return [_stem(m.group()) for m in _TOKEN_RE.finditer(_fold(text).lower())]
+    positional; callers drop stopwords as needed).
+
+    A hyphenated/slash-joined compound ("modern-trade", "and/or") is emitted
+    BOTH whole and split into its parts, and a known closed compound
+    ("healthcare") is emitted alongside its split form too. This is additive
+    only -- the whole-word token is always still there -- so it exists purely
+    to close a real miss: `token_set()` builds the bag this JD-fit check runs
+    against, and without the split form, a JD phrase extracted as separate
+    words ("medical devices") never matches a resume that happens to write
+    the same term joined ("medical-devices"), or vice versa, even though a
+    human reader would call that an obvious match.
+    """
+    out: list[str] = []
+    for m in _TOKEN_RE.finditer(_fold(text).lower()):
+        word = m.group()
+        out.append(_stem(word))
+        if _COMPOUND_SPLIT_RE.search(word):
+            parts = [p for p in _COMPOUND_SPLIT_RE.split(word) if p]
+            if len(parts) > 1:
+                out.extend(_stem(p) for p in parts)
+        elif word in _CLOSED_COMPOUNDS:
+            out.extend(_stem(p) for p in _CLOSED_COMPOUNDS[word])
+    return out
 
 
 def token_set(text: str) -> set[str]:
     """Unordered stemmed content tokens with stopwords removed — the bag a
     keyphrase is checked against."""
     return {t for t in tokens(text) if t not in _STOPWORDS and len(t) > 1}
+
+
+def _is_adjacent_gap(gap: str) -> bool:
+    """True when `gap` (the raw text between two token matches) is nothing
+    but spaces/tabs — a comma, period, or line break is a phrase boundary,
+    so two tokens either side of one never form a bigram. Shared by
+    `bigram_pairs()` below and `extract_keyphrases()`'s own bigram builder,
+    so "what counts as adjacent" can't quietly drift between the two."""
+    return gap == "" or gap.strip(" \t") == ""
+
+
+def bigram_pairs(text: str) -> set[tuple[str, str]]:
+    """Ordered, stemmed (word, next-word) pairs for every TRUE adjacency in
+    `text` — the phrase-level partner to `token_set()`'s unordered bag.
+
+    Why this exists: `Keyphrase.covered_by()` used to check a bigram keyphrase
+    ("conversion rate") by testing whether both stems were ANYWHERE in a
+    whole-resume bag — so "conversion" from one unrelated bullet plus "rate"
+    from a different unrelated bullet scored as "conversion rate" covered,
+    even though the resume never says that phrase. This builds the adjacency
+    a caller can check instead: covered means the two words actually sit next
+    to each other somewhere, not just that both words exist somewhere.
+
+    A pair is order-sensitive (JD phrasing sets the order; a resume stating
+    the same two words in reverse order isn't the same phrase) and counts as
+    adjacent in two cases:
+      1. True textual adjacency — matches `extract_keyphrases()`'s own rule
+         (`_is_adjacent_gap`): nothing but whitespace between the two tokens.
+      2. The split halves of ONE compound token from `tokens()`'s own
+         compound handling (hyphen/slash-joined, or a closed-compound fold
+         like "healthcare") — so a JD bigram like "modern trade" still
+         matches a resume that writes it joined ("modern-trade"), keeping
+         this in step with the item-2 tokenizer fix instead of quietly
+         undoing it for any phrase that happens to be a compound elsewhere.
+    """
+    folded = _fold(text).lower()
+    matches = list(_TOKEN_RE.finditer(folded))
+    pairs: set[tuple[str, str]] = set()
+
+    for i in range(len(matches) - 1):
+        gap = folded[matches[i].end():matches[i + 1].start()]
+        if _is_adjacent_gap(gap):
+            pairs.add((_stem(matches[i].group()), _stem(matches[i + 1].group())))
+
+    for m in matches:
+        word = m.group()
+        if _COMPOUND_SPLIT_RE.search(word):
+            parts = [p for p in _COMPOUND_SPLIT_RE.split(word) if p]
+            for j in range(len(parts) - 1):
+                pairs.add((_stem(parts[j]), _stem(parts[j + 1])))
+        elif word in _CLOSED_COMPOUNDS:
+            cparts = _CLOSED_COMPOUNDS[word]
+            for j in range(len(cparts) - 1):
+                pairs.add((_stem(cparts[j]), _stem(cparts[j + 1])))
+
+    return pairs
 
 
 # -----------------------------------------------------------------------------
@@ -304,8 +397,22 @@ class Keyphrase:
         self.level = level
         self.weight = weight
 
-    def covered_by(self, bag: set[str]) -> bool:
-        return all(s in bag for s in self.stems)
+    def covered_by(self, bag: set[str], bigrams: set[tuple[str, str]] | None = None) -> bool:
+        """A unigram is covered when its word is anywhere in `bag` (order/
+        proximity don't matter for one word). A bigram needs the two words to
+        actually sit next to each other -- `tuple(self.stems) in bigrams` --
+        not just both be present somewhere in the resume; that whole-bag
+        check used to let two unrelated bullets each contribute one half of a
+        phrase and score as if the phrase itself appeared (`coverage.py`
+        item 4). `bigrams` is optional so an existing caller that only has a
+        `token_set()` bag (no adjacency index built) still gets the old,
+        looser behavior rather than an error -- but `coverage_report()` below
+        always builds and passes one."""
+        if len(self.stems) <= 1:
+            return all(s in bag for s in self.stems)
+        if bigrams is None:
+            return all(s in bag for s in self.stems)
+        return tuple(self.stems) in bigrams
 
 
 def extract_keyphrases(
@@ -340,9 +447,10 @@ def extract_keyphrases(
     def adjacent(i: int) -> bool:
         # Only tokens separated by plain spaces/tabs form a bigram — a comma,
         # period, or line break between them is a phrase boundary, so we never
-        # invent cross-clause bigrams like "chains experience".
+        # invent cross-clause bigrams like "chains experience". Shared with
+        # bigram_pairs() via _is_adjacent_gap so the two never drift apart.
         gap = folded[matches[i].end():matches[i + 1].start()]
-        return gap == "" or gap.strip(" \t") == ""
+        return _is_adjacent_gap(gap)
 
     bigram_counts: Counter[tuple[str, str]] = Counter()
     bigram_display: dict[tuple[str, str], str] = {}
@@ -412,8 +520,14 @@ def extract_keyphrases(
 # -----------------------------------------------------------------------------
 # Resume / master text harvesting
 # -----------------------------------------------------------------------------
-def instance_text(instance: dict) -> str:
-    """Everything a reader/ATS actually sees on the rendered resume."""
+def instance_segments(instance: dict) -> list[str]:
+    """Everything a reader/ATS actually sees on the rendered resume, kept as
+    separate text units (one per bullet/summary/skill-group) rather than one
+    joined string. `bigram_pairs()` needs these kept apart: joining every
+    bullet with a single space before adjacency-checking would let the last
+    word of one bullet and the first word of the next register as "adjacent"
+    to each other, which is exactly the kind of cross-bullet false match
+    item 4 exists to rule out."""
     parts: list[str] = [str(instance.get("summary", ""))]
     for exp in instance.get("experience", []):
         parts += [str(exp.get("title", "")), str(exp.get("company", ""))]
@@ -424,13 +538,21 @@ def instance_text(instance: dict) -> str:
     for group in instance.get("skills", []):
         parts.append(str(group.get("label", "")))
         parts += [str(i) for i in group.get("items", [])]
-    return " ".join(parts)
+    return parts
 
 
-def master_text(master: dict) -> str:
-    """Every term the bank *could* surface: all bullet variants, all their
-    themes, and every skill item — the universe a selection gap is measured
-    against."""
+def instance_text(instance: dict) -> str:
+    """Everything a reader/ATS actually sees on the rendered resume, as one
+    string -- for callers (e.g. `gap_digest.py`) that only need an unordered
+    `token_set()` bag and don't care about segment boundaries."""
+    return " ".join(instance_segments(instance))
+
+
+def master_segments(master: dict) -> list[str]:
+    """Every term the bank *could* surface, kept as separate text units --
+    all bullet variants, all their themes, every skill item, every summary --
+    the universe a selection gap is measured against. See
+    `instance_segments()` for why these stay separate rather than joined."""
     parts: list[str] = []
     for exp in master.get("experience", []):
         parts += [str(exp.get("title", "")), str(exp.get("company", ""))]
@@ -443,7 +565,13 @@ def master_text(master: dict) -> str:
         parts += [str(i) for i in group.get("items", [])]
     for s in master.get("summaries", []):
         parts.append(str(s.get("text", "")))
-    return " ".join(parts)
+    return parts
+
+
+def master_text(master: dict) -> str:
+    """Every term the bank *could* surface, as one string -- see
+    `instance_text()`'s equivalent note."""
+    return " ".join(master_segments(master))
 
 
 # -----------------------------------------------------------------------------
@@ -529,8 +657,20 @@ def _annotate(kp: "Keyphrase") -> str:
 def coverage_report(jd_text: str, instance: dict, master: dict, limit: int = 25) -> dict:
     """Full deterministic coverage/gap/depth report for one instance + JD."""
     phrases = extract_keyphrases(jd_text, limit=limit)
-    resume_bag = token_set(instance_text(instance))
-    master_bag = token_set(master_text(master))
+    resume_segs = instance_segments(instance)
+    master_segs = master_segments(master)
+    resume_bag = token_set(" ".join(resume_segs))
+    master_bag = token_set(" ".join(master_segs))
+    # Per-segment adjacency, not a whole-resume/whole-bank union of pairs
+    # from different segments -- same reasoning as instance_segments()'s
+    # docstring: a bigram must actually sit together in ONE bullet/summary/
+    # skill-item, not straddle two unrelated ones.
+    resume_bigrams: set[tuple[str, str]] = set()
+    for seg in resume_segs:
+        resume_bigrams |= bigram_pairs(seg)
+    master_bigrams: set[tuple[str, str]] = set()
+    for seg in master_segs:
+        master_bigrams |= bigram_pairs(seg)
 
     # Terms the JD explicitly marks as not required (rare) never enter the
     # score or the gap lists at all — they're not a gap, they're a non-issue.
@@ -543,10 +683,10 @@ def coverage_report(jd_text: str, instance: dict, master: dict, limit: int = 25)
     total_weight = 0.0
     for kp in scored_phrases:
         total_weight += kp.weight
-        if kp.covered_by(resume_bag):
+        if kp.covered_by(resume_bag, resume_bigrams):
             covered.append(kp.display)
             covered_weight += kp.weight
-        elif kp.covered_by(master_bag):
+        elif kp.covered_by(master_bag, master_bigrams):
             selection_gap.append(_annotate(kp))
         else:
             content_gap.append(_annotate(kp))

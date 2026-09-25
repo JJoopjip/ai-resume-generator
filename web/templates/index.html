@@ -546,8 +546,23 @@ result.addEventListener("click", (ev) => {
   if (trackBtn) { addToTracker(trackBtn); return; }
 });
 
+// The generate/cover run pushes to the tracker itself now (see web/app.py);
+// this renders that already-happened result under the download row.
+function trackerNote(t) {
+  if (!t) return "";
+  if (!t.ok) {
+    return `<span class="err">Tracker push skipped: ${escapeHtml(t.error || "unknown error")}</span>`;
+  }
+  const verb = t.marked_applied ? "Added to tracker and marked applied"
+             : (t.created ? "Added to tracker" : "Already in the tracker");
+  let msg = `✓ ${verb} — <a href="${t.url}" target="_blank" rel="noopener">open the application ↗</a>`;
+  if (t.warning) msg += `<br><span class="err">Note: ${escapeHtml(t.warning)}</span>`;
+  return msg;
+}
+
 // Send the finished folder to the tracker (a quick JSON call — not a long
 // pipeline run), and show a link straight to the new/updated application.
+// Manual retry path only — used when the automatic push (above) failed.
 async function addToTracker(btn) {
   const out = $("tracker-out");
   btn.disabled = true;
@@ -767,14 +782,19 @@ function finish(r) {
     if (r.slug && hasResume && !hasCover) {
       html += `<button id="make-cover" class="btn btn-primary" data-slug="${escapeHtml(r.slug)}">Write a cover letter</button>`;
     }
-    if (r.slug && hasResume) {
+    // Every finished run auto-pushes to the tracker now (see _import_to_tracker
+    // in web/app.py) — the button is only a manual retry for when that push
+    // failed or was skipped (e.g. tracker was down).
+    if (r.slug && hasResume && !(r.tracker && r.tracker.ok)) {
       html += `<button id="to-tracker" class="btn btn-soft" data-slug="${escapeHtml(r.slug)}">Add to tracker</button>`;
     }
     if (r.slug && (r.meta && (r.meta.reports || []).includes("omitted.md"))) {
       html += `<a class="sub" href="/download?slug=${encodeURIComponent(r.slug)}&file=omitted.md">See what was left out</a>`;
     }
     html += "</div>";
-    if (r.slug && hasResume) html += '<div id="tracker-out" class="sub"></div>';
+    if (r.slug && hasResume) {
+      html += '<div id="tracker-out" class="sub">' + trackerNote(r.tracker) + '</div>';
+    }
     html += `<div class="folder">Saved at ${escapeHtml(r.folder || "output/" + (r.slug || ""))}</div>`;
 
     result.innerHTML = html;

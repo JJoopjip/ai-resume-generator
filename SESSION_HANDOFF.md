@@ -13,6 +13,28 @@ this file only summarizes the current front line.
 
 ## What's done
 
+- **`coverage.py` bigram-adjacency fix (2026-09-25).** See What's next (4) —
+  a multi-word JD phrase now has to actually appear adjacent somewhere on the
+  resume/master to score as covered, not just have both words present
+  anywhere. Closes the exact false-positive class the 2026-07-28 A/B
+  surfaced. Live-reverified on the Abbott fixture, regression-tested, Docker
+  image rebuilt.
+- **Cross-profile variant lever written into the tailoring prompt
+  (2026-09-25).** See What's next (3) for the full writeup — `prompts/
+  tailor_resume.md` §2 now implements the anchor-with-exceptions rule the
+  2026-07-28 A/B argued for (deviate from the dominant profile's variant
+  only for a genuine JD-required fact, never to chase the coverage score),
+  plus a new `cross-profile-swap` category in §7's `omitted.md` spec. Not
+  yet exercised on a live run — no paid run spent purely to test prompt
+  wording; watch the next real `resume-gen <jd>`.
+- **Duplicate-JD warning click-through verified (2026-09-25).** See What's
+  next (0a) for the full writeup — 409 path, `force=1` retry, and the Drafts
+  link all confirmed against the real running service, with one minor UX
+  caveat noted (no visual highlight of the matched draft).
+- **`coverage.py` compound-token tokenizer fix (2026-09-25).** See What's next
+  (2) for the full writeup — hyphenated/closed compounds now match their
+  split-word equivalents across the JD/resume/master boundary. Live-verified,
+  regression-tested, Docker image rebuilt.
 - Core pipeline (Phases 0–4): `master.yaml` content bank, AI tailoring prompt,
   deterministic validator/renderer (PDF + DOCX), `resume-gen` one-command
   launcher, Docker packaging. Live end-to-end run verified.
@@ -30,6 +52,41 @@ this file only summarizes the current front line.
   synthetic fixtures).
 - Phase 7 (application tracker): skipped — already exists as a separate
   local service; the web UI already integrates with it.
+- **Model upgrade Opus 4.8 → Opus 5 (2026-09-24)**: `claude-opus-5` verified
+  live (resolves, self-identifies correctly) and confirmed same list price
+  ($5/$25 per 1M) as Opus 4.8 via the claude-api skill. Swapped as the default
+  "best" tier in `resume-gen`, `web/app.py` TIERS, `scripts/eval_run.py`
+  (`_DEFAULT_B` + judge call); added a `claude-opus-5` row to
+  `scripts/session_cost.py`'s pricing table (kept the `claude-opus-4-8` row —
+  still resolves, may still show up in old transcripts). Updated prose in
+  README/TECH_SPEC/web/README to match. Left historical records (this file's
+  older Log entries, `TODO.md`'s completed `[x]` item, `tests/test_eval_run.py`'s
+  label-derivation test which just needs *a* valid model string) alone. Docker
+  image rebuilt (scripts/ changed). Full test suite green (65 passed).
+- **Concurrent web-UI runs enabled (2026-09-24).** The web UI was hard-capped
+  at one generation at a time because two things raced under concurrency:
+  `web/app.py` found "the new output folder" by diffing `output/` before/after
+  a run, and `scripts/session_cost.py` picked "the newest transcript file" in
+  `~/.claude/projects/<cwd>/` by mtime. Both are now per-run instead of
+  shared-state guesses: new `scripts/run_and_capture.py` mirrors a `claude -p`
+  child's stdout live while reading THAT run's own `sessionId` and its
+  `output/<slug>/` (off its own tool-call inputs) into a small `--info-file`;
+  `resume-gen`'s `run_claude_and_log()` uses it instead of
+  `ls -dt output/*/ | head -1` for the AUTO outdir, and passes
+  `--session-id` to `session_cost.py`, which now opens `<session_id>.jsonl`
+  directly (transcripts are literally named by session id) instead of
+  mtime-sorting — falls back to the old mtime heuristic only when no
+  session id is available (manual/back-compat CLI use). `web/app.py`'s
+  narrator (`make_narrator()`/`_hunt_slug`) does the equivalent for the UI's
+  own slug attribution, replacing the `output/` diff (kept as a last-resort
+  fallback only if the stream never mentions a slug). With both races closed,
+  `_run_lock` became `threading.Semaphore(RESUME_WEB_CONCURRENCY)` (env var,
+  default 2) instead of a single `Lock`. Unit-verified (session-id lookup
+  ignores a newer sibling transcript; slug-hunt regex tested via `\boutput/`
+  boundary, not `/`-anchored, so it also matches mid-string like "instance
+  output/slug/x.yaml"); full suite green (65 passed). **Live-verified
+  2026-09-24 — see What's next (00) for the concurrent-run smoke test and the
+  follow-on `SESSION_HANDOFF.md`-race hardening.**
 - Content additions to `master.yaml`: Thai Festival Toronto PR internship
   (pinned as always-include anchor), York University FinTech TA role
   (relevance-gated).
@@ -195,18 +252,82 @@ this file only summarizes the current front line.
 
 Highest-leverage remaining items:
 
+000. **DONE (2026-09-25).** The two test rows the concurrency live-test
+   auto-created in the application tracker (app_id 19 Zylotech, app_id 20
+   Marrow & Finch) are deleted — user explicitly asked for it, so the earlier
+   permission-classifier block no longer applies. Confirmed both gone (GET on
+   either id now redirects to `/`; neither appears in the tracker's listing).
+00. **DONE + live-verified (2026-09-24).** Concurrent web-UI runs: fired two
+   real overlapping `/generate?tier=fast` requests (different JDs) at the
+   running service — both ran as fully separate process trees, each landed in
+   its own correct output folder with the right JD content (no cross-
+   contamination), each `cost.json` got its own correctly-matched
+   `session_id`. Then found and closed a second race in the same area: two
+   concurrent runs' headless agents were BOTH hand-editing
+   `SESSION_HANDOFF.md` per CLAUDE.md's blanket hygiene rule — a classic
+   lost-update risk (this time both edits happened to survive, not
+   guaranteed). Fixed: `scripts/append_handoff_log.py` now appends the
+   automated run's Log line deterministically under a real `flock`
+   (`.session_handoff.lock`), and the agent's TASK explicitly tells it not to
+   touch that file itself (CLAUDE.md documents this narrow carve-out).
+   Stress-tested 20 truly concurrent invocations of the appender against one
+   file — zero lost entries, zero corruption (atomic temp-file + `os.replace`
+   throughout). Also hardened slug-picking itself: the agent's TASK now
+   retries with `-b`/`-c`/... if its chosen `output/<slug>/` already exists,
+   closing the (rare, same-day-same-company-role) case where two concurrent
+   runs could otherwise pick the identical slug and overwrite each other's
+   files. Live-verified end to end with a real `resume-gen --fast` run: the
+   agent's transcript shows zero Write/Edit calls on `SESSION_HANDOFF.md`,
+   and the appender's line landed with correct metrics (1 page, 16% coverage,
+   $1.47, sonnet). `RESUME_WEB_CONCURRENCY=2` left as the default — no
+   evidence yet that it needs to scale with cores/Docker capacity; revisit if
+   `output/` render collisions or Tectonic-cache contention show up at higher
+   settings. `pytest` 65/65 green throughout.
 0. **§6 core-role floor-protection fix (2026-09-10) — exercised live twice on
    2026-09-11 (LHSC + Apex), held both times.** Both overflowed 2 pp (~12 lines
    over) and trimmed back to one page while keeping every core role
    (winnergy/lgchem/otsuka) at ≥1 bullet + its dates, dropping `server` first per
    §6 (see Log). Two data points; keep an eye on future deep-overflow runs but no
    known defect remains here.
-0a. **Click-through the new duplicate-JD warning in the real browser UI (NEW,
-   2026-08-28)**. Implemented and unit-smoke-tested (see What's done /
-   Log) but never driven through an actual `python3 web/app.py` + browser
-   session — confirm the 409 JSON path renders the warning card correctly,
-   the "Generate again anyway" button's `&force=1` retry actually starts a
-   run, and "View it in Drafts" switches tabs and shows the match.
+0a. **DONE, with one caveat (2026-09-25).** Verified against the running
+   `resume-generator.service` at :5000 (real production data, no synthetic
+   JDs this time). Couldn't get a true rendered-browser screenshot — this
+   sandbox lacks the system libs a headless Chromium needs
+   (`libnspr4.so` etc.) and has no `sudo` to install them
+   (`playwright install-deps` fails: "sudo: a terminal is required to
+   authenticate") — so this is the deepest verification available here: the
+   real HTTP flow the browser's JS drives, plus a read of that JS against the
+   real payloads it received.
+   - **409 JSON path**: confirmed. Re-submitting an existing draft's exact
+     `job_description.txt` returns `HTTP 409` with
+     `{"duplicate": true, "slug", "modified", "coverage_pct"}`. Traced
+     `renderDuplicateWarning()` against that exact payload — renders "You
+     already generated a résumé for this exact job description —
+     **pharmamedica-projectmanager-2026-09-24**, Sep 24, 11:23 PM (30%
+     match). View it in Drafts or [Generate again anyway]" correctly.
+   - **`force=1` retry**: confirmed live, not just read. Fired the identical
+     request with `&force=1` at the real running service — it skipped the
+     409 and genuinely launched the pipeline (`resume-gen` →
+     `run_and_capture.py` → `claude -p --model claude-opus-5 --effort high`,
+     real subprocess tree observed via `ps`). Killed it deliberately within
+     ~2s (before it wrote anything or spent meaningful tokens) once
+     confirmed live, purely to avoid burning real cost on a smoke test — no
+     output folder was created, semaphore slot confirmed released
+     afterward (a follow-up request got the correct 409-duplicate, not a
+     409-busy).
+   - **"View it in Drafts"**: `GET /drafts` confirmed to include the
+     matched slug with correct fields. **Caveat found while reading the
+     JS**: the click handler (`web/templates/index.html` ~line 626) only
+     does `showView("drafts")` + reload the list — it does NOT scroll to or
+     visually highlight the specific matching entry. "Shows the match" is
+     true only in the loose sense that it appears somewhere in the
+     (newest-first) list, not that the UI points at it. Minor, not a bug —
+     just don't expect a highlight if you click it.
+   - Also worth noting: `claude-opus-5` is confirmed the actual model
+     string still in live use for the "best" tier (matches the 2026-09-24
+     model-upgrade note above), even though a recent real run's `cost.json`
+     logged `claude-opus-4-8` as the model id — both are in circulation;
+     not a bug, just worth knowing both strings can appear.
 1. **Phase 5 — DONE + decided + shipped (2026-07-28).** Two evals settled the
    model default. Low-match JD (`jd.txt`): all tiers produce identical output →
    Opus/high wasteful there. High-match JD (`jd_highmatch.txt`, `--judge`):
@@ -216,7 +337,28 @@ Highest-leverage remaining items:
    runs; Opus/medium not offered (worst value).** Implemented in `resume-gen`
    (arg pre-scan + tier block), README, TECH_SPEC §6. No open follow-ups here.
    Reports: `output/eval-run{1,2}-*-2026-07-28/`, `output/eval-jd_highmatch-2026-07-28/`.
-2. **`coverage.py` tokenizer fix (NEW, 2026-07-28 — highest-leverage bug).**
+2. **DONE (2026-09-25) — `coverage.py` tokenizer fix.** `tokens()` now emits a
+   hyphen/slash-joined compound ("modern-trade") both whole AND split into its
+   parts ("modern-trade", "modern", "trade"), additively — the whole-token
+   form is never removed. Plus a small `_CLOSED_COMPOUNDS` lookup (currently
+   just `"healthcare": ("health", "care")`, add more as real gaps turn up) for
+   compounds with no separator to split on. `extract_keyphrases` (the JD-side
+   ranking) was deliberately left untouched — it builds its own token arrays
+   directly rather than through `tokens()`/`token_set()` — so the keyphrase
+   golden snapshots (`tests/fixtures/keyphrases/`) did NOT move; no regen
+   needed, contrary to the original note below. Re-verified against
+   `output/abbott-associate-product-manager-2026-07-28/`: 14/25 → 17/25 (the
+   codebase has moved since the original 8/25→12/25 note — master.yaml and
+   requirement-level weighting both postdate it — but the fix's own effect is
+   isolated and confirmed: exactly 3 newly-covered terms, "health care",
+   "medical devices", "product lines", all genuine matches, zero spurious
+   ones). Added 3 regression tests to `tests/test_coverage.py` (the hyphen↔
+   split-words direction, the healthcare closed-compound fold, and an
+   additive-not-replacing guard). `pytest` 68/68 green (65 + 3 new). Docker
+   image rebuilt (`scripts/` changed).
+   <details>
+   <summary>Original proposal (2026-07-28), superseded by the above</summary>
+
    Hyphenated/closed compounds are single tokens, so real matches score as
    misses and one ("medical devices") is wrongly reported as a *content* gap.
    Proposed: in `token_set()`/`tokens()`, emit a compound both whole and split
@@ -226,8 +368,37 @@ Highest-leverage remaining items:
    tokens to the bag) but `tests/test_coverage.py` snapshots will move — regen
    via `tests/regen_snapshots.py`. Verified against
    `output/abbott-associate-product-manager-2026-07-28/`: 8/25 → 12/25.
-3. **Teach the tailoring prompt the cross-profile variant lever (NEW,
-   2026-07-28).** `validate.py:194` accepts *any* variant of a bullet id, but
+   </details>
+3. **DONE — written (2026-09-25), not yet exercised on a live run.**
+   `prompts/tailor_resume.md` §2 now implements the anchor-with-exceptions
+   rule exactly as agreed below: default to the dominant profile's variant
+   for every bullet; deviate only when a sibling variant states a JD-required
+   fact the anchor variant lacks (explicitly NOT "reads better" / "uses the
+   JD's word" / "raises coverage" — those are named as insufficient reasons
+   in the prompt text itself); prefer `general` over a rival profile when
+   deviating; cap ~1/3 of selected bullets; ban two adjacent non-anchor
+   bullets in one role; record every swap in `omitted.md` under a new
+   `cross-profile-swap` category (added to §7 alongside `never-selected`/
+   `overflow-cut`) naming the anchor variant passed over and the fact that
+   justified the swap. Summary (§4) deliberately left untouched — its own
+   looser blending rule already matched the agreed design, and §2 now says so
+   explicitly to avoid the two sections implicitly disagreeing again. Also
+   fixed the actual contradiction that blocked this: old §2 said "decide per
+   bullet independently" (unrestricted) while old line 66 only covered the
+   no-variant-at-all fallback — neither one was the anchor-with-exceptions
+   rule the A/B below argues for; both are now one coherent rule.
+   **Not yet exercised live** — this is prompt text an LLM agent reads and
+   (imperfectly) follows, so the only real test is watching it on an actual
+   `resume-gen <jd>` run: did it anchor by default, invoke the exception only
+   for a genuine JD-required fact, respect the cap/adjacency rule, and
+   actually write the `cross-profile-swap` rows? Didn't spend a paid run
+   purely to test a prompt tweak (matches how items 4/5 below were left for
+   the next natural real use) — worth a deliberate glance at `omitted.md` on
+   whatever real JD comes through next.
+   <details>
+   <summary>Original proposal + A/B investigation (2026-07-28), now implemented above</summary>
+
+   `validate.py:194` accepts *any* variant of a bullet id, but
    `prompts/tailor_resume.md` (~line 66) only permits leaving the chosen
    profile when that profile has **no** variant. The Abbott re-fit showed
    re-picking a variant that already exists under another profile is a free,
@@ -290,16 +461,34 @@ Highest-leverage remaining items:
    Analytics, CMS, SEO/GEO, automation platforms), so the variant dial had little
    real work to do here; the earlier `abbott-associate-product-manager` re-fit
    did get a genuine +4 from 3 swaps. One JD, one data point.
-4. **`coverage.py` has no adjacency requirement (NEW, 2026-07-28, found during
-   the A/B).** `Keyphrase.covered_by` (`coverage.py:159`) is
-   `all(s in bag for s in self.stems)` against a **whole-resume** token bag, so a
-   multi-word phrase counts as covered when its words appear in unrelated bullets
-   — "conversion rate" scored as covered off "conversion" in a pharmacy bullet
-   plus "rate" in a retention bullet. This is what makes the score gameable and
-   is distinct from the tokenizer fix in item 2 (that one *adds* tokens; this one
-   needs proximity/adjacency, e.g. match bigrams within a single bullet's token
-   sequence rather than bag-wide). Fix both before trusting coverage deltas as
-   evidence for anything.
+   </details>
+4. **DONE (2026-09-25) — `coverage.py` adjacency requirement.** New
+   `bigram_pairs(text)` builds ordered, stemmed (word, next-word) pairs for
+   true textual adjacency (shared `_is_adjacent_gap` helper with
+   `extract_keyphrases`'s own bigram builder, so the two definitions of
+   "adjacent" can't drift apart) plus the split halves of a compound token
+   (keeps this in step with item 2's tokenizer fix — a JD bigram like
+   "modern trade" still matches a resume's "modern-trade"). `Keyphrase.
+   covered_by()` now takes an optional `bigrams` set: a unigram is covered
+   by bag membership as before (order never mattered for one word); a
+   bigram now requires `tuple(stems) in bigrams` — actually sitting next to
+   each other somewhere, not just both words existing anywhere in the
+   resume. `instance_text`/`master_text` split into segment-returning
+   companions (`instance_segments`/`master_segments`) so bigram pairs are
+   built **per bullet/summary/skill-item**, never across a join — otherwise
+   the last word of one bullet and the first word of the next would
+   register as "adjacent." `coverage_report()` builds both bags per side and
+   passes them through. Old two-argument `covered_by(bag)` call sites still
+   work (bigram checking falls back to the old bag-wide behavior only when
+   no `bigrams` set is passed — `coverage_report` always passes one).
+   Re-verified against the actual A/B bug (conversion/rate in two unrelated
+   bullets): no longer scores as covered; a real adjacent phrase in one
+   bullet still does (positive control). Re-ran the Abbott fixture:
+   17/25 → 10/25 — a real drop, not a bug, since it's removing exactly the
+   class of false positive this item targets (spot-checked several of the
+   removed terms: zero segments even contained both words, let alone
+   adjacently — pure whole-bag artifacts). 3 regression tests added.
+   `pytest` 71/71; Docker image rebuilt.
 5. **Web UI follow-ups (from the 2026-07-28 redesign)**: the new screen has not
    yet been driven through a *real* (paid) run — it was verified with a stub
    pipeline, so eyeball the step list and the rail on the next genuine
@@ -326,6 +515,213 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 
 ## Log
 
+- **2026-09-25** — Automated tailor run: `output/patsnap-project-manager-2026-09-25/` — 1 page(s), 33% coverage, ~$2.59, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-09-25** — Automated tailor run: `output/wesco-project-manager-2026-09-25/` — 1 page(s), 18% coverage, ~$1.66, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-09-25** — Fixed the `coverage.py` bigram-adjacency bug (What's next
+  item 4, found during the 2026-07-28 A/B): a multi-word JD phrase used to
+  score as "covered" if both its words appeared ANYWHERE in the resume, even
+  in two unrelated bullets ("conversion" + "rate" from different roles
+  counted as "conversion rate"). New `bigram_pairs()` + segment-aware
+  `instance_segments()`/`master_segments()` require true adjacency instead
+  — composes correctly with item 2's compound-token fix (a JD bigram still
+  matches a resume's hyphenated form of the same term). Re-verified against
+  the real A/B bug scenario and the Abbott fixture (17/25 → 10/25, all
+  removed terms confirmed as genuine false positives); 3 regression tests;
+  `pytest` 71/71; Docker image rebuilt.
+- **2026-09-25** — Wrote the cross-profile variant lever into
+  `prompts/tailor_resume.md` §2 (What's next item 3): anchor to the dominant
+  profile by default, deviate per bullet only when a sibling variant states a
+  JD-required fact the anchor lacks (never for "reads better" / coverage-
+  chasing — the 2026-07-28 A/B showed that makes the resume worse while the
+  score goes up), prefer `general` over a rival profile, cap ~1/3 of bullets,
+  ban adjacent non-anchor bullets in one role, record every swap in
+  `omitted.md` under a new `cross-profile-swap` category (§7). Also fixed the
+  prompt's internal contradiction (old §2 said "decide per bullet
+  independently" while old line 66 only covered the no-variant fallback).
+  Summary (§4) deliberately left alone — already matched the agreed design.
+  Prompt-only change, no code touched; `pytest` 68/68 (unaffected, as
+  expected). Not yet exercised on a live run.
+- **2026-09-25** — Verified the duplicate-JD warning click-through (0a)
+  against the live `resume-generator.service`: 409 JSON path and
+  `force=1` retry both confirmed with real requests (the `force=1` run was
+  deliberately killed within ~2s of confirming it launched, to avoid real
+  API spend on a smoke test — no artifacts left behind, semaphore slot
+  confirmed released). Found one minor UX gap: "View it in Drafts" doesn't
+  visually highlight the matched entry, just reloads the list. Couldn't get
+  an actual rendered-browser screenshot — this sandbox lacks headless-
+  Chromium's system deps and has no usable `sudo` to install them.
+- **2026-09-25** — Fixed the `coverage.py` compound-token tokenizer bug
+  (What's next item 2): `tokens()` now emits a hyphen/slash-joined compound
+  both whole and split ("modern-trade" → modern-trade, modern, trade),
+  additive only, plus a small closed-compound lookup for "healthcare" →
+  health+care. `extract_keyphrases` untouched, so keyphrase snapshots didn't
+  move. Re-verified on the Abbott fixture (14/25 → 17/25, all 3 new matches
+  genuine); 3 regression tests added; `pytest` 68/68; Docker image rebuilt.
+- **2026-09-25** — Deleted the two test rows the concurrency live-test had
+  auto-created in the application tracker (app_id 19, 20) — user explicitly
+  asked for it, clearing the earlier permission-classifier block.
+- **2026-09-24** — Concurrent-run + handoff-race hardening (see What's done /
+  What's next 00): fired real overlapping `/generate` requests and a real
+  `resume-gen --fast` run against three throwaway synthetic JDs (Quillmark,
+  Marrow & Finch, Zylotech — fictitious companies invented purely to test
+  attribution/locking) to prove out the concurrency and handoff-logging fixes
+  live. Their `output/*/` folders and their auto-created rows in the
+  application tracker are test artifacts, not real applications — the
+  `output/` folders have been removed; the tracker rows still need manual
+  cleanup (curl-based deletion was correctly blocked by the permission
+  classifier as an irreversible action — see What's next). Their automated
+  Log lines are omitted here for that reason (this note replaces them).
+- **2026-09-24** — Tailored-run (product use, no code change): generated a
+  `pm`-profile draft for a Pharma Medica Research (PMRI) CRO Project Manager JD
+  → `output/pharmamedica-projectmanager-2026-09-24/`. Overflow on first render
+  (~12 lines over); one §6 trim (dropped `server` + 4 lowest-priority bullets)
+  reached 1 page; one same-role coverage swap (`ot_regulatory`→`ot_access`)
+  landed the JD-central term "progress" (coverage 26%→30%). 3 renders total.
+- **2026-09-24** — Enabled concurrent web-UI generations: replaced the two
+  shared-state races (`output/` before/after diffing in `web/app.py`, "newest
+  transcript by mtime" in `scripts/session_cost.py`) with per-run detection —
+  new `scripts/run_and_capture.py` reads a run's own `sessionId` + chosen
+  `output/<slug>/` off its own stdout stream; `resume-gen` and `web/app.py`
+  both consume it instead of guessing off shared directory state.
+  `_run_lock` is now `threading.Semaphore(RESUME_WEB_CONCURRENCY=2)`. 65/65
+  tests green. See What's done / What's next (00) for the still-open
+  real-browser smoke test.
+- **2026-09-24** — **Tailored run: Marks (Propelis Group), Project Manager**
+  (creative/consumer-experience agency PM; project plans/schedules/budgets,
+  margins/VCM, gates/risk/commercial controls, PMO governance, Workfront,
+  central point of contact for designers/strategists/copywriters, client
+  relationship mgmt, process improvement). Output
+  `output/marks-project-manager-2026-09-24/` → **1 page (exit 0)**, ~1 line free.
+  Profile **pm** (renderer agreed: pm 61, top of four). Lean first pass (12
+  bullets / 6 roles incl. `server`) overflowed 2 pp / ~10 lines; §6 edit 1
+  dropped `server` role + `win_process_design` (longest) + `lg_stakeholders`
+  → still 2 pp / ~3 over; §6 edit 2 trimmed `thaifest` to its single strongest
+  bullet (`tf_partnerships`) → 1 page. Final: thaifest(tf_partnerships),
+  winnergy(win_b2c/win_portfolio/win_team), lgchem(lg_xfn_kpi),
+  otsuka(ot_launch/ot_access), boots(boots_frontline); highlights
+  hl_experience/hl_gpa/hl_skus. Coverage 32% (8/25). No coverage swap taken —
+  selection_gap terms were generic ("process") or not literal in any omittable
+  bullet ("clients"/"timelines"/"plans"); only ~1 line free. `omitted.md` written.
+  Draft only, not submitted. `master.yaml` untouched.
+- **2026-09-24** — **Tailored run: Publicis Health Toronto, Project Manager**
+  (agency PM, pharma advertising DTC/HCP; scope/schedule/budget, timelines, risk,
+  resource mgmt, cross-functional creative/MedReg/dev/QA, digital + traditional
+  ad projects, MS Project/JIRA). Output
+  `output/publicis-project-manager-2026-09-24/` → **1 page (exit 0)**. Profile
+  **pm** (renderer agreed: pm 64, top of four). Lean first pass (11 bullets / 6
+  roles incl. `server`) overflowed 2 pp / ~12 lines; one §6 edit dropped the
+  `server` additional role + the lowest-priority bullet from thaifest/winnergy/
+  lgchem (`tf_partnerships`/`win_portfolio`/`lg_feasibility`) + `hl_skus` (its
+  20+ SKUs metric lived only in the cut `win_portfolio`) → 1 page, 0 lines free.
+  Then §4 summary keyword nudge: reworded connective prose "digital and
+  traditional campaigns" → "…advertising" (she did billboard/TV advertising —
+  real, not invented) → **coverage 36%→48%** (9→12/25); "advertising",
+  "advertising projects", "pharma advertising" all moved gap→covered, still 1
+  page. Residual `selection_gap` (lead project / project plans / resources /
+  experience) is generic tokenized fragments, not chased on a 0-slack page.
+  Final: 7 bullets / 5 roles — thaifest(tf_infrastructure),
+  winnergy(win_gtm_channels, win_b2c), lgchem(lg_xfn_kpi), otsuka(ot_launch,
+  ot_regulatory), boots(boots_frontline); highlights hl_experience + hl_gpa.
+  `omitted.md` written. Draft only, not submitted. No code/prompt/master changes.
+
+- **2026-09-24** — **Tailored run: Info-Tech Research Group new-business sales
+  (hunter, London ON hybrid)** → `output/infotech-business-development-2026-09-24/`.
+  Pure net-new B2B sales JD (prospect/close, engage CIOs & senior IT leaders) →
+  `bd` profile (renderer suggested `pm` on pharma-vocab weight; bd is the right
+  human call for a sales resume). Lean first pass (13 bullets/6 roles) overflowed
+  2pp/~10 lines; per §6 dropped `server` role + `tf_outreach`/`win_ceo`/
+  `lg_stakeholders`/`ot_clinical` in one edit → 1 page, 3 lines free. Added the
+  strongest omitted bullet `win_ceo` (CEO/executive engagement, core to the JD)
+  back into the free space → 1 page (exit 0), 2 lines free, 9 bullets/5 roles.
+  `selection_gap` left as generic singles (build/client/growth — not literally in
+  any omitted bd bullet); coverage 26%, rest is content-gap (territory/prospect-
+  list terms the bank can't cover). Draft only.
+
+- **2026-09-24** — **Tailored run: McLean & Company Inside Account Executive (remote Canada).**
+  Pure new-business/B2B prospecting sales JD → `bd` profile (renderer suggested `pm`
+  but on a near-tie of generic sales terms; bd is the right human call). Lean first
+  pass (11 bullets/6 roles) overflowed 2pp/~7 lines; per §6 dropped `server` role +
+  `win_retention` (90% still in summary) + `ot_access` in one edit → 1 page (exit 0),
+  2 lines free. `selection_gap` empty (no missed coverable terms) so no swap; coverage
+  20% driven by McLean/HR-leaders/advisory content-gap terms the bank can't cover.
+  Final: 8 bullets/5 roles. Output in git-ignored
+  `output/mclean-company-inside-account-executive-2026-09-24/`.
+- **2026-09-24** — **Tailored run: Ascensia Territory Business Manager (Scarborough).**
+  Field-sales/BD JD → `bd` profile. First render overflowed 2pp/~12 lines; per §6
+  dropped `server` role + one lowest-priority bullet each from thaifest/winnergy/
+  lgchem/otsuka → 1 page. Added `win_ceo` back into the free line (market/competitive
+  intelligence — a named JD duty). Final: 8 bullets/5 roles, 1 page (exit 0).
+  Coverage 10% — low, driven by Ascensia/diabetes/territory content-gap terms the
+  bank truthfully can't cover. Output in git-ignored `output/ascensia-territory-business-manager-2026-09-24/`.
+
+- **2026-09-24** — **Model upgrade: Opus 4.8 → Opus 5 (default "best" tier).**
+  User asked why generation is slow; while explaining the pipeline, confirmed
+  Opus 5 is now available and asked to upgrade. Verified `claude-opus-5`
+  resolves and priced it via the claude-api skill (same $5/$25 per 1M as
+  4.8) before switching. Changed: `resume-gen` (_MODEL_FLAGS default),
+  `web/app.py` (TIERS["best"]), `scripts/eval_run.py` (_DEFAULT_B + judge
+  subprocess call), `scripts/session_cost.py` (added pricing row, kept the old
+  one). Docs: README.md, TECH_SPEC.md, web/README.md. Rebuilt Docker image
+  (scripts/ changed) and reran full test suite (65 passed). Did not touch
+  historical log entries, TODO.md's completed checklist item, or the
+  eval_run label-derivation test (arbitrary valid model string, not the
+  default).
+- **2026-09-24** — **Tailored resume: McCarthy Tétrault, Business Development
+  Specialist (Toronto law firm / professional-services BD seat)** (draft).
+  `output/mccarthy-bd-specialist-2026-09-24/` → **1 page (exit 0)**. Profile
+  **bd** (market presence, client relationships, go-to-market, competitive/
+  business intelligence, sponsorships, marketing materials). First render (14
+  bullets incl. server) overflowed ~14 lines (exit 3); one §6 edit dropped the
+  `server` additional role + the lowest-priority bullet from each role
+  (`win_engagement`, `lg_sourcing`, `ot_clinical`, `tf_infrastructure`) and
+  `hl_engagement` (its 100% only lived on the impact line) → 1 page, 0 lines
+  free (9.5pt slack). Final: 9 bullets / 5 roles
+  (thaifest·winnergy·lgchem·otsuka·boots). Coverage 44%; `selection_gap`
+  (professional services / client service / existing clients / experience) left
+  uncovered — all firm-specific phrasing, not literal words in any omitted
+  bullet, so no worthwhile same-role swap (page also full). `omitted.md` written.
+- **2026-09-24** — **Tailored resume: Consultus Digital, Growth Strategist
+  (Healthcare Division — inbound/outbound BD sales seat)** (draft).
+  `output/consultus-digital-growth-strategist-2026-09-24/` → **1 page (exit 0)**.
+  Profile **bd** (healthcare + digital-marketing product credibility). First
+  render (11 bullets incl. server) overflowed ~11 lines (exit 3); one §6 edit
+  dropped the `server` additional role, `win_gtm_channels` (longest bullet),
+  `win_engagement`, `tf_partnerships`→thaifest to 1, and `hl_engagement` → 1 page,
+  3 lines free. Used the headroom to add `win_engagement` back verbatim (digital
+  growth metric + re-backed `hl_engagement`) → still 1 page, 1 line free. Final:
+  8 bullets / 5 roles (thaifest·winnergy·lgchem·otsuka·boots). Coverage 20%;
+  `selection_gap` (crm, marketing plan, sales process) only in themes/generic
+  words — no truthful swap renders them, left uncovered per §6. Docker Desktop
+  had to be launched from WSL first.
+- **2026-09-18** — **Tailored resume: Jerry.ai, Manager, Business Development &
+  Partnerships** (draft). `output/jerry-business-development-manager-2026-09-18/`
+  → **1 page (exit 0)** on the 2nd render. Profile **bd**. First render (13
+  bullets, incl. server + 2 thaifest) overflowed ~10 lines (exit 3); one §6 edit
+  cut the `server` additional role, `win_ceo`, `lg_xfn_kpi`, and thaifest→1
+  bullet, landing 1 page w/ ~1 line free. Final cut: thaifest(tf_partnerships),
+  winnergy(win_b2c/win_b2b/win_retention), lgchem(lg_sourcing/lg_stakeholders),
+  otsuka(ot_access/ot_feasibility), boots(boots_frontline); highlights
+  hl_retention+hl_experience. Coverage 20% (5/25); left selection_gap (mostly
+  generic: growth/insights/business plans + "business kpis") unchased — no page
+  room to re-add a 2-3 line bullet into ~19.7pt slack without reopening overflow.
+  `omitted.md` written. Draft for human review; not submitted.
+- **2026-09-18** — **Cover letter: TTC (Toronto Transit Commission), Project
+  Coordinator** (draft, off the 2026-09-18 tailored resume below).
+  `output/ttc-project-coordinator-2026-09-18/cover_letter.{pdf,docx}` → **1 page
+  (exit 0, first render)**. Addressee "Hiring Team" (JD names no manager; reports
+  to an unnamed "Manager, Transportation Strategy"); company Toronto Transit
+  Commission, Toronto, ON. Culture mirror = public-sector/service register echoing
+  TTC's mission ("create access to opportunity for everyone", safe/reliable/
+  accessible service, "Moving Toronto, Connecting Communities", accountability to
+  riders) — framing only. Proof leaned on ot_launch (scope/schedule/budget across
+  R&D, regulatory, manufacturing, marketing, on time + full regulatory compliance)
+  + win_portfolio ("20+ SKUs across four pipelines", budget/capacity) + ot_access
+  (executive briefings); fit para tied cross-functional/regulated-industry
+  coordination + MS Project/Excel/Power BI to the JD's project-control/budget-
+  reconciliation/compliance asks. Metrics verbatim: "seven years", "20+ SKUs",
+  "four pipelines". Signoff "Sincerely," (measured public-sector register). **Note
+  the JD's explicit AI-tool prohibition** — this is a DRAFT the human must rewrite
+  in their own words, not paste (re-flagged). No repo code/prompt/master touched.
 - **2026-09-18** — **Tailored resume: TTC (Toronto Transit Commission), Project
   Coordinator — Transportation Strategy** (temp to ~Jan 2027; draft).
   `output/ttc-project-coordinator-2026-09-18/` → **1 page (exit 0)**, 3 lines free.

@@ -11,7 +11,7 @@
 #
 #   resume-gen <job-description-file> --fast   Same, but use the cheaper Sonnet 5
 #                                              /medium tier instead of the default
-#                                              Opus 4.8/high — for routine, bulk,
+#                                              Opus 5/high — for routine, bulk,
 #                                              or low-match runs (RESUME_GEN_FAST=1
 #                                              does the same). Combines with --cover.
 #
@@ -99,47 +99,85 @@ TODAY="$(date +%F)"
 # day land in distinct output/ folders instead of fighting over one slug.
 SLUG_SUFFIX="${RESUME_GEN_SLUG_SUFFIX:-}"
 
-# Model/effort: default Opus 4.8 / high. Bullet selection is the one judgment
+# Model/effort: default Opus 5 / high. Bullet selection is the one judgment
 # call in this pipeline that nothing downstream can repair — validate.py proves
 # the result is *truthful* and coverage.py scores its keyword fit, but neither
 # can tell whether the bullets chosen were the most persuasive ones for this
-# posting. The 2026-07-28 eval settled that this is worth paying for on the
-# postings that matter: on a well-matched JD, Opus/high kept a quantified,
-# on-target bullet that Sonnet/medium dropped, and a blind judge preferred it
-# (see SESSION_HANDOFF.md). On a poorly-matched JD the two produce identical
-# output — so `--fast` (Sonnet 5 / medium) is the right call for routine, bulk,
-# or low-match runs: ~60% cheaper and ~20% faster for the same result there.
-# (Opus/medium was measured to be the worst value — near-Opus/high cost with no
-# benefit — so it is deliberately not offered.) Perms pre-authorize the tools
-# the headless run needs so it runs unattended. RESUME_GEN_CLAUDE_FLAGS
-# overrides both the model choice and --fast entirely.
+# posting. The 2026-07-28 eval (run against Opus 4.8, the tier available at the
+# time) settled that this is worth paying for on the postings that matter: on a
+# well-matched JD, Opus/high kept a quantified, on-target bullet that
+# Sonnet/medium dropped, and a blind judge preferred it (see SESSION_HANDOFF.md).
+# On a poorly-matched JD the two produce identical output — so `--fast`
+# (Sonnet 5 / medium) is the right call for routine, bulk, or low-match runs:
+# ~60% cheaper and ~20% faster for the same result there. (Opus/medium was
+# measured to be the worst value — near-Opus/high cost with no benefit — so it
+# is deliberately not offered.) Perms pre-authorize the tools the headless run
+# needs so it runs unattended. RESUME_GEN_CLAUDE_FLAGS overrides both the model
+# choice and --fast entirely.
 if [ "$FAST" != "0" ]; then
   _MODEL_FLAGS="--model claude-sonnet-5 --effort medium"
 else
-  _MODEL_FLAGS="--model claude-opus-4-8 --effort high"
+  _MODEL_FLAGS="--model claude-opus-5 --effort high"
 fi
 CLAUDE_FLAGS="${RESUME_GEN_CLAUDE_FLAGS:-$_MODEL_FLAGS --permission-mode acceptEdits --allowedTools Bash Read Edit Write}"
 
-# Run the headless Claude session, then record what it cost into the run's
-# output folder (scripts/session_cost.py reads the session transcript). Best
-# effort: cost logging never changes the run's exit code. Set RESUME_GEN_NO_COST=1
-# to skip it. $2 is the output dir, or AUTO to use the newest output/*/ folder
-# (the resume run picks its own slug, so we only learn it after the run).
+# Run the headless Claude session through scripts/run_and_capture.py, which
+# mirrors its stdout unchanged (so streaming/narration downstream sees exactly
+# what it always did) while reading this run's OWN session id and chosen
+# output/<slug>/ straight off its OWN stream-json events -- into --info-file,
+# not off shared state. That's what makes $2=AUTO and the transcript lookup
+# below safe with more than one of these running at once: "newest output/*/
+# folder" and "newest transcript file" are both races across concurrent runs;
+# this run's info-file only ever reflects this run's child process.
+#
+# Then record what it cost into the run's output folder (session_cost.py
+# reads the session transcript by session id when we have one), and append
+# this run's SESSION_HANDOFF.md Log line deterministically (append_handoff_log.py
+# -- see its docstring: the agent no longer hand-edits that file for automated
+# runs, precisely because two of THEM editing it at once is the read-modify-
+# write race concurrent runs would otherwise hit). Both are best effort: never
+# change the run's exit code. Set RESUME_GEN_NO_COST=1 / RESUME_GEN_NO_HANDOFF_LOG=1
+# to skip either. $2 is the output dir, or AUTO to use the slug this run
+# detected (falling back to the newest output/*/ folder if detection came up
+# empty -- only safe there in the no-concurrency case, same as before this
+# change). $3 is "tailor" or "cover-letter", for the handoff line's wording.
 run_claude_and_log() {
-  _task="$1"; _outdir="$2"
+  _task="$1"; _outdir="$2"; _kind="${3:-tailor}"
   _start="$(date +%s)"
+  _info_file="$(mktemp)"
   set +e
   # shellcheck disable=SC2086
-  claude -p "$_task" $CLAUDE_FLAGS
+  python3 scripts/run_and_capture.py --info-file "$_info_file" -- claude -p "$_task" $CLAUDE_FLAGS
   _rc=$?
   set -e
-  if [ "${RESUME_GEN_NO_COST:-0}" = "0" ] && command -v python3 >/dev/null 2>&1; then
-    if [ "$_outdir" = "AUTO" ]; then
+  _sid=""
+  _slug=""
+  if [ -s "$_info_file" ] && command -v python3 >/dev/null 2>&1; then
+    _sid="$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d.get('session_id') or '')" "$_info_file" 2>/dev/null || true)"
+    _slug="$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d.get('slug') or '')" "$_info_file" 2>/dev/null || true)"
+  fi
+  rm -f "$_info_file"
+  if [ "$_outdir" = "AUTO" ]; then
+    if [ -n "$_slug" ] && [ -d "output/$_slug" ]; then
+      _outdir="output/$_slug"
+    else
       _outdir="$(ls -dt output/*/ 2>/dev/null | head -1)"
     fi
-    if [ -n "$_outdir" ] && [ -d "$_outdir" ]; then
-      python3 scripts/session_cost.py --out "$_outdir" --since "$_start" --cwd "$(pwd)" || true
-    fi
+  fi
+  # Prefer the detected slug (exact) over deriving it from $_outdir's basename
+  # (also fine -- $_outdir is either "output/<slug>" or empty by this point).
+  if [ -z "$_slug" ] && [ -n "$_outdir" ]; then
+    _slug="$(basename "$_outdir")"
+  fi
+  if [ "${RESUME_GEN_NO_COST:-0}" = "0" ] && command -v python3 >/dev/null 2>&1 \
+     && [ -n "$_outdir" ] && [ -d "$_outdir" ]; then
+    python3 scripts/session_cost.py --out "$_outdir" --since "$_start" --cwd "$(pwd)" \
+      ${_sid:+--session-id "$_sid"} || true
+  fi
+  if [ "${RESUME_GEN_NO_HANDOFF_LOG:-0}" = "0" ] && command -v python3 >/dev/null 2>&1 \
+     && [ -n "$_slug" ]; then
+    python3 scripts/append_handoff_log.py --slug "$_slug" --kind "$_kind" \
+      --exit-code "$_rc" --cwd "$(pwd)" || true
   fi
   return $_rc
 }
@@ -176,12 +214,18 @@ Do all of this without asking any questions:
    one-page loop: exit 0 done; exit 3 (overflow) tighten prose and re-render;
    exit 1/2 fix cover_letter.yaml and re-run. Cap 4 attempts; ALWAYS end on a
    render so $DIR/cover_letter.pdf is viewable.
-4. LEAD your report with the cover_letter.pdf path and its page count, then the
+4. Do NOT edit SESSION_HANDOFF.md yourself: the launcher appends this run's
+   Log entry automatically once your session ends
+   (scripts/append_handoff_log.py) — CLAUDE.md's usual every-agent-updates-
+   the-handoff rule is deliberately overridden for this automated path,
+   precisely because concurrent runs hand-editing that file at the same time
+   is a lost-update race. Leave it alone.
+5. LEAD your report with the cover_letter.pdf path and its page count, then the
    addressee you chose and one line on how you matched the company's culture.
    This is a DRAFT for human review — never submit it anywhere."
   echo "  resume-gen │ ▶ cover-letter  ·  folder: $DIR" >&2
   echo "  resume-gen │ launching headless Claude Code (prompts/tailor_cover_letter.md) …" >&2
-  run_claude_and_log "$COVER_ONLY_TASK" "$DIR"
+  run_claude_and_log "$COVER_ONLY_TASK" "$DIR" cover-letter
   exit $?
 fi
 
@@ -241,6 +285,9 @@ file: $JD
 Do all of this without asking any questions:
 1. Read prompts/tailor_resume.md, $MASTER, and the job description ($JD).
 2. Pick an output slug '<company>-<role>-$TODAY$SLUG_SUFFIX' and create output/<slug>/.
+   If that folder already exists (a concurrent run may have just claimed it),
+   append '-b', then '-c', etc. until \`mkdir output/<slug>\` succeeds — never
+   write into a folder you didn't create yourself.
 3. Copy $JD to output/<slug>/job_description.txt (audit trail).
 4. Write output/<slug>/instance.yaml per the prompt: choose the profile, select
    and order bullets/highlights/skills, and include priority_order. Aim to fit
@@ -270,6 +317,11 @@ Do all of this without asking any questions:
    bullet (never just its id), a never-selected-vs-overflow-cut category, and a
    reason. Reflect the final rendered state.
 $COVER_TASK
+Do NOT edit SESSION_HANDOFF.md yourself: the launcher appends this run's Log
+entry automatically once your session ends (scripts/append_handoff_log.py) —
+CLAUDE.md's usual every-agent-updates-the-handoff rule is deliberately
+overridden for this automated path, precisely because concurrent runs hand-
+editing that file at the same time is a lost-update race. Leave it alone.
 Finally, LEAD your report with the resume PDF path and its page count (§6a/§8),
 then the chosen profile, which roles/bullets made the final cut, the omitted.md
 path$COVER_REPORT. This is a DRAFT for human review — never submit it anywhere."
@@ -280,5 +332,5 @@ if [ "$GEN_COVER" != "0" ]; then
 else
   echo "  resume-gen │ launching headless Claude Code (resume only; add --cover for a letter) …" >&2
 fi
-run_claude_and_log "$TASK" "AUTO"
+run_claude_and_log "$TASK" "AUTO" tailor
 exit $?

@@ -12,3 +12,6 @@ __pycache__/
 *.log
 *.out
 *Zone.Identifier
+# Lock file scripts/append_handoff_log.py uses to serialize concurrent
+# SESSION_HANDOFF.md writes -- local coordination state, not repo content.
+.session_handoff.lock

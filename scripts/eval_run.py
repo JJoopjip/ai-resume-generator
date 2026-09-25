@@ -44,7 +44,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # Same pre-authorized perms the normal launcher uses (resume-gen CLAUDE_FLAGS).
 _PERMS = "--permission-mode acceptEdits --allowedTools Bash Read Edit Write"
 _DEFAULT_A = "--model claude-sonnet-5 --effort medium"
-_DEFAULT_B = "--model claude-opus-4-8 --effort high"
+_DEFAULT_B = "--model claude-opus-5 --effort high"
 
 
 def derive_label(flags: str, fallback: str) -> str:
@@ -210,7 +210,7 @@ Read all three, score both candidates against the rubric, and write your
 judgment to {eval_dir}/judge.md. Do not ask questions. You are not told which
 model produced which candidate — judge only what is on the page."""
     print("\n  eval │ ━━ blind judge ━━", file=sys.stderr)
-    subprocess.run(["claude", "-p", task, "--model", "claude-opus-4-8", "--effort", "high",
+    subprocess.run(["claude", "-p", task, "--model", "claude-opus-5", "--effort", "high",
                     "--permission-mode", "acceptEdits", "--allowedTools", "Read", "Write"])
     mapping = ", ".join(f"candidate {i} = **{arm.label}**" for i, arm in enumerate(order, 1))
     return (f"Blind judge ran over shuffled candidates — see `judge.md`. "
