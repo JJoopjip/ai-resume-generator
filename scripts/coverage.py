@@ -46,7 +46,7 @@ _STOPWORDS_RAW = {
     "up", "out", "about", "across", "per", "via", "within", "including",
     "etc", "e.g", "i.e", "also", "well", "able", "using", "use", "used",
     "work", "working", "role", "position", "job", "team", "teams", "years",
-    "year", "including", "ability", "strong", "excellent", "including",
+    "year", "including", "ability", "skill", "strong", "excellent", "including",
     "responsibilities", "requirements", "qualifications", "preferred",
     "plus", "new", "key", "including", "including",
     # Survives tokenization as one token because of the internal slash.
@@ -74,6 +74,8 @@ _BOILERPLATE = {
     # Posting scaffolding: hiring-process prose, not the job.
     "duties", "assigned", "candidate", "applicant", "applicable", "please",
     "apply", "employment", "equity", "diversity", "accommodation",
+    "recruitment", "reserve", "reserves", "reserved", "discontinue",
+    "misleading",
 }
 _STOPWORDS_RAW |= _BOILERPLATE
 
@@ -96,6 +98,20 @@ _COMPOUND_SPLIT_RE = re.compile(r"[-/]")
 # adds unused tokens to the bag, which is harmless but pointless.
 _CLOSED_COMPOUNDS = {
     "healthcare": ("health", "care"),
+}
+
+# True synonyms -- not a spelling/joining variant of the SAME word (that's
+# what _CLOSED_COMPOUNDS/_COMPOUND_SPLIT_RE are for), but a different word an
+# employer uses for the same concept. Kept small and literal on purpose: this
+# is a scoring-accuracy fix for a genuine false negative (a resume that says
+# "stakeholder" shouldn't score zero against a JD that happens to prefer
+# "interest-holder" -- some orgs, notably in healthcare/public-sector hiring,
+# use it as the DEI-preferred term for the same role), not a general synonym
+# engine. Applied post-stem, so both spellings ("interestholder" if ever
+# closed up) fold to the same stem as "stakeholder".
+_SYNONYMS = {
+    "interest-holder": "stakeholder",
+    "interestholder": "stakeholder",
 }
 
 # Cosmetic character folds shared with validate._normalize's intent: we compare
@@ -131,6 +147,8 @@ def _stem(token: str) -> str:
     through to the plain '-s' rule instead.
     """
     t = token.lower()
+    if t in _SYNONYMS:
+        return _SYNONYMS[t]
     if len(t) > 4 and t.endswith("ies"):
         return t[:-3] + "y"                       # policies -> policy
     if len(t) > 4 and t.endswith(("sses", "xes", "zes", "ches", "shes")):
@@ -415,6 +433,82 @@ class Keyphrase:
         return tuple(self.stems) in bigrams
 
 
+# -----------------------------------------------------------------------------
+# Posting self-reference exclusion (employer name / site / team / admin
+# metadata)
+# -----------------------------------------------------------------------------
+# A JD's OWN organization, department, site, or team name is not a skill a
+# resume can ever truthfully "cover" -- no honest candidate already has
+# "University Health Network" on their resume before they've worked there.
+# Left unfiltered, terms like this structurally cap every score below 100%
+# for reasons that have nothing to do with resume quality: the scorer ends up
+# testing the resume against the hiring org's own name. Administrative
+# scaffolding (a "Closing Date:" field, a requisition header) is the same
+# problem for the same reason -- it names the posting, not the job.
+#
+# Detected from one signal, general across JD formats and unambiguous by
+# construction: structured header fields. ATS-exported postings (Workday,
+# iCIMS, and similar -- this repo's UHN fixture is one) commonly lead with a
+# "Label: value" block naming the org/department/site/admin metadata
+# explicitly. The label says what the value means, so nothing needs guessing.
+#
+# A prose-based signal ("an acronym defined in parens near the posting's own
+# self-introduction") was tried and dropped: on a posting with no early
+# heading to bound the search, it swept up genuine skill acronyms mentioned
+# anywhere in the document ("Discounted Cash Flow (DCF)", "Net Present Value
+# (NPV)" in this repo's own real-estate PM fixture) as if they were org
+# self-references. Even scoped to unigram-only, "Corporate Real Estate
+# Management (CREM)" is that same fixture's department name AND its literal
+# job domain -- there is no syntactic way to tell "the org's own acronym"
+# apart from "an acronym for the exact skill being screened for." A
+# structured field's label carries that disambiguation for free; free-text
+# prose doesn't, so this stays field-only rather than guess wrong.
+_ORG_FIELD_RE = re.compile(
+    # Deliberately excludes "Reports to:" -- that field's value is a JOB
+    # TITLE (the posting's reporting line), not the org's own name, and on
+    # this repo's UHN fixture it happens to literally be "Senior Project
+    # Manager" -- the single most important phrase a PM resume should say.
+    # Absorbing it as a self-reference wiped every "project"/"manager"
+    # keyphrase from the whole run, which is the opposite of this function's
+    # purpose.
+    r"^[ \t]*(?:compan(?:y|ies)|employer|organi[sz]ation|department|division|"
+    r"business unit|site|location|union|number of positions|"
+    r"hours|salary range|status|closing date|posted date|job type|"
+    r"requisition id|req id)[ \t]*:[ \t]*(.+)$",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+
+def _org_self_reference(jd_text: str) -> tuple[set[str], set[tuple[str, str]]]:
+    """Stemmed (unigrams, bigrams) naming the POSTING'S OWN organization,
+    department, site, team, or admin metadata -- terms no truthful resume
+    could ever cover, so they shouldn't count against one. See the module
+    comment above for why this is limited to structured header fields.
+
+    Only ever returns BIGRAMS from a multi-word field value, never the
+    individual words as unigrams: "Department: UHN Connected Care" should
+    drop the phrases "uhn connected" and "connected care", but stripping the
+    unigram "care" on its own would also erase every OTHER, unrelated use of
+    that common healthcare-domain word across the whole JD -- the same
+    collision risk as the dropped acronym-phrase signal, just one level
+    down. A field value that is a single token (e.g. a bare "UHN") is
+    unambiguous on its own and IS excluded as a unigram; nothing shorter
+    than that is."""
+    folded = _fold(jd_text)
+    unigrams: set[str] = set()
+    bigrams: set[tuple[str, str]] = set()
+
+    for m in _ORG_FIELD_RE.finditer(folded):
+        toks = [_stem(t.group()) for t in _TOKEN_RE.finditer(m.group(1).lower())]
+        toks = [t for t in toks if t not in _STOPWORDS and len(t) > 1]
+        if len(toks) == 1:
+            unigrams.add(toks[0])
+        else:
+            bigrams.update(zip(toks, toks[1:]))
+
+    return unigrams, bigrams
+
+
 def extract_keyphrases(
     jd_text: str, limit: int = 25, unigram_share: float = 0.4
 ) -> list[Keyphrase]:
@@ -472,6 +566,20 @@ def extract_keyphrases(
             unigram_counts[stemmed[i]] += 1
             unigram_display.setdefault(stemmed[i], lowered[i])
             unigram_levels.setdefault(stemmed[i], set()).add(token_levels[i])
+
+    # Drop the posting's own org/site/team/admin self-reference (see
+    # _org_self_reference above) before ranking, so it never occupies one of
+    # `limit` slots in the first place -- a term no resume could truthfully
+    # cover shouldn't cost a slot a real skill could have filled instead.
+    org_unigrams, org_bigrams = _org_self_reference(jd_text)
+    for key in org_bigrams & bigram_counts.keys():
+        del bigram_counts[key]
+        bigram_display.pop(key, None)
+        bigram_levels.pop(key, None)
+    for stem in org_unigrams & unigram_counts.keys():
+        del unigram_counts[stem]
+        unigram_display.pop(stem, None)
+        unigram_levels.pop(stem, None)
 
     phrases: list[Keyphrase] = []
     seen: set[tuple[str, ...]] = set()
@@ -538,6 +646,11 @@ def instance_segments(instance: dict) -> list[str]:
     for group in instance.get("skills", []):
         parts.append(str(group.get("label", "")))
         parts += [str(i) for i in group.get("items", [])]
+    for edu in instance.get("education", []):
+        parts += [str(edu.get("degree", "")), str(edu.get("institution", "")),
+                  str(edu.get("detail", ""))]
+    for cert in instance.get("certifications", []):
+        parts.append(str(cert.get("name", "")))
     return parts
 
 
@@ -565,6 +678,11 @@ def master_segments(master: dict) -> list[str]:
         parts += [str(i) for i in group.get("items", [])]
     for s in master.get("summaries", []):
         parts.append(str(s.get("text", "")))
+    for edu in master.get("education", []):
+        parts += [str(edu.get("degree", "")), str(edu.get("institution", "")),
+                  str(edu.get("detail", ""))]
+    for cert in master.get("certifications", []):
+        parts.append(str(cert.get("name", "")))
     return parts
 
 

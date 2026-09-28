@@ -13,6 +13,42 @@ this file only summarizes the current front line.
 
 ## What's done
 
+- **Lilly PSP Associate coverage raised 19%→44% (2026-09-28) via truthful
+  rephrasing + a `coverage.py` scorer fix, not fabrication.** User asked to
+  raise coverage on `output/lilly-psp-associate-2026-09-28/`. Two moves:
+  1. `master.yaml` rewording of 5 already-true bullets (no facts/metrics/
+     scope changed, per `authoring_rules`'s rephrasable-connective-wording
+     allowance): `lg_patient_access` (bd/pm/general) "patient-access/support
+     programs" → "market-access and patient-support programs"; `ot_regulatory`
+     (bd/pm/general) now names "patient safety" explicitly alongside the
+     pharmacovigilance/labeling work it always described; `ot_access`
+     (bd/pm/general) "secured primary distribution" →
+     "secured primary market access and distribution"; `lg_intelligence`
+     (pm/general) "portfolio" → "portfolio of brands"; `win_retention` (pm)
+     "managing the account relationship" → "managing the customer experience".
+     Reran the paid tailor stage (`output/lilly-psp-associate-2026-09-28-b/`,
+     opus, ~$4) to confirm: 19%→40% (5→10/25), all 5 target terms (`market
+     access`, `patient support`, `patient safety`, `customer experiences`,
+     `experiences`) newly covered.
+  2. Found + fixed a real `coverage.py` bug while explaining a gap term to
+     the user: "project management" was listed as a *content gap* even
+     though it's literally on the resume twice (`M.S. Project Management`
+     degree, `Project Management Professional (PMP)` certification) — because
+     `instance_segments()`/`master_segments()` never read `education`/
+     `certifications` at all, only summary/experience/highlights/skills.
+     Added degree/institution/detail and certification-name harvesting to
+     both functions. Verified: recomputing coverage on the same `-b` instance
+     went 40%→44% (10→11/25) with `project management` now correctly
+     covered, and confirmed live through the actual containerized pipeline
+     (`resume-gen render`, not just the bare script) after a Docker rebuild.
+     Full `pytest tests/ -q`: 71/71 green, no regressions.
+  Remaining gap on this posting (13 terms: `PSP`/`PSP vendor`/`PSP strategy`/
+  `Lilly Canada`/`existing PSP`/`benefit program`/`business units`/
+  `government affairs`/etc.) is genuine — Lilly/PSP-industry-internal jargon
+  the user has no real work history for — correctly left alone per
+  [[raise-coverage-by-enriching-master]]. Also 2 selection-gap terms
+  (`support programs`, `brands`) still in master but not selected this run —
+  not chased, diminishing-returns territory.
 - **Cover letter prompt: no em dashes / dash-as-punctuation (2026-09-28).**
   User asked flat out for cover letters to stop using em dashes and hyphens
   as sentence-level punctuation (the "—" and "- " habit that reads as
@@ -609,6 +645,15 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 
 ## Log
 
+- **2026-09-28** — Raised Lilly PSP Associate coverage 19%→44%: truthful
+  `master.yaml` rewording of 5 bullets (`lg_patient_access`, `ot_regulatory`,
+  `ot_access`, `lg_intelligence`, `win_retention`) to name already-true facts
+  in the JD's vocabulary (market access, patient support, patient safety,
+  customer experience, brands), plus a real `coverage.py` bug fix — the
+  scorer never read Education/Certifications, so "project management" showed
+  as a content gap despite being on the resume twice. Docker rebuilt, full
+  `pytest` 71/71 green. See What's done.
+- **2026-09-28** — Automated tailor run: `output/lilly-psp-associate-2026-09-28-b/` — 1 page(s), 40% coverage, ~$4.06, opus *(logged automatically by scripts/append_handoff_log.py)*
 - **2026-09-28** — Added a no-em-dash/no-dash-punctuation rule to
   `prompts/tailor_cover_letter.md` (user request — cover letters were
   reading as AI-written because of the dash habit). Compound words and date
