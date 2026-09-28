@@ -13,6 +13,28 @@ this file only summarizes the current front line.
 
 ## What's done
 
+- **`master.yaml` real content added (2026-09-28): NLEM listing work at LG
+  Chem + Thai Otsuka.** User volunteered, unprompted by any specific gap
+  term, that they'd actually done patient-support-program-adjacent work in
+  Thailand at both companies: assessing which national healthcare-coverage
+  scheme a product fit, then pushing it onto Thailand's National List of
+  Essential Medicines (NLEM) for government-subsidized reimbursement.
+  Confirmed via two clarifying questions before writing anything (per
+  [[raise-coverage-by-enriching-master]]): outcome was a **confirmed
+  listing** (not just an attempt), and the work was **the same activity at
+  both employers** (not two different scopes). Added new bullets `lg_nlem`
+  (LG Chem) and `ot_nlem` (Thai Otsuka), bd/pm/general variants, themes
+  `[market-access, reimbursement, government-affairs,
+  patient-support-programs, healthcare-policy, patients]`. Verified against
+  the Lilly PSP Associate instance: `government affairs` moved from
+  *content gap* (bank had nothing) to *selection gap* (bank has it now,
+  just not yet chosen in that already-rendered instance) — content-gap
+  count 12→11. `pytest` 71/71 green; `resume-master-sync` run manually to
+  push to the out-of-repo backup. **Not yet exercised on a fresh paid tailor
+  run** — the new bullets exist in the bank but no live `resume-gen` pass
+  has tried selecting them yet; worth watching the next real PSP/market-
+  access-flavored posting (or a deliberate rerun) to confirm they actually
+  get picked and the score climbs past 44%.
 - **Lilly PSP Associate coverage raised 19%→44% (2026-09-28) via truthful
   rephrasing + a `coverage.py` scorer fix, not fabrication.** User asked to
   raise coverage on `output/lilly-psp-associate-2026-09-28/`. Two moves:
@@ -645,6 +667,13 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 
 ## Log
 
+- **2026-09-28** — Added real `master.yaml` content: `lg_nlem`/`ot_nlem`
+  bullets (Thailand healthcare-scheme fit assessment + National List of
+  Essential Medicines listing, confirmed-successful outcome, same at LG
+  Chem and Thai Otsuka — user-volunteered, confirmed via clarifying
+  questions before writing). Closes `government affairs` as a content gap
+  on the Lilly PSP posting (now selection gap, not yet exercised on a live
+  tailor run). `pytest` 71/71 green; synced to backup.
 - **2026-09-28** — Raised Lilly PSP Associate coverage 19%→44%: truthful
   `master.yaml` rewording of 5 bullets (`lg_patient_access`, `ot_regulatory`,
   `ot_access`, `lg_intelligence`, `win_retention`) to name already-true facts
