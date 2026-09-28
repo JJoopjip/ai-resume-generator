@@ -20,9 +20,10 @@ this file only summarizes the current front line.
   (new item 6) plus a matching line in the §4 pre-commit voice checks.
   Compound words ("data-driven") and real date ranges are still allowed —
   only the dash-as-pause usage is banned. Prompt-only edit, nothing to
-  render/test/rebuild for. Not yet exercised on a live cover-letter run —
-  next one written should get a quick read for stray dashes before it's
-  called done.
+  render/test/rebuild for. **Verified same day**: found 6 em dashes in the
+  existing `output/uhn-project-manager-2026-09-25/cover_letter.yaml`
+  (written before this rule existed), rewrote them out with commas/plain
+  prose (no facts/metrics touched), re-rendered — still 1 page, valid.
 - **`coverage.py` employer-self-reference exclusion built (2026-09-28).**
   Follow-up to the UHN entry below: the scorer was ranking the hiring org's
   OWN name/department/site/admin-metadata into its top-25 key terms, which
@@ -611,7 +612,9 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 - **2026-09-28** — Added a no-em-dash/no-dash-punctuation rule to
   `prompts/tailor_cover_letter.md` (user request — cover letters were
   reading as AI-written because of the dash habit). Compound words and date
-  ranges still fine. Prompt-only, no rebuild needed.
+  ranges still fine. Prompt-only, no rebuild needed. Verified against the
+  UHN cover letter: found and rewrote 6 pre-existing em dashes, re-rendered
+  clean (1 page, valid, no facts changed).
 - **2026-09-28** — Wrote and rendered `cover_letter.yaml`/`.pdf`/`.docx` for
   the UHN run (`output/uhn-project-manager-2026-09-25/`), grounded only in
   that instance's already-selected bullets (ot_launch full-lifecycle
