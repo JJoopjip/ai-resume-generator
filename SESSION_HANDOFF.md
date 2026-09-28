@@ -13,6 +13,28 @@ this file only summarizes the current front line.
 
 ## What's done
 
+- **Theme-only-term selection-gap bug found + fixed on `lg_nlem`/`ot_nlem`
+  (2026-09-28), same bug class as the 2026-09-12 Apotex incident.** Reran the
+  Lilly PSP tailor after adding those bullets (see entry below) expecting
+  `government affairs` to flip to covered — it didn't, still 44%, even
+  though `lg_nlem`/`ot_nlem` WERE selected this time
+  (`output/lilly-psp-associate-2026-09-28-c/instance.yaml`). Root cause:
+  `government-affairs` was only ever written in the bullets' `themes:` list,
+  never in any variant's actual text — `themes` feeds `master_segments()`
+  (what counts as "in the bank" for gap classification) but never
+  `instance_segments()` (what actually renders), so the term was
+  structurally unable to ever flip to covered no matter which bullet got
+  picked. Same mechanism as `lg_feasibility`/`trade-marketing` in the
+  2026-09-12 Apotex log entry below. Fixed by rewording all 6 variants (bd/
+  pm/general × 2 bullets) to literally say "government affairs" — truthful,
+  since securing an NLEM listing means directly engaging Thailand's
+  government reimbursement authority. Verified the fix at the source
+  (`coverage.bigram_pairs()` on the reworded `pm` text now contains the
+  stemmed `(government, affair)` pair); **not yet re-verified through a
+  fresh paid tailor run** — `-c`'s `instance.yaml` predates this edit and
+  its frozen text can't show the fix (instance text is baked at generation
+  time, not re-derived from `master.yaml`). `pytest` 71/71 green;
+  `resume-master-sync` run.
 - **`master.yaml` real content added (2026-09-28): NLEM listing work at LG
   Chem + Thai Otsuka.** User volunteered, unprompted by any specific gap
   term, that they'd actually done patient-support-program-adjacent work in
@@ -667,6 +689,7 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 
 ## Log
 
+- **2026-09-28** — Automated tailor run: `output/lilly-psp-associate-2026-09-28-c/` — 1 page(s), 44% coverage, ~$3.73, opus *(logged automatically by scripts/append_handoff_log.py)*
 - **2026-09-28** — Added real `master.yaml` content: `lg_nlem`/`ot_nlem`
   bullets (Thailand healthcare-scheme fit assessment + National List of
   Essential Medicines listing, confirmed-successful outcome, same at LG
