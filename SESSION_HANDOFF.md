@@ -13,6 +13,18 @@ this file only summarizes the current front line.
 
 ## What's done
 
+- **Lilly PSP Associate: manual swap-B to 48% (2026-09-28), no LLM spend.**
+  After the `-d` paid run landed at 44% by trading `patient safety` for
+  `government affairs` (page was already full), user asked to bring
+  `patient safety` back instead of chasing `brands`. Applied the repo's
+  existing swap-B mechanic (`prompts/tailor_resume.md` §6 / the 2026-09-12
+  Apotex precedent): hand-edited `-d`'s `instance.yaml` — dropped
+  `win_process_design` (contributed zero covered terms, safe cut) and added
+  `ot_regulatory` back under Otsuka — then `resume-gen render` (deterministic,
+  no LLM). Result: `output/lilly-psp-associate-2026-09-28-e/` — **48%
+  (12/25)**, still 1 page, 2 lines free, validate-clean; all 11 prior covered
+  terms retained plus `patient safety`. Only `support programs`/`brands`
+  remain as selection gaps.
 - **Theme-only-term selection-gap bug found + fixed on `lg_nlem`/`ot_nlem`
   (2026-09-28), same bug class as the 2026-09-12 Apotex incident.** Reran the
   Lilly PSP tailor after adding those bullets (see entry below) expecting
@@ -689,6 +701,12 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 
 ## Log
 
+- **2026-09-28** — Manual swap-B on the Lilly PSP Associate `-d` instance
+  (no LLM cost): dropped `win_process_design`, added `ot_regulatory` back
+  → `output/lilly-psp-associate-2026-09-28-e/`, 48% (12/25), 1 page, 2 lines
+  free, validate-clean. Brought back `patient safety` per user's explicit
+  ask, in place of chasing `brands`.
+- **2026-09-28** — Automated tailor run: `output/lilly-psp-associate-2026-09-28-d/` — 1 page(s), 44% coverage, ~$4.72, opus *(logged automatically by scripts/append_handoff_log.py)*
 - **2026-09-28** — Automated tailor run: `output/lilly-psp-associate-2026-09-28-c/` — 1 page(s), 44% coverage, ~$3.73, opus *(logged automatically by scripts/append_handoff_log.py)*
 - **2026-09-28** — Added real `master.yaml` content: `lg_nlem`/`ot_nlem`
   bullets (Thailand healthcare-scheme fit assessment + National List of
