@@ -13,6 +13,90 @@ this file only summarizes the current front line.
 
 ## What's done
 
+- **Cover letter prompt: no em dashes / dash-as-punctuation (2026-09-28).**
+  User asked flat out for cover letters to stop using em dashes and hyphens
+  as sentence-level punctuation (the "—" and "- " habit that reads as
+  AI-generated). Added a hard rule to `prompts/tailor_cover_letter.md` §1
+  (new item 6) plus a matching line in the §4 pre-commit voice checks.
+  Compound words ("data-driven") and real date ranges are still allowed —
+  only the dash-as-pause usage is banned. Prompt-only edit, nothing to
+  render/test/rebuild for. Not yet exercised on a live cover-letter run —
+  next one written should get a quick read for stray dashes before it's
+  called done.
+- **`coverage.py` employer-self-reference exclusion built (2026-09-28).**
+  Follow-up to the UHN entry below: the scorer was ranking the hiring org's
+  OWN name/department/site/admin-metadata into its top-25 key terms, which
+  structurally capped every score below 100% for reasons unrelated to resume
+  quality (no truthful resume has "University Health Network" on it before
+  working there). New `_org_self_reference()` in `coverage.py` drops these
+  before ranking, using ONE signal: structured "Label: value" header fields
+  (`Department:`, `Site:`, `Company:`, `Closing Date:`, etc. — the label
+  disambiguates the value unambiguously, common in ATS-exported postings
+  like Workday/iCIMS and this repo's UHN fixture).
+  A second signal (acronym defined in parens near the posting's
+  self-introduction, e.g. "The Foo Bar Network (FBN)") was tried and
+  **deliberately dropped** after live-testing surfaced two real false-positive
+  classes on this repo's own fixtures, both worth remembering before anyone
+  re-attempts that signal:
+    1. On `tests/fixtures/jds/project-manager.txt` (a Toronto real-estate PM
+       posting), "Corporate Real Estate Management (CREM)" is simultaneously
+       the department's proper name AND the literal job domain the posting
+       screens for — stripping "real estate" as an org name also erased the
+       actual skill. Narrowing to acronym-only (not the expanded phrase)
+       fixed that case but broke the next one.
+    2. With no early heading to bound the search, the acronym-only version
+       swept up genuine finance acronyms mentioned deep in Qualifications
+       ("Discounted Cash Flow (DCF)", "Net Present Value (NPV)") on the same
+       fixture — there's no syntactic way to tell "the org's own acronym"
+       from "an acronym for the skill being screened for" in free prose.
+  The field-based signal has its own version of this same trap and needed
+  two live-caught fixes before it was safe:
+    - `Reports to:` was in the field-label list; its value is a JOB TITLE
+      (the reporting line), not an org name, and on the UHN posting it's
+      literally "Senior Project Manager" — the single most important phrase
+      a PM resume should say. Absorbing it wiped every project/manager
+      keyphrase from the run (coverage regressed 53%→30%) and let unrelated
+      EEO/hiring boilerplate ("criminal record", "equal opportunity") rise
+      into the vacated slots instead. Removed from the label list.
+    - Multi-word field values ("Department: UHN Connected Care") were
+      absorbed word-by-word as unigrams, so standalone "care" — ordinary
+      healthcare-domain vocabulary used correctly elsewhere on the resume —
+      got silently excluded too. Fixed: a field's constituent words are only
+      excluded as an exact adjacent BIGRAM ("connected care"), never as
+      individual unigrams, unless the whole field value is a single token
+      (e.g. a bare "UHN") that's unambiguous on its own.
+  Net result on the UHN run: same 53% (14/25) as the manual master.yaml
+  edits below achieved, but now via general infrastructure — re-verified via
+  `resume-gen render`, full `pytest` (71/71, no golden-snapshot drift on the
+  real-estate/finance fixtures), Docker rebuild.
+- **UHN Project Manager run raised 37% → 53% coverage (2026-09-28), by
+  scorer-accuracy fixes + genuine content, not gaming.** Live example of the
+  "raise coverage by enriching master.yaml" strategy on a real low-coverage
+  run (`output/uhn-project-manager-2026-09-25/`). Changes, all re-verified
+  live via `resume-gen render` + full `pytest` + Docker rebuild:
+  - `coverage.py`: new `_SYNONYMS` fold (`interest-holder`/`interestholder`
+    → `stakeholder`) — a genuine false-negative fix (DEI-preferred term some
+    healthcare/public-sector JDs use for the same concept as "stakeholder",
+    which the bank already says extensively), same category as the existing
+    bigram-adjacency/compound-token fixes, not JD-specific.
+  - `coverage.py`: added `skill` to `_STOPWORDS_RAW` (same class as the
+    existing `ability` — a generic category noun, not a skill itself) and
+    `recruitment` to `_BOILERPLATE` (hiring-process scaffolding, same class
+    as `duties`/`candidate`/`applicant`).
+  - `master.yaml`: reworded `ot_launch` (pm variant) to say "through the
+    full project lifecycle" and reworded `ot_access` (pm variant, now
+    "Applied communication strategies to align stakeholders throughout the
+    project...") — both truthful precision edits to *already-selected*
+    bullets (confirmed with user: this NPD role genuinely ran end-to-end),
+    not new fabricated content.
+  - Swapped `win_process_design` out of the UHN instance to reclaim the ~3
+    lines the above added, keeping the render at 1 page (2 lines to spare).
+  - Remaining content_gap at the time was the employer's own name/site/team
+    names plus posting-field noise — genuinely unaddable without fabricating
+    that the candidate worked there. The "strip the employer's own proper
+    nouns" idea flagged here as future work was built same-day — see the
+    entry above.
+
 - **`coverage.py` bigram-adjacency fix (2026-09-25).** See What's next (4) —
   a multi-word JD phrase now has to actually appear adjacent somewhere on the
   resume/master to score as covered, not just have both words present
@@ -252,6 +336,15 @@ this file only summarizes the current front line.
 
 Highest-leverage remaining items:
 
+0000. **DONE (2026-09-28).** Employer-self-reference exclusion built in
+   `coverage.py` (`_org_self_reference()`, structured-field signal only).
+   See What's done for the full writeup, including two false-positive
+   classes caught and fixed live before landing. Possible follow-up, not
+   started: a prose-based signal for postings that DON'T use a structured
+   "Label: value" header block (this repo has no fixture like that yet to
+   test safely against) — the two prose heuristics tried here were both
+   unsafe, so a next attempt needs a materially different approach, not a
+   tighter version of the same one.
 000. **DONE (2026-09-25).** The two test rows the concurrency live-test
    auto-created in the application tracker (app_id 19 Zylotech, app_id 20
    Marrow & Finch) are deleted — user explicitly asked for it, so the earlier
@@ -515,6 +608,48 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 
 ## Log
 
+- **2026-09-28** — Added a no-em-dash/no-dash-punctuation rule to
+  `prompts/tailor_cover_letter.md` (user request — cover letters were
+  reading as AI-written because of the dash habit). Compound words and date
+  ranges still fine. Prompt-only, no rebuild needed.
+- **2026-09-28** — Wrote and rendered `cover_letter.yaml`/`.pdf`/`.docx` for
+  the UHN run (`output/uhn-project-manager-2026-09-25/`), grounded only in
+  that instance's already-selected bullets (ot_launch full-lifecycle
+  delivery, ot_access communication-strategies/stakeholder-alignment,
+  boots_frontline pharmacist background, lg_stakeholders cross-functional
+  engagement) — no facts outside `instance.yaml`. Written directly per
+  `prompts/tailor_cover_letter.md` rather than via the headless
+  `resume-gen cover-letter` path (already had full context loaded; avoids
+  paying for a second LLM session). 1 page, valid on render.
+- **2026-09-28** — Corrected Chulalongkorn University degree in `master.yaml`
+  (locked field): "Bachelor of Pharmacy" → "Doctor of Pharmacy", per user
+  ("my graduation letter stated it as Doctor of Pharmacy"). Also fixed in
+  the live `output/uhn-project-manager-2026-09-25/instance.yaml` (locked
+  fields must match master verbatim) and re-rendered — still 1 page, 53%
+  coverage, valid. Dozens of OLDER `output/*/instance.yaml` runs still say
+  "Bachelor of Pharmacy" — left as-is (historical generated artifacts, not
+  source of truth); only fix those if the user says one was actually sent
+  out under the wrong degree name.
+- **2026-09-28** — Automated tailor run: `output/lilly-psp-associate-2026-09-28/` — 1 page(s), 19% coverage, ~$0.85, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-09-28** — Built `coverage.py` employer-self-reference exclusion
+  (`_org_self_reference()`, structured-field signal only). Caught and fixed
+  two live false positives before landing: `Reports to:` absorbed as an org
+  field wiped every project/manager keyphrase (score regressed 53%→30%);
+  multi-word field values absorbed word-by-word as unigrams struck ordinary
+  domain vocabulary ("care") along with the org name. A tried prose-based
+  acronym signal was dropped entirely — false-positived on this repo's own
+  real-estate PM fixture (CREM/"real estate" ambiguity, then swept up
+  legitimate DCF/NPV finance acronyms). UHN run back to 53% via general
+  infra instead of one-off edits. `pytest` 71/71, Docker rebuilt. See What's
+  done for full writeup.
+- **2026-09-28** — Automated tailor run: `output/get-well-family-health-team-project-manager-2026-09-28/` — 1 page(s), 40% coverage, ~$0.78, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-09-28** — Raised UHN run coverage 37% → 53% (14/25): `coverage.py`
+  `interest-holder`→`stakeholder` synonym fold + `skill`/`recruitment`
+  boilerplate additions (scorer-accuracy fixes), `master.yaml` `ot_launch`/
+  `ot_access` pm-variant rewording (truthful — user confirmed end-to-end
+  project delivery), swapped `win_process_design` out of the UHN instance to
+  hold 1 page. Docker rebuilt, `pytest` 71/71 green. See What's done.
+- **2026-09-25** — Automated tailor run: `output/uhn-project-manager-2026-09-25/` — 1 page(s), 37% coverage, ~$2.76, sonnet *(logged automatically by scripts/append_handoff_log.py)*
 - **2026-09-25** — Automated tailor run: `output/patsnap-project-manager-2026-09-25/` — 1 page(s), 33% coverage, ~$2.59, sonnet *(logged automatically by scripts/append_handoff_log.py)*
 - **2026-09-25** — Automated tailor run: `output/wesco-project-manager-2026-09-25/` — 1 page(s), 18% coverage, ~$1.66, sonnet *(logged automatically by scripts/append_handoff_log.py)*
 - **2026-09-25** — Fixed the `coverage.py` bigram-adjacency bug (What's next

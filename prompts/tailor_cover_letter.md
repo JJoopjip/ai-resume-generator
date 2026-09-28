@@ -47,6 +47,11 @@ truthfulness guard is identical and non-negotiable.
 4. Output is a DRAFT for human review. Never auto-submit anywhere.
 5. **One page.** ~250–350 words, 3–4 short paragraphs. If it overflows, tighten
    prose — never shrink fonts, margins, or facts (see §6).
+6. **No em dashes and no hyphens used as punctuation.** Do not use `—`, `–`,
+   or `-` to join clauses (e.g. "the role - and the team - excites me"). Rewrite
+   with a comma, period, or connecting word instead. Hyphens inside a genuine
+   compound word (e.g. "data-driven", "mission-driven") or a real range in a
+   date are fine; a hyphen or dash used as a sentence-level pause is not.
 
 ## 2. Read the company and its culture
 
@@ -102,6 +107,7 @@ Voice checks before you commit each paragraph:
   make it specific or cut it.
 - Does every factual claim map to a line in `instance.yaml`? If not, remove it.
 - Is a metric quoted? Does it match the resume digit-for-digit?
+- Any em dash, en dash, or punctuation-style hyphen? Rewrite it out (see §1.6).
 
 ## 5. Output schema — `cover_letter.yaml`
 
