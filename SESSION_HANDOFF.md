@@ -13,6 +13,26 @@ this file only summarizes the current front line.
 
 ## What's done
 
+- **Policy change: `thaifest` is no longer a pinned/always-included role
+  (2026-09-29).** Standing user instruction: include the PR-internship role
+  only when it matches the JD, otherwise drop it entirely for page space —
+  overriding the prior §3b rule that kept it (trimmed to one bullet) on every
+  resume for Canadian-experience continuity. Updated
+  `prompts/tailor_resume.md` §3b (now "relevance-gated", mirrors `yorkta`'s
+  treatment) and the §6 overflow-cut floor (removed `thaifest` from the
+  "never drop a role's last bullet" list; `boots` is still pinned/exempt,
+  unchanged). Documented the trade-off inline: dropping `thaifest` reopens a
+  visible Experience-section recency gap (Boots ends Aug 2024; the 2024–2026
+  M.S. is in Education, not Experience) — accepted per the user's explicit
+  instruction, not a bug. Applied immediately to
+  `output/cencora-program-manager-2026-09-29/instance.yaml` (JD is pharma
+  call-center/PM work, no PR/marketing relevance): dropped `thaifest` role +
+  its `priority_order` entry, which freed 5 lines; used 2 of them to restore
+  `lg_xfn_kpi` (previously overflow-cut, good JD fit — KPI reporting /
+  cross-functional recommendations) to LG Chem. Re-rendered deterministically:
+  **1 page, 3 lines free, exit 0**, coverage unchanged at 21% (structural
+  edits, not new covered terms). Not yet exercised on a fresh paid tailor run
+  to confirm the agent applies the new §3b rule correctly from scratch.
 - **Cencora Program Manager: 2-page overflow-cap hit resolved manually
   (2026-09-29), no LLM spend.** The automated tailor run
   (`output/cencora-program-manager-2026-09-29/`, 21%, 5/25) hit the 5-attempt
@@ -815,6 +835,10 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 
 ## Log
 
+- **2026-09-29** — Policy change: `thaifest` role un-pinned, now
+  relevance-gated like any other role (`prompts/tailor_resume.md` §3b/§6);
+  dropped it from the Cencora instance and used the freed space to restore
+  `lg_xfn_kpi`; still 1 page.
 - **2026-09-29** — Manual fix on Cencora overflow-cap run: dropped highlights
   line, moved PMP into education (full name, `master.yaml` edited + synced),
   recategorized skills for JD fit; re-rendered to 1 page, 0 lines free, no

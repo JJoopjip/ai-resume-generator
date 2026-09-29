@@ -156,30 +156,30 @@ relevance is thin — the point is that its dates sit in the timeline. On overfl
 (§6), prefer trimming `boots` down to a single bullet before removing the role
 entirely, so the dates stay visible.
 
-### 3b. Canadian experience — the thaifest role (always included)
+### 3b. Canadian experience — the thaifest role (relevance-gated)
 
 `master.yaml` has a `thaifest` role (Public Relations Intern, Thai Festival
-Toronto Foundation, Toronto — May 2026 – Present). **Include it on every resume,
-regardless of the JD's topical fit.** It is her current, Canadian-based role, and
-a Canadian recruiter reads local experience as a signal in its own right — that
-signal is the point, so it is never dropped for low keyword overlap the way an
-ordinary role would be. Keep it in the main **Experience** section (never
-`additional`).
-
-Scale *how much* of it appears to the JD, but never below one bullet:
+Toronto Foundation, Toronto — May 2026 – Present). **Treat it like an ordinary
+role, gated on JD relevance — not pinned.** (Standing user instruction,
+2026-09-29, superseding the prior "always included" rule: include it only when
+it matches the JD; otherwise drop it entirely to give the page's limited space
+to more important, on-topic bullets.)
 
 - **JD is relevant** (marketing, communications, PR, partnerships, BD, events,
-  stakeholder/vendor coordination, program/process setup): select 2–4 bullets
+  stakeholder/vendor coordination, program/process setup): select 1–4 bullets
   and pick the profile variant that matches, as you would for any strong role.
-- **JD is unrelated** (e.g. a pharma reimbursement or lab role): keep just the
-  **single strongest / most transferable** bullet — `tf_infrastructure`
-  (systems/process/CRM) or `tf_partnerships` (stakeholder coordination) usually
-  travel furthest — so the role and its current Canadian dates still appear
-  without spending page space on off-topic detail.
+- **JD is unrelated** (e.g. a pharma reimbursement or lab role): drop the role
+  entirely — same as any other low-relevance role (compare `yorkta`'s
+  treatment). Do not keep a single bullet "just for the dates."
 
-This is the same treatment as `boots` in §3a (timeline-load-bearing, trimmed not
-dropped), applied here for Canadian-experience continuity. On overflow (§6),
-trim `thaifest` toward one bullet before ever removing it.
+Trade-off to be aware of, not a reason to override the instruction above:
+dropping `thaifest` removes the only Experience-section entry with Canadian,
+current (May 2026–Present) dates. Boots ends Aug 2024, so on a JD where
+`thaifest` is cut, the Experience section's most recent dated entry will read
+as ending in 2024 (the M.S. at Northeastern, 2024–2026, is in Education, not
+Experience, so it doesn't cover this on its own). That's an accepted trade
+for page space per the user's instruction — not a bug to fix by re-adding the
+role.
 
 ## 4. Summary guidance
 
@@ -358,13 +358,16 @@ Read the exit code and the JSON on stdout:
      from that role's `bullets` list (and remove it from `priority_order` too).
      Use judgment on *which* role to trim from if multiple roles have
      low-priority bullets left: prefer trimming the role least central to the
-     chosen profile. **Never remove the last remaining bullet of any role in
-     `experience`** — including `winnergy`, `lgchem`, and `otsuka`, not just
-     `boots` (§3a) and `thaifest` (§3b). Dropping a core role's last bullet
-     removes the role's header and dates too, silently opening an unexplained
+     chosen profile. **Never remove the last remaining bullet of any role
+     still present in `experience`** — including `winnergy`, `lgchem`,
+     `otsuka`, and `boots` (§3a). Dropping a core role's last bullet removes
+     the role's header and dates too, silently opening an unexplained
      employment gap — worse than a denser page. Trim every role down to one
      bullet before touching a role's last one, and keep the role and its dates
-     visible no matter how tight the page gets.
+     visible no matter how tight the page gets. `thaifest` (§3b) is exempt
+     from this floor — it's relevance-gated, not timeline-pinned, so if it was
+     selected at all it can still be dropped whole during overflow like any
+     other relevance-gated role.
   3. If still overflowing and the impact line is present, dropping a `highlights`
      entry (or the whole `highlights` key) is a low-cost trim before cutting more
      substantive bullets.
