@@ -38,6 +38,14 @@ not a style note.
 3. Output is a DRAFT for human review. Never auto-submit anywhere.
 4. One page. If content overflows, drop the lowest-priority bullets — never
    shrink fonts, margins, or facts to make room.
+5. **No em dashes and no hyphens used as punctuation.** Do not use `—`, `–`,
+   or a `-` as a sentence-level pause anywhere you're rewriting text (i.e. in
+   the Summary — bullet/locked-field text is copied verbatim from
+   `master.yaml` so this doesn't apply there, and a pre-existing dash in
+   `master.yaml` source itself is out of scope). Use a comma, period, or
+   restructure the sentence instead. A hyphen in a genuine compound word
+   (e.g. "cross-functional") or a date range (e.g. "2023-2025") is fine; a
+   hyphen or dash used as a sentence-level pause is not.
 
 ## 2. Profile guidance
 
@@ -433,6 +441,8 @@ omitted in a class, you may skip its rows, but the file must always exist.
 - Confirm every locked field in `instance.yaml` string-matches `master.yaml`
   for its id — this is what `validate.py` checks, so pre-checking it
   yourself avoids a wasted render cycle.
+- Any em dash, en dash, or punctuation-style hyphen in the Summary? Rewrite
+  it out (see §1.5).
 - Report the `output/<slug>/resume.pdf` path and its page count as the first
   line of your result, whether you finished at one page or stopped at the cap
   (see §6a) — the human's next action is to open it.

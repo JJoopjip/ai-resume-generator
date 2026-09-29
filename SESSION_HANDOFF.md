@@ -13,6 +13,89 @@ this file only summarizes the current front line.
 
 ## What's done
 
+- **Cencora Program Manager: 2-page overflow-cap hit resolved manually
+  (2026-09-29), no LLM spend.** The automated tailor run
+  (`output/cencora-program-manager-2026-09-29/`, 21%, 5/25) hit the 5-attempt
+  overflow cap still ~3 lines over one page (§6 correctly stopped rather than
+  shrinking fonts/margins — see `omitted.md` for the trim history). User
+  asked for three specific manual edits: (1) drop the `hl_experience`/`hl_gpa`
+  highlights line entirely; (2) remove the `certifications` section and fold
+  "Project Management Professional (PMP) certified" (full name, per user
+  follow-up) into the Northeastern education `detail` line instead, after the
+  capstone mention; (3) recategorize the 4 skill groups for JD fit — dropped
+  `Pharmacovigilance & drug safety` (pharma-R&D term, mismatched to this
+  call-center/patient-support-program JD) and the `Stakeholder management` /
+  `Client, patient & stakeholder engagement` duplication, added `Vendor &
+  contract management`, `Change management`, `Health & safety compliance`
+  (all pre-existing `pm`-profile bank items, nothing invented). Change (2)
+  required editing `master.yaml` itself, since `education[].detail` is a
+  locked verbatim field — appended the same PMP text to the Northeastern
+  entry there (true fact, already listed in `certifications`), then
+  `resume-master-sync` run and verified in sync (new snapshot
+  `master.2026-09-29T175115.yaml`). Re-rendered deterministically
+  (`resume-gen render`, no LLM): **1 page, 0 lines free, exit 0**, coverage
+  unchanged at 21% (these were formatting/space edits, not content-coverage
+  ones).
+- **B. Braun manual swap-B: 16%→20% (2026-09-28), no LLM spend.** User asked
+  to do the swap flagged in the rerun below. Hand-edited
+  `output/bbraun-project-manager-2026-09-28-b/instance.yaml`: replaced
+  Otsuka's `ot_launch` bullet with `ot_iv_licensing` (pm variant, copied
+  verbatim from `master.yaml`) and updated `priority_order.otsuka` to match
+  — same swap-B mechanic as the 2026-09-28 Lilly PSP precedent. Then
+  `resume-gen validate` (clean) → `resume-gen render` (deterministic, no
+  LLM): **20% (5/25)**, `infusion therapy` now covered, still 1 page, 0 lines
+  free. Trade-off accepted knowingly: lost `ot_launch`'s scope/schedule/
+  budget/Agile evidence for Otsuka in exchange for the `infusion therapy`
+  keyword hit — the same "never trade a stronger bullet for a weaker one"
+  judgment call the original agent made, just resolved the other way because
+  the user explicitly wanted this term covered on this specific posting.
+- **B. Braun rerun (`resume-gen --fast`) confirms the Otsuka content landed
+  (2026-09-28).** `output/bbraun-project-manager-2026-09-28-b/` — still 16%
+  (4/25), but `infusion therapy` is now a *selection gap* (bank has it, via
+  `ot_iv_licensing`) not a *content gap*. Agent deliberately left it
+  unselected — see What's next for the swap-B option if the user wants it
+  in. Cost ~$2.32.
+- **Thai Otsuka: IV solutions / parenteral nutrition + enteral-nutrition
+  wording added to `master.yaml` (2026-09-28), for B. Braun coverage.** User
+  asked to improve the B. Braun Project Manager coverage score
+  (`output/bbraun-project-manager-2026-09-28/`, 16%, 4/25 — most of the other
+  20 "missing" terms are JD prose boilerplate about B. Braun itself, not real
+  requirements; the org-self-reference filter in `coverage.py` only catches
+  structured headers, not this prose-style JD — noted as a known gap, not
+  re-fixed here). Web search confirmed Thai Otsuka is a genuine head-to-head
+  competitor: it manufactures IV solutions/parenteral-nutrition (its own
+  plants) and enteral-nutrition medical foods (ONCE/TWINLINE/RACOL lines),
+  which map directly to B. Braun's IV Fluids, Parenteral Nutrition, and
+  Enteral Nutrition catalog lines. Confirmed scope with the user via two
+  questions before writing (per [[raise-coverage-by-enriching-master]]):
+  (1) their hands-on NPD work was the enteral-nutrition/medical-food line
+  (ONCE/TWINLINE/RACOL) — same product line already described in
+  `ot_launch`/`ot_clinical`, just missing the literal term; IV
+  solutions/parenteral nutrition are licensed in from the wider Otsuka Group,
+  not domestically developed, but the user did conduct domestic clinical
+  research and build feasibility/P&L analysis for the board's licensing
+  go/no-go decisions on those. (2) confirmed same product line, reword only.
+  Changes: reworded `ot_launch` and `ot_clinical` (bd/pm/dm/general) to say
+  "enteral-nutrition medical-food products" instead of generic "medical-food
+  products" — no new facts, just the literal term; added new bullet
+  `ot_iv_licensing` (bd/pm/dm/general) under Otsuka for the licensing
+  clinical-research + feasibility/P&L work — genuinely new content, not a
+  reword. Verified at the source: `iv solutions`, `parenteral nutrition`,
+  `enteral nutrition` now all present in `coverage.master_segments()`.
+  `pytest` 71/71 green; `resume-master-sync` run manually. **Not yet
+  exercised on a fresh paid tailor run against the B. Braun JD** — worth a
+  rerun to confirm the score climbs and the right bullets get selected.
+- **No-em-dash rule extended to the resume prompt (2026-09-28).** The
+  cover-letter prompt already banned em/en dashes and punctuation-hyphens
+  (`prompts/tailor_cover_letter.md` §1.6); user asked for the same rule on
+  the resume. Added as Absolute Rule 5 in `prompts/tailor_resume.md` §1,
+  scoped to the Summary field only (the one field with real rewrite
+  latitude — bullets/locked fields are copied verbatim from `master.yaml`,
+  so a pre-existing dash there is out of scope and untouched), plus a
+  matching self-check line in §8 "Before you finish". This is prompt-only
+  (no mechanical enforcement in `validate.py`, matching how the cover-letter
+  rule also relies on the LLM self-check rather than a hard validator gate).
+  Not yet exercised on a live tailor run.
 - **Lilly PSP Associate: manual swap-B to 48% (2026-09-28), no LLM spend.**
   After the `-d` paid run landed at 44% by trading `patient safety` for
   `government affairs` (page was already full), user asked to bring
@@ -429,6 +512,37 @@ this file only summarizes the current front line.
 
 Highest-leverage remaining items:
 
+00000000. **DONE (2026-09-28).** Manual swap-B applied — see What's done.
+   `output/bbraun-project-manager-2026-09-28-b/` now sits at 20% (5/25),
+   1 page, 0 lines free, validate-clean. Remaining gaps on this posting are
+   almost entirely B. Braun's own company-boilerplate n-grams (`braun
+   medical`, `sharing expertise`, `compensation`, etc.) — not real skills to
+   chase; see the coverage.md note about the org-self-reference filter not
+   covering prose-style JDs (item below). Only remaining real selection gap
+   is `areas` (generic, low-value). Nothing further queued here.
+0000000. **DONE (2026-09-28), re-run confirmed content landed, selection
+   didn't (correctly) — superseded by the swap-B item above.** Reran
+   `resume-gen --fast` against the B. Braun JD →
+   `output/bbraun-project-manager-2026-09-28-b/`. Confirmed the `master.yaml`
+   additions took effect: `infusion therapy` moved from "missing — not in
+   your master.yaml" (content gap) to "missing — in your master.yaml, not
+   selected" (selection gap) in `coverage.md`. Score stayed 16% though —
+   `omitted.md` shows the agent explicitly considered `ot_iv_licensing` for
+   this term but the Otsuka page-space was already down to its single
+   strongest bullet (`ot_launch`, best scope/schedule/budget/Agile match);
+   swapping would have traded a stronger bullet for a weaker one on a
+   zero-free-lines page, so it correctly left it out per §6.
+000000. **SUPERSEDED by the item above — folding in for history.** Original
+   plan: rerun `resume-gen` against `output/bbraun-project-manager-2026-09-28/
+   job_description.txt` (or a fresh B. Braun posting) and confirm coverage
+   climbs above 16% and the new bullets actually get selected, not just
+   present in the bank.
+00000. **DONE (2026-09-28), prompt-only.** No-em-dash rule added to
+   `prompts/tailor_resume.md` (mirrors the cover-letter rule). Watch the next
+   live resume tailor run's Summary output to confirm the model actually
+   honors it; if it slips through, consider whether it needs a mechanical
+   check in `validate.py` like the cosmetic-fold logic already there, rather
+   than relying on the LLM alone.
 0000. **DONE (2026-09-28).** Employer-self-reference exclusion built in
    `coverage.py` (`_org_self_reference()`, structured-field signal only).
    See What's done for the full writeup, including two false-positive
@@ -701,6 +815,28 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 
 ## Log
 
+- **2026-09-29** — Manual fix on Cencora overflow-cap run: dropped highlights
+  line, moved PMP into education (full name, `master.yaml` edited + synced),
+  recategorized skills for JD fit; re-rendered to 1 page, 0 lines free, no
+  LLM cost.
+- **2026-09-29** — Automated tailor run: `output/cencora-program-manager-2026-09-29/` — 2 page(s) — overflow cap hit, 21% coverage, ~$2.27, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-09-28** — Manual swap-B on `bbraun-project-manager-2026-09-28-b`:
+  Otsuka `ot_launch` → `ot_iv_licensing`, `resume-gen render` (no LLM cost)
+  → 16%→20% (5/25), `infusion therapy` now covered, 1 page, 0 lines free.
+- **2026-09-28** — Automated tailor run: `output/bbraun-project-manager-2026-09-28-b/` — 1 page(s), 16% coverage, ~$2.32, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-09-28** — Added Thai Otsuka IV-solutions/parenteral-nutrition
+  content (new bullet `ot_iv_licensing`) and reworded `ot_launch`/
+  `ot_clinical` to say "enteral-nutrition medical-food products", to raise
+  B. Braun Project Manager coverage. Web-search-confirmed Thai Otsuka is a
+  real B. Braun competitor first; scope confirmed with user before writing.
+- **2026-09-28** — Automated tailor run: `output/bbraun-project-manager-2026-09-28/` — 1 page(s), 16% coverage, ~$2.37, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-09-28** — Automated tailor run: `output/riverside-natural-foods-associate-plm-2026-09-28/` — 1 page(s), 36% coverage, ~$2.63, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-09-28** — Automated tailor run: `output/red-nucleus-digital-project-manager-2026-09-28/` — 1 page(s), 32% coverage, ~$2.62, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-09-28** — Automated tailor run: `output/bioenterprise-program-manager-2026-09-28/` — 1 page(s), 49% coverage, ~$2.52, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-09-28** — Extended the cover letter's no-em-dash rule to
+  `prompts/tailor_resume.md` (§1 Absolute Rule 5 + §8 self-check), scoped to
+  the Summary field since that's the only resume content the LLM rewrites.
+  User request: "no em dash in resume too."
 - **2026-09-28** — Manual swap-B on the Lilly PSP Associate `-d` instance
   (no LLM cost): dropped `win_process_design`, added `ot_regulatory` back
   → `output/lilly-psp-associate-2026-09-28-e/`, 48% (12/25), 1 page, 2 lines
