@@ -838,7 +838,8 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 - **2026-09-29** — Policy change: `thaifest` role un-pinned, now
   relevance-gated like any other role (`prompts/tailor_resume.md` §3b/§6);
   dropped it from the Cencora instance and used the freed space to restore
-  `lg_xfn_kpi`; still 1 page.
+  `lg_xfn_kpi` and `win_retention` (customer-success angle); now 1 page, 1
+  line free, coverage 21%→25%.
 - **2026-09-29** — Manual fix on Cencora overflow-cap run: dropped highlights
   line, moved PMP into education (full name, `master.yaml` edited + synced),
   recategorized skills for JD fit; re-rendered to 1 page, 0 lines free, no
