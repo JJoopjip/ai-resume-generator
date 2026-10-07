@@ -13,6 +13,9 @@ this file only summarizes the current front line.
 
 ## What's done
 
+- **Mobile access (2026-10-06).** Tailscale + `tailscale serve` exposes the
+  generator (443) and tracker (8443) to the user's tailnet only. See README
+  "Using it from your phone".
 - **Policy change: `thaifest` is no longer a pinned/always-included role
   (2026-09-29).** Standing user instruction: include the PR-internship role
   only when it matches the JD, otherwise drop it entirely for page space —
@@ -834,6 +837,11 @@ Highest-leverage remaining items:
 Full checklist with all sub-items and completion history: **`TODO.md`**.
 
 ## Log
+
+- **2026-10-06** — Phone access set up via Tailscale Serve (tailnet-only HTTPS):
+  generator at `https://joopjips.taile8e7eb.ts.net`, tracker on `:8443`. Serve
+  config persists in tailscaled; no app/code changes (still bound to
+  127.0.0.1). Documented in README "Using it from your phone".
 
 - **2026-09-29** — Policy change: `thaifest` role un-pinned, now
   relevance-gated like any other role (`prompts/tailor_resume.md` §3b/§6);

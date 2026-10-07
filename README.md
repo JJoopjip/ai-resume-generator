@@ -146,6 +146,22 @@ different things:
 
 ---
 
+### Using it from your phone (optional, free)
+
+The web UI stays bound to localhost; [Tailscale](https://tailscale.com) (free
+personal plan) gives your phone a private path to it from any network.
+
+1. Install Tailscale in WSL and on the phone, sign in with the same account.
+2. One-time: `sudo tailscale set --operator=$USER`, and enable *Serve* + HTTPS
+   in the Tailscale admin console.
+3. `tailscale serve --bg --https=443 http://127.0.0.1:5000` (generator) and
+   `tailscale serve --bg --https=8443 http://127.0.0.1:8000` (tracker).
+4. On the phone, with Tailscale on, open the `https://<machine>.<tailnet>.ts.net`
+   URL from `tailscale serve status`.
+
+The PC (with WSL and Docker Desktop) must be on. The app has no login, so never
+set `RESUME_WEB_HOST=0.0.0.0`, port-forward, or use `tailscale funnel`.
+
 ## 2. What this project actually does
 
 This is a portfolio piece demonstrating **AI orchestration** — designing a
