@@ -23,7 +23,8 @@ The letter is prose, so it has more wording latitude than the resume — but the
 truthfulness guard is identical and non-negotiable.
 
 **Locked — reproduce verbatim, never rewrite:**
-- Every metric/number (e.g. "100%", "20+ SKUs", "10K+", "seven years", GPA).
+- Every metric/number (e.g. "100%", "20+ SKUs", "10K+", "more than five
+  years", GPA).
   Copy the digits and units exactly as they appear in `instance.yaml`.
 - Job titles, company names, dates, degree names, certifications.
 
@@ -52,6 +53,21 @@ truthfulness guard is identical and non-negotiable.
    with a comma, period, or connecting word instead. Hyphens inside a genuine
    compound word (e.g. "data-driven", "mission-driven") or a real range in a
    date are fine; a hyphen or dash used as a sentence-level pause is not.
+7. **No experience-length claim beyond the resume summary's.** Use its exact
+   wording ("more than five years in pharma and medtech"; the pharmacy years
+   stated separately). Never add them together or round up.
+8. **Echo the company's own values language at most once** in the whole
+   letter. Lifting several of the JD's slogans ("uniting caring with
+   discovery", "holistic patient ecosystem") reads as parroting. Say what you
+   understand about their work in your own words instead.
+9. **Don't restate resume bullets.** The reader has the resume open. Name an
+   achievement and its metric, then spend the words on what the bullet can't
+   say: why it mattered, what she learned, how it transfers to this role.
+   A sentence that is a bullet with "I" in front of it has failed.
+10. **Banned openers and filler.** No "caught my attention immediately", "I
+    was thrilled/excited to see", "I am writing to apply", "the exact
+    instinct my career has been built around", "perfect fit", "passionate
+    about". Open on something specific.
 
 ## 2. Read the company and its culture
 
@@ -89,7 +105,7 @@ to 3–5 sentences; skimmable beats complete.
 1. **Hook.** Name the exact role and company, give one *specific, genuine*
    reason this role/company excites her (drawn from the JD's mission or focus),
    and land one headline credential or achievement from the resume that signals
-   fit. Never open with "I am writing to apply for…".
+   fit. Never open with "I am writing to apply for…" (see rule 10).
 2. **Proof.** Pick the 1–2 achievements from `instance.yaml` most relevant to the
    JD's top requirements and narrate them in prose — with the metric reproduced
    verbatim. Show the through-line from what she did to what this role needs.
@@ -102,9 +118,31 @@ to 3–5 sentences; skimmable beats complete.
 4. **Close.** Reinforce fit in one line, make a clear, warm call to action (a
    conversation / interview), and thank them. Two sentences.
 
+**Relocation sentence (required, once, usually paragraph 1 or 3).** One
+confident, non-apologetic sentence, traced to the summary's relocation line:
+she moved to Toronto in 2024 for the M.S. in Project Management at
+Northeastern, finished in 2026, and is now bringing her pharma, market-access
+and pharmacy experience to Canada. Don't apologize for or explain away the
+Thai experience; it's the asset.
+
+**Pharma, PSP and market-access roles: the central thesis.** Build the
+letter around the real link between her work and the Canadian context: at LG
+Chem she segmented patients across Thailand's tiered coverage (universal
+coverage, social security, civil servants, private/out-of-pocket) and helped
+secure an NLEM listing, and Canadian patient-support programs exist largely
+because patients move between public and private drug coverage. Present it
+as a transferable way of thinking, not as Canadian expertise: claim
+knowledge of Canadian reimbursement (provincial formularies, CDA-AMC/CADTH,
+pCPA, private payers) only if `instance.yaml` states it. Use this only when
+the matching bullets are on the resume.
+
 Voice checks before you commit each paragraph:
 - Could this exact sentence appear in a letter to a different company? If yes,
   make it specific or cut it.
+- Is any sentence a near-copy of a resume bullet? Rewrite it as the story or
+  the *why* behind the bullet (rule 9).
+- More than one phrase lifted from the JD's values/mission copy? Keep the best
+  one (rule 8).
 - Does every factual claim map to a line in `instance.yaml`? If not, remove it.
 - Is a metric quoted? Does it match the resume digit-for-digit?
 - Any em dash, en dash, or punctuation-style hyphen? Rewrite it out (see §1.6).
@@ -168,6 +206,7 @@ Cap at **4 render attempts**. Always end on a render, so the on-disk
 
 - Confirm every metric in the letter string-matches `instance.yaml`.
 - Confirm no paragraph makes a claim absent from `instance.yaml`.
+- Relocation sentence present once; no banned opener or filler (rules 8-10).
 - Lead your report with the `cover_letter.pdf` path and its page count — the
   human's next action is to open it.
 - Remind the user this is a draft to read and personalize before sending.
