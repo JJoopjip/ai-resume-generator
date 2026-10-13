@@ -13,6 +13,20 @@ this file only summarizes the current front line.
 
 ## What's done
 
+- **General Pharmacy Assistant resume: 13%→64% (2026-10-07).** User wanted a
+  general resume at >50% coverage. Built a composite JD from Shoppers/Rexall/
+  Walmart/Job Bank postings, ran `resume-gen --fast` (first pass 13%). Then,
+  per [[raise-coverage-by-enriching-master]], asked the user which Boots
+  pharmacist duties were real and added only confirmed ones to `master.yaml`:
+  4 `general`-variant Boots bullets (`boots_dispensing`, `boots_inventory`,
+  `boots_records`, `boots_service_compliance`) + a `pharmacy_ops` skills group
+  (general profile). NOT added (unconfirmed): insurance/billing/cash handling,
+  named pharmacy software. Re-run: `output/general-pharmacy-assistant-2026-10-07-b/`,
+  **64% (16/25)**, 1 page, validated. Old 13% draft (no `-b`) is superseded.
+- **TMU Operations Project Specialist cover letter (2026-10-07).** Ran
+  `./resume-gen cover-letter output/tmu-operations-project-specialist-2026-10-07`;
+  1 page, PDF + DOCX, ~$0.79. Draft for user review; not submitted. What's
+  next is unchanged.
 - **Mobile access (2026-10-06).** Tailscale + `tailscale serve` exposes the
   generator (443) and tracker (8443) to the user's tailnet only. See README
   "Using it from your phone".
@@ -838,6 +852,13 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 
 ## Log
 
+- **2026-10-09** — Automated tailor run: `output/general-project-manager-2026-10-09/` — 1 page(s), 58% coverage, ~$3.79, opus *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-09** — Automated tailor run: `output/general-business-development-manager-2026-10-09/` — 1 page(s), 40% coverage, ~$3.17, opus *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-08** — Automated tailor run: `output/general-business-development-project-manager-2026-10-08/` — 1 page(s), 51% coverage, ~$4.28, opus *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-08** — Investigated: web run dies when Safari backgrounds/screen locks. Cause: `web/app.py` `_run_pipeline` ties the `resume-gen` subprocess to the streaming HTTP response; client drop -> BrokenPipeError in `emit` -> subprocess orphaned with closed stdout pipe (dies on next write), no result/tracker push. No code changed. Fix proposed: run job in background thread, buffer log, let page poll/reconnect by run id.
+- **2026-10-07** — Automated tailor run: `output/general-pharmacy-assistant-2026-10-07-b/` — 1 page(s), 64% coverage, ~$2.06, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-07** — Automated tailor run: `output/general-pharmacy-assistant-2026-10-07/` — 1 page(s), 13% coverage, ~$1.80, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-07** — Automated cover-letter run: `output/tmu-operations-project-specialist-2026-10-07/` — 1 page(s), 18% coverage, ~$0.79, opus *(logged automatically by scripts/append_handoff_log.py)*
 - **2026-10-06** — Phone access set up via Tailscale Serve (tailnet-only HTTPS):
   generator at `https://joopjips.taile8e7eb.ts.net`, tracker on `:8443`. Serve
   config persists in tailscaled; no app/code changes (still bound to
