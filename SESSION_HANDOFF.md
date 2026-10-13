@@ -13,6 +13,25 @@ this file only summarizes the current front line.
 
 ## What's done
 
+- **Resume refinement Steps 4-5: bank enriched from the user's answers
+  (2026-10-13).** Fixed 5 overclaims (Otsuka budget 'managed' -> contributed,
+  'on time' removed; LG Chem NLEM 'secured' -> supported; Winnergy 90% was 4
+  drugstore chains + clinics not hospitals; Winnergy budget 'owned' ->
+  managed, CEO approved). New bullets: `ot_trials` (3 trials, 1 protocol,
+  CRO), `ot_rd_lead` (directed 3 R&D scientists, dotted-line), `ot_hcp`,
+  `lg_psp_ops` (PSP KPIs, AE reports, HCP coverage navigation),
+  `lg_advisory`, `win_vendors` (10+), `boots_psp` (PSP enrollment). Updated
+  `ot_launch` (4 projects, 1 launched), `lg_patient_access` (contributed to a
+  PSP that launched, exact 'Patient Support Program (PSP)'), `lg_sourcing` (2
+  co-negotiated licensing deals), `lg_feasibility` (5 P&L cases), AE reporting
+  on Otsuka/LG/Boots. New `patient_access` skill group, `hl_retention` label
+  -> 'repeat-order rate', thaifest title back to 'Public Relations Intern'
+  (Foundation's own title; still `section: volunteer`). Code: per-JD
+  `education[].coursework` (8 catalog-verified Northeastern titles; 5
+  user-remembered titles unverified, see REFINEMENT_QUESTIONS.md), cover-letter
+  `letter_facts` (Canadian-coverage self-study). User decisions: work auth
+  stays OFF; 'AI tools (ChatGPT, Claude Code)' on EVERY resume (overrides
+  critique); no CRM. 84 tests green, image rebuilt, backup synced.
 - **Resume refinement from recruiter critique, Steps 1-3, 5 (partial), 6-8
   (2026-10-13).** Source: user's `resume_refinement_prompt.md` (critique of
   the Lilly PSP resume + letter). Done: `master.yaml` summaries say "more
@@ -588,20 +607,15 @@ this file only summarizes the current front line.
 
 Highest-leverage remaining items:
 
-0. **Resume refinement Steps 4, 5, 9: answers COLLECTED (2026-10-13)** in
-   `REFINEMENT_QUESTIONS.md` (repo root, git-ignored; see its ANSWERS
-   section, which supersedes the plan below where they differ: e.g. Otsuka
-   NLEM leads (she owned it; LG Chem's she only supported), 90% retention is
-   chains+clinics not hospitals, budgets contributed/managed not owned, PR
-   *Intern* title kept, work auth stays OFF, AI tools on ALL resumes). Then: add confirmed
-   metrics/bullets (3-4 for LG Chem + Winnergy, 2-3 Otsuka; `lg_nlem` leads
-   for pharma JDs; "Patient Support Program (PSP)" exact phrase only if a PSP
-   was actually run, Q3), skills cleanup (Q10, Q15, Q16), optional
-   `meta.work_authorization` only if Q13 says yes (master records an agreed
-   omission), M.S. coursework/capstone in Northeastern `detail` (Q12),
-   `ot_agile` fate (Q9), thaifest title (Q14). Then a paid run:
+0. **Resume refinement Step 9: paid Lilly run, awaiting user approval of the
+   new bullet text.** Steps 4-5 DONE 2026-10-13 (see What's done). Then run
    `./resume-gen output/lilly-psp-associate-2026-09-28-e/job_description.txt --cover`
-   and the Step 9 checklist from the critique file.
+   and check the critique's Step 9 list (no 'seven years', summary claims
+   backed on page, sections + reverse-chron, no Thai Festival/dairy/German,
+   'Patient Support Program' present, relocation line in summary + letter).
+   Free preview of the expected shape: `output/lilly-psp-associate-2026-10-13-preview/`
+   (52%, 1 page, hand-built, NOT a tailor output).
+
 1. **Decouple runs from the HTTP connection (top priority, user-hit daily on
    phone).** `POST /run` starts the pipeline in a background thread, log goes
    to a buffer/file keyed by run id; page polls `GET /run/<id>?from=<offset>`
@@ -912,6 +926,7 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 
 ## Log
 
+- **2026-10-13** — Steps 4-5 of resume refinement: 5 overclaims fixed, 7 bullets added, coursework + letter_facts mechanisms; free Lilly preview 52% (was 48%), 1 page. Paid Lilly run awaits user OK.
 - **2026-10-13** — Collected all 16 refinement answers interactively (in `REFINEMENT_QUESTIONS.md`). Found 5 bank overclaims to fix: Otsuka budget/on-time, LG Chem NLEM 'secured', Winnergy 90% 'hospital' accounts, Winnergy budget 'owned'. No bank edits yet.
 - **2026-10-13** — Resume refinement (user critique of Lilly PSP output): honest experience length + relocation line in summaries, de-dashed bullets, experience sections + reverse-chron renderer, publications/language subsets, cover-letter rules. Steps 4/5/9 wait on `REFINEMENT_QUESTIONS.md`. 83 tests green; Docker image rebuilt; master backup synced.
 - **2026-10-13** — Session end: merged `web-ui-refresh` -> `main` and pushed; handoff updated (general BD/PM resumes done, Safari-disconnect fix queued as top What's-next item, README caveat added).
