@@ -41,8 +41,9 @@ not a style note.
 5. **No em dashes and no hyphens used as punctuation.** Do not use `—`, `–`,
    or a `-` as a sentence-level pause anywhere you're rewriting text (i.e. in
    the Summary — bullet/locked-field text is copied verbatim from
-   `master.yaml` so this doesn't apply there, and a pre-existing dash in
-   `master.yaml` source itself is out of scope). Use a comma, period, or
+   `master.yaml` so this doesn't apply there; the bank's bullets were cleaned
+   of sentence-pause dashes on 2026-10-13, so if you spot one, copy it
+   verbatim anyway and mention it in your report as a bank fix). Use a comma, period, or
    restructure the sentence instead. A hyphen in a genuine compound word
    (e.g. "cross-functional") or a date range (e.g. "2023-2025") is fine; a
    hyphen or dash used as a sentence-level pause is not.
