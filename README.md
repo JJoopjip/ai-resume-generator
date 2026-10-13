@@ -162,6 +162,11 @@ personal plan) gives your phone a private path to it from any network.
 The PC (with WSL and Docker Desktop) must be on. The app has no login, so never
 set `RESUME_WEB_HOST=0.0.0.0`, port-forward, or use `tailscale funnel`.
 
+**Known limitation:** a run is tied to the open browser connection. If iOS
+Safari suspends the tab (screen off, app switch), the stream drops and the run
+dies. Keep Safari in the foreground until a run finishes (~2-5 min). A fix
+(background jobs + polling) is queued in `SESSION_HANDOFF.md`.
+
 ## 2. What this project actually does
 
 This is a portfolio piece demonstrating **AI orchestration** — designing a

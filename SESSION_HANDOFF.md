@@ -13,6 +13,23 @@ this file only summarizes the current front line.
 
 ## What's done
 
+- **General BD + PM resumes (2026-10-08/09).** User applies from their phone
+  and can't customize per posting, so built reusable "general" resumes from
+  hand-written composite JDs (scratchpad only, not committed): combined BD+PM
+  `output/general-business-development-project-manager-2026-10-08/` (51%),
+  PM-only `output/general-project-manager-2026-10-09/` (58%), BD-only
+  `output/general-business-development-manager-2026-10-09/` (40%). All 1 page,
+  opus tier. BD is lower because its JD terms (pipeline, CRM, licensing) are
+  generic; `coverage.md` lists master-has-it swaps. No master.yaml changes.
+- **Safari/phone disconnect diagnosed (2026-10-08), NOT fixed.** `web/app.py`
+  `_run_pipeline`/`_run_cover` run `resume-gen` as a subprocess tied to the
+  streaming HTTP response; when iOS suspends the tab, `emit` raises
+  BrokenPipeError, the subprocess is orphaned with a closed stdout pipe and
+  dies, and no result/tracker push happens. Also explains seeing a 2-page PDF
+  mid-run (overflow loop's first render) when peeking at a running job.
+- **Repo state (2026-10-13):** `web-ui-refresh` fast-forward merged into
+  `main` and pushed (main = origin/main); `web-ui-refresh` branch still exists.
+
 - **General Pharmacy Assistant resume: 13%→64% (2026-10-07).** User wanted a
   general resume at >50% coverage. Built a composite JD from Shoppers/Rexall/
   Walmart/Job Bank postings, ran `resume-gen --fast` (first pass 13%). Then,
@@ -549,6 +566,13 @@ this file only summarizes the current front line.
 
 Highest-leverage remaining items:
 
+1. **Decouple runs from the HTTP connection (top priority, user-hit daily on
+   phone).** `POST /run` starts the pipeline in a background thread, log goes
+   to a buffer/file keyed by run id; page polls `GET /run/<id>?from=<offset>`
+   and stores the run id in localStorage to reattach after Safari resumes.
+   Apply to the cover-letter route too; don't delete the JD temp file until
+   the subprocess exits. Until then: keep Safari foregrounded during runs.
+
 00000000. **DONE (2026-09-28).** Manual swap-B applied — see What's done.
    `output/bbraun-project-manager-2026-09-28-b/` now sits at 20% (5/25),
    1 page, 0 lines free, validate-clean. Remaining gaps on this posting are
@@ -852,6 +876,7 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 
 ## Log
 
+- **2026-10-13** — Session end: merged `web-ui-refresh` -> `main` and pushed; handoff updated (general BD/PM resumes done, Safari-disconnect fix queued as top What's-next item, README caveat added).
 - **2026-10-09** — Automated tailor run: `output/general-project-manager-2026-10-09/` — 1 page(s), 58% coverage, ~$3.79, opus *(logged automatically by scripts/append_handoff_log.py)*
 - **2026-10-09** — Automated tailor run: `output/general-business-development-manager-2026-10-09/` — 1 page(s), 40% coverage, ~$3.17, opus *(logged automatically by scripts/append_handoff_log.py)*
 - **2026-10-08** — Automated tailor run: `output/general-business-development-project-manager-2026-10-08/` — 1 page(s), 51% coverage, ~$4.28, opus *(logged automatically by scripts/append_handoff_log.py)*
