@@ -267,6 +267,21 @@ You do not control role order within a section: the renderer always sorts
 roles reverse-chronologically. Your `experience` list order has no effect on
 the page.
 
+## 4d. Publications, languages, company notes
+
+- **`publications`** (optional, relevance-gated): include an entry, citation
+  verbatim, only when the JD is research, R&D, medical affairs, medical
+  information, or otherwise scientific. Omit the key for everything else;
+  a 2017 food-science paper costs a line and reads as noise on a commercial,
+  PSP or PM resume.
+- **`languages`**: choose a subset, entries verbatim (`{name, level}` exactly
+  as in the bank). Keep native and fluent languages. Drop basic-level ones
+  the role doesn't value (German for Canadian roles). Keep French (basic)
+  whenever the JD mentions French or bilingualism; otherwise it's optional.
+- **`multinational_note`**: keep it by default (LG Chem's note especially,
+  since many Canadian readers won't know the company), but you may omit it
+  from a role when the page is tight. Never rewrite it.
+
 ## 5. Output schema — `instance.yaml`
 
 Write exactly this shape (see `TECH_SPEC.md` §3 for the full structural
@@ -326,9 +341,10 @@ Notes:
 - `priority_order` is required for every role that appears in `experience`,
   and must contain exactly the bullet ids you selected for that role — same
   set, no more, no less. Order = cut order (§6), not display order.
-- `meta`, `education` (non-id fields), `certifications`, and `languages` are
-  locked — copy them from `master.yaml` verbatim; you may reorder education
-  entries but not alter their content.
+- `meta`, `education` (non-id fields), and `certifications` are locked —
+  copy them from `master.yaml` verbatim; you may reorder education entries but
+  not alter their content. `languages` and `publications` are verbatim subsets
+  (§4d).
 - `projects` is optional and self-built work, not employment — never merge it
   into `experience`. Include it when the role values building, automating or
   systems thinking, and pick each bullet's `variants` entry by profile exactly
@@ -420,7 +436,10 @@ Read the exit code and the JSON on stdout:
      from this floor — it's relevance-gated, not timeline-pinned, so if it was
      selected at all it can still be dropped whole during overflow like any
      other relevance-gated role.
-  3. If still overflowing and the impact line is present, dropping a `highlights`
+  3. Cheap trims before cutting more substance: drop a basic-level language
+     the JD doesn't ask for, or a `multinational_note` other than LG Chem's
+     (§4d).
+  4. If still overflowing and the impact line is present, dropping a `highlights`
      entry (or the whole `highlights` key) is a low-cost trim before cutting more
      substantive bullets.
   Re-run after each cut.

@@ -302,3 +302,31 @@ def test_sections_may_be_reordered_or_subset(valid_instance, master, schema):
         [s for s in instance["experience_sections"] if s["id"] in used]
     ))
     assert v.validate(instance, master, schema) == []
+
+
+# --- languages / publications ------------------------------------------------
+
+def test_language_subset_is_allowed(valid_instance, master, schema):
+    instance = copy.deepcopy(valid_instance)
+    instance["languages"] = [master["languages"][0]]
+    assert v.validate(instance, master, schema) == []
+
+
+def test_language_level_upgrade_is_flagged(valid_instance, master, schema):
+    instance = copy.deepcopy(valid_instance)
+    basic = next(l for l in master["languages"] if l["level"] == "basic")
+    instance["languages"] = [{"name": basic["name"], "level": "fluent"}]
+    errors = v.validate(instance, master, schema)
+    assert any(e["field"] == "languages" for e in errors)
+
+
+def test_publication_must_be_verbatim(valid_instance, master, schema):
+    if not master.get("publications"):
+        pytest.skip("master.yaml has no publications")
+    instance = copy.deepcopy(valid_instance)
+    pub = master["publications"][0]
+    instance["publications"] = [{"id": pub["id"], "citation": pub["citation"]}]
+    assert v.validate(instance, master, schema) == []
+    instance["publications"][0]["citation"] = "Lead author, Nature (2017)."
+    errors = v.validate(instance, master, schema)
+    assert any(e["field"] == "citation" for e in errors)

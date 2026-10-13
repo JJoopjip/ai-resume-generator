@@ -115,6 +115,14 @@
 \BLOCK{if not loop.last}\vspace{3pt}\BLOCK{endif}
 \BLOCK{endfor}
 
+% ---------- Publications (optional; relevance-gated by the tailor) ----------
+\BLOCK{if publications}
+\section*{Publications}
+\BLOCK{for pub in publications}
+\VAR{pub.citation} \\
+\BLOCK{endfor}
+\BLOCK{endif}
+
 % ---------- Skills ----------
 \section*{Skills}
 \BLOCK{for group in skills}

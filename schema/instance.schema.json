@@ -184,6 +184,18 @@
         }
       }
     },
+    "publications": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "citation"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "citation": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
     "highlights": {
       "type": "array",
       "maxItems": 3,

@@ -139,7 +139,12 @@ Draft 2020-12 JSON Schema, top-level `object`, `required`: `schema_version`,
 - `skills`: array of `{label, items: [string]}`. `items` must be a subset of
   some `master.yaml` skill group's `items` for that `label`; `validate.py`
   enforces this (not pure JSON Schema — needs the master.yaml lookup).
-- `languages`: copied verbatim, array of `{name, level}`.
+- `languages`: array of `{name, level}`, a subset of `master.yaml.languages`
+  with each entry verbatim (the tailor may drop languages, never add one or
+  change a level).
+- `publications` (optional): array of `{id, citation}`, a subset of
+  `master.yaml.publications`, citation verbatim. Renders as its own
+  "Publications" section after Education; relevance-gated by the tailor.
 - `priority_order`: object, one key per experience `id` present in
   `experience`, value = array of bullet-id strings, ascending priority
   (lowest-priority-to-cut first). Every bullet id under that role in

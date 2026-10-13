@@ -237,6 +237,15 @@ education:
     start: "2016"
     end: "2020"
 
+# Optional and relevance-gated: the tailor includes it only for research-type
+# roles. Renders as its own "Publications" section after Education.
+publications:
+  - id: pub_demo
+    themes: [research, analytics, peer-reviewed]
+    citation: >-
+      Co-author, Journal of Demo Analytics (2019): forecasting refill demand
+      for a fictional community pharmacy network.
+
 certifications:
   - id: pmp
     name: "Project Management Professional (PMP)"

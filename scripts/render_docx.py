@@ -159,6 +159,11 @@ def render_docx(instance: dict, out_dir: Path) -> Path:
             detail_p = doc.add_paragraph()
             _add_run(detail_p, edu["detail"], size=style.SMALL_SIZE)
 
+    if instance.get("publications"):
+        _add_heading(doc, "Publications")
+        for pub in instance["publications"]:
+            doc.add_paragraph(pub["citation"])
+
     _add_heading(doc, "Skills")
     for group in instance["skills"]:
         p = doc.add_paragraph()

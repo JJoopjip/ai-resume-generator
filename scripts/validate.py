@@ -9,6 +9,7 @@ Implements PRD.md §7 and TECH_SPEC.md §3:
   5. Skills subset check
   6. priority_order cross-field check (same bullet-id set as `bullets`)
   7. Experience-section check (headings verbatim, every role's section listed)
+  8. Languages and publications: subsets of master.yaml, entries verbatim
 
 Returns a list of error dicts matching the stdout contract in TECH_SPEC.md §2:
   {code, id, field, expected, actual, message}
@@ -311,6 +312,53 @@ def validate_skills(instance: dict, master: dict) -> list[dict]:
     return errors
 
 
+def validate_languages(instance: dict, master: dict) -> list[dict]:
+    """The tailor may choose a subset of languages (e.g. drop a basic-level one
+    the role doesn't value) but never add one or change a level."""
+    known = {
+        (_normalize(lang["name"]), _normalize(lang["level"]))
+        for lang in master.get("languages", [])
+    }
+    errors = []
+    for lang in instance.get("languages", []):
+        if (_normalize(lang.get("name")), _normalize(lang.get("level"))) not in known:
+            errors.append(
+                _error(
+                    "locked_field_mismatch",
+                    f"Language {lang.get('name')!r} ({lang.get('level')!r}) is not "
+                    f"present in master.yaml with that level.",
+                    id=lang.get("name"),
+                    field="languages",
+                    actual=lang,
+                )
+            )
+    return errors
+
+
+def validate_publications(instance: dict, master: dict) -> list[dict]:
+    """Optional, relevance-gated section: each entry must be a master.yaml
+    publication with its citation verbatim."""
+    errors = []
+    master_pub_by_id = _index_by_id(master.get("publications", []))
+    for pub in instance.get("publications", []):
+        pub_id = pub.get("id")
+        master_pub = master_pub_by_id.get(pub_id)
+        if master_pub is None:
+            errors.append(
+                _error(
+                    "unknown_id",
+                    f"Publication id {pub_id!r} is not present in master.yaml.",
+                    id=pub_id,
+                    field="publications.id",
+                )
+            )
+            continue
+        errors.extend(
+            _check_locked_fields("publications", pub_id, pub, master_pub, ["citation"])
+        )
+    return errors
+
+
 def validate_highlights(instance: dict, master: dict) -> list[dict]:
     """Each selected highlight must reference a master.highlights id and carry
     that entry's locked `value` and `label` verbatim (mirrors the bullet-verbatim
@@ -475,6 +523,8 @@ def validate(instance: dict, master: dict, schema: dict) -> list[dict]:
     errors.extend(validate_certifications(instance, master))
     errors.extend(validate_skills(instance, master))
     errors.extend(validate_highlights(instance, master))
+    errors.extend(validate_languages(instance, master))
+    errors.extend(validate_publications(instance, master))
     errors.extend(validate_experience_sections(instance, master))
     errors.extend(validate_priority_order(instance))
 
