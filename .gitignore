@@ -15,3 +15,5 @@ __pycache__/
 # Lock file scripts/append_handoff_log.py uses to serialize concurrent
 # SESSION_HANDOFF.md writes -- local coordination state, not repo content.
 .session_handoff.lock
+# Private: answers contain career/immigration details destined for master.yaml.
+/REFINEMENT_QUESTIONS.md
