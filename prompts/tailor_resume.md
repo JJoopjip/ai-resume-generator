@@ -356,6 +356,17 @@ Notes:
   under a matching `label` — pick the groups relevant to the chosen
   profile(s) and trim `items` to what's most relevant to the JD, but don't
   add anything not already listed there.
+- **AI and developer tools are relevance-gated.** Drop "AI tools (ChatGPT,
+  Claude Code)", "AI tools (ChatGPT, Canva AI, Claude Code)", LiteLLM and
+  DeepInfra from the Tools line for non-technical roles: pharma, patient
+  support programs, market access, medical, clinical, regulatory, pharmacy,
+  and most BD/sales roles. Keep them only when the JD mentions AI,
+  automation, digital transformation, analytics tooling, or tech/product
+  work. On a pharma page they read as off-topic and take the space a
+  domain skill should have.
+- **Every skill should be backed by something on the page** (a bullet, the
+  degree, or the certification). Prefer dropping an unbacked item over
+  listing it.
 
 ## 6. Overflow loop
 
