@@ -20,7 +20,7 @@ from docx.shared import Pt, RGBColor
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "templates"))
 
-from render_pdf import _order_experience  # noqa: E402
+from render_pdf import group_experience  # noqa: E402
 import resume_docx_style as style  # noqa: E402
 
 
@@ -134,17 +134,9 @@ def render_docx(instance: dict, out_dir: Path) -> Path:
     _add_heading(doc, "Summary")
     doc.add_paragraph(instance["summary"])
 
-    ordered = _order_experience(instance["experience"])
-    core_roles = [e for e in ordered if not e.get("additional")]
-    additional_roles = [e for e in ordered if e.get("additional")]
-
-    _add_heading(doc, "Experience")
-    for exp in core_roles:
-        _render_experience_entry(doc, exp)
-
-    if additional_roles:
-        _add_heading(doc, "Additional Experience")
-        for exp in additional_roles:
+    for group in group_experience(instance):
+        _add_heading(doc, group["heading"])
+        for exp in group["roles"]:
             _render_experience_entry(doc, exp)
 
     # Optional — mirrors resume.tex.j2, where the header disappears when the

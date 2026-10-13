@@ -1,9 +1,9 @@
 """Jinja2 render -> Tectonic compile -> page-count extraction.
 
 Per TECH_SPEC.md §4: Jake's-resume-style LaTeX, Latin Modern fonts, bounded
-font-size/margin overrides (schema/layout.schema.json), full-time roles
-before part-time/concurrent roles, multinational_note appended after company
-name, dates rendered verbatim with an en dash.
+font-size/margin overrides (schema/layout.schema.json), roles grouped into
+experience sections and reverse-chronological within each, multinational_note
+appended after company name, dates rendered verbatim with an en dash.
 """
 
 from __future__ import annotations
@@ -54,12 +54,66 @@ def _escape_recursive(obj: Any) -> Any:
     return tex_escape(obj)
 
 
-def _order_experience(experience: list[dict]) -> list[dict]:
-    """Full-time roles first (given order preserved), then part_time/concurrent
-    roles (given order preserved) — TECH_SPEC.md §4 experience-ordering rule."""
-    full_time = [e for e in experience if not (e.get("part_time") or e.get("concurrent"))]
-    other = [e for e in experience if e.get("part_time") or e.get("concurrent")]
-    return full_time + other
+# Used when an instance carries no `experience_sections` list (older instances,
+# or a bank that never split its roles): everything under "Experience", with
+# `additional: true` roles under their own heading — the pre-sections layout.
+DEFAULT_SECTIONS = [
+    {"id": "experience", "heading": "Experience"},
+    {"id": "additional", "heading": "Additional Experience"},
+]
+
+_MONTHS = {m: i for i, m in enumerate(
+    ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1)}
+_DATE_RE = re.compile(r"^\s*(?:([A-Za-z]{3})[a-z]*\.?\s+)?(\d{4})\s*$")
+
+
+def _date_key(value: Any) -> tuple[int, int]:
+    """'Aug 2022' -> (2022, 8); '2024' -> (2024, 0); None/''/'Present' -> far
+    future, so ongoing roles sort first. Anything unparseable sorts last
+    instead of raising — ordering is cosmetic, it must never block a render."""
+    if value is None or not str(value).strip() or str(value).strip().lower() == "present":
+        return (9999, 99)
+    match = _DATE_RE.match(str(value))
+    if not match:
+        return (0, 0)
+    month = _MONTHS.get((match.group(1) or "").lower(), 0)
+    return (int(match.group(2)), month)
+
+
+def role_section(exp: dict) -> str:
+    """A role's section id: its explicit `section`, else `additional` for the
+    legacy `additional: true` flag, else the default `experience`."""
+    return exp.get("section") or ("additional" if exp.get("additional") else "experience")
+
+
+def order_reverse_chronological(roles: list[dict]) -> list[dict]:
+    """Most recent first, by end date then start date — deterministic, so the
+    tailoring agent's list order can never put a 2026 role under a 2017 one."""
+    return sorted(
+        roles,
+        key=lambda e: (_date_key(e.get("end")), _date_key(e.get("start"))),
+        reverse=True,
+    )
+
+
+def group_experience(instance: dict) -> list[dict]:
+    """[{id, heading, roles}] in the instance's `experience_sections` order
+    (DEFAULT_SECTIONS if absent), roles reverse-chronological within each,
+    empty sections dropped so their heading never renders. validate.py rejects
+    a role whose section isn't listed; if one slips through anyway it renders
+    in the last section rather than silently vanishing from the page."""
+    sections = instance.get("experience_sections") or DEFAULT_SECTIONS
+    known = {s["id"] for s in sections}
+    groups = []
+    for i, sec in enumerate(sections):
+        is_last = i == len(sections) - 1
+        roles = [
+            e for e in instance["experience"]
+            if role_section(e) == sec["id"] or (is_last and role_section(e) not in known)
+        ]
+        if roles:
+            groups.append({**sec, "roles": order_reverse_chronological(roles)})
+    return groups
 
 
 def _format_language(lang: dict) -> str:
@@ -86,12 +140,12 @@ def _jinja_env() -> jinja2.Environment:
 
 
 def render_tex(instance: dict, out_dir: Path, layout: dict) -> Path:
-    """Render resume.tex.j2 with an escaped, ordered copy of instance plus the
+    """Render resume.tex.j2 with an escaped, section-grouped copy of instance plus the
     bounded `layout` overrides (font_size_pt, margin_h_in, margin_v_in — see
     schema/layout.schema.json) into out_dir/resume.tex. Returns the path
     written."""
     safe_instance = _escape_recursive(instance)
-    safe_instance["experience"] = _order_experience(safe_instance["experience"])
+    safe_instance["experience_groups"] = group_experience(safe_instance)
     safe_instance["layout"] = layout
 
     env = _jinja_env()

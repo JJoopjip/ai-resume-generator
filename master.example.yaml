@@ -7,7 +7,9 @@
 #
 # It mirrors the real schema exactly: profiles (bd/pm/dm/general), per-bullet
 # `variants` keyed by profile, `themes`, a `summaries` bank, `highlights`,
-# `skills` groups, `projects`, and an `additional: true` role. Keep it valid:
+# `skills` groups, `projects`, `experience_sections` (each role's `section` picks
+# its heading; roles render reverse-chronologically within a section), and an
+# `additional: true` role. Keep it valid:
 # `python3 -m pytest tests/test_example_master.py` renders it to one page.
 schema_version: 1.0
 
@@ -74,6 +76,10 @@ summaries:
       partner channel 3x and launched a direct-to-consumer line. M.S.
       Management, Riverton University (GPA 3.8); PMP certified.
 
+experience_sections:
+  - { id: experience, heading: "Experience" }
+  - { id: additional, heading: "Additional Experience" }
+
 experience:
   - id: harborlight
     company: Harborlight Community Foundation
@@ -81,6 +87,7 @@ experience:
     title: Program & Outreach Coordinator
     start: "Feb 2026"
     end: "Present"
+    section: experience
     multinational: false
     part_time: true
     concurrent: true
@@ -108,6 +115,7 @@ experience:
     title: Business Development & Marketing Manager
     start: "Jun 2023"
     end: "Jan 2026"
+    section: experience
     multinational: false
     bullets:
       - id: nc_dtc
@@ -157,6 +165,7 @@ experience:
     title: Business Analyst, Partnerships
     start: "Jul 2020"
     end: "May 2023"
+    section: experience
     multinational: true
     multinational_note: "North American arm of a global fintech group"
     bullets:
@@ -192,6 +201,7 @@ experience:
     title: Barista (Part-Time)
     start: "Sep 2024"
     end: "Jun 2026"
+    section: additional
     part_time: true
     additional: true
     bullets:

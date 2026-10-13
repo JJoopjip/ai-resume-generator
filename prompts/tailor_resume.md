@@ -151,27 +151,34 @@ before the master's begins. `boots` (Sep 2021 – Aug 2024, concurrent) spans bo
 
 Therefore: **whenever both `lgchem` and `winnergy` appear on the resume, include
 `boots` as well**, even if its JD relevance is low — omitting it exposes an
-unexplained gap. Keep `boots` in the main **Experience** section (it is relevant
-pharma domain experience); never mark it `additional`. One bullet is enough when
-relevance is thin — the point is that its dates sit in the timeline. On overflow
+unexplained gap. Copy its `section: pharmacy` verbatim: it renders under its
+own "Community Pharmacy Experience" heading below the industry roles, so its
+dates stay on the page without a part-time retail role leading it. Never
+mark it `additional`. One bullet is enough when relevance is thin — the
+point is that its dates sit in the timeline. On overflow
 (§6), prefer trimming `boots` down to a single bullet before removing the role
 entirely, so the dates stay visible.
 
-### 3b. Canadian experience — the thaifest role (relevance-gated)
+### 3b. Volunteer work — the thaifest role (relevance-gated)
 
-`master.yaml` has a `thaifest` role (Public Relations Intern, Thai Festival
-Toronto Foundation, Toronto — May 2026 – Present). **Treat it like an ordinary
-role, gated on JD relevance — not pinned.** (Standing user instruction,
-2026-09-29, superseding the prior "always included" rule: include it only when
-it matches the JD; otherwise drop it entirely to give the page's limited space
-to more important, on-topic bullets.)
+`master.yaml` has a `thaifest` role (Public Relations Volunteer, Thai Festival
+Toronto Foundation, Toronto — May 2026 – Present, `section: volunteer`, so it
+renders under "Volunteer & Community", never in the industry section).
+**Treat it like an ordinary role, gated on JD relevance — not pinned.**
+(Standing user instruction, 2026-09-29: include it only when it matches the
+JD; otherwise drop it entirely to give the page's limited space to more
+important, on-topic bullets.)
 
-- **JD is relevant** (marketing, communications, PR, partnerships, BD, events,
-  stakeholder/vendor coordination, program/process setup): select 1–4 bullets
-  and pick the profile variant that matches, as you would for any strong role.
-- **JD is unrelated** (e.g. a pharma reimbursement or lab role): drop the role
-  entirely — same as any other low-relevance role (compare `yorkta`'s
-  treatment). Do not keep a single bullet "just for the dates."
+- **Include it** only when the JD's *core* work is marketing, communications,
+  PR, media, events, sponsorship/partnerships, or BD: select 1–4 bullets and
+  pick the profile variant that matches.
+- **Drop it whole** for pharma, patient-support-program, market-access,
+  reimbursement, medical, clinical, regulatory, pharmacy or lab roles, and for
+  any JD where it would only match on generic skills. "Stakeholder
+  coordination", "vendor coordination" or "process setup" appearing in a
+  pharma JD does **not** qualify it: every role on the page shows those, and
+  this one adds nothing a pharma reader values over another industry bullet.
+  Do not keep a single bullet "just for the dates."
 
 Trade-off to be aware of, not a reason to override the instruction above:
 dropping `thaifest` removes the only Experience-section entry with Canadian,
@@ -238,12 +245,27 @@ simply doesn't render.
 
 ## 4b. Additional Experience — the server role
 
-`master.yaml` has a `server` role carrying `additional: true`. Include it by
-default: it fills the Canadian timeline and renders under its own "Additional
-Experience" heading, after the main roles. It is the **lowest-priority** content
-on the resume — see the overflow rule in §6, where it is the first thing cut.
-Copy `additional: true` verbatim (it's a locked passthrough field) so the
-renderer routes it to the right heading.
+`master.yaml` has a `server` role carrying `section: additional` and
+`additional: true`. Include it by default: it fills the Canadian timeline and
+renders under its own "Additional Experience" heading, after the main roles.
+It is the **lowest-priority** content on the resume — see the overflow rule in
+§6, where it is the first thing cut. Copy both fields verbatim (locked
+passthrough fields): `section` picks the heading, `additional` marks it as the
+first cut.
+
+## 4c. Experience sections and order
+
+Copy `master.yaml`'s `experience_sections` list into `instance.yaml` verbatim
+(ids and headings; you may drop entries no selected role uses, which is
+harmless either way since an empty section never renders). Copy every role's
+`section` field verbatim. **Keep the bank's section order** (industry roles
+first) with one exception: when the JD is a pharmacy-practice role
+(pharmacist, pharmacy assistant or technician, dispensary), move `pharmacy`
+to the top so the most relevant experience leads.
+
+You do not control role order within a section: the renderer always sorts
+roles reverse-chronologically. Your `experience` list order has no effect on
+the page.
 
 ## 5. Output schema — `instance.yaml`
 
@@ -256,15 +278,20 @@ profile: bd                      # dominant angle label: bd | pm | dm | general
 job_description_ref: job_description.txt
 meta: { ...copied verbatim from master.yaml.meta... }
 summary: "..."                    # rephrased prose, profile-appropriate
-experience:
+experience_sections:             # copied from master.yaml (§4c); order = render order
+  - { id: industry, heading: "..." }
+  - { id: pharmacy, heading: "..." }
+experience:                       # list order doesn't matter: renderer sorts by date
   - id: winnergy                  # must match an id in master.yaml
     company: ...                  # copied verbatim (locked)
     location: ...
     title: ...
     start: ...
     end: ...
+    section: industry             # required whenever master.yaml has it
     # copy verbatim if present on this id in master.yaml:
     # multinational, multinational_note, part_time, concurrent, additional
+    # (multinational_note may be omitted when the page is tight, see §6)
     bullets:                      # ordered, most to least relevant, subset only
       - id: win_b2c
         text: "Opened the company's first B2C channel from scratch, ..."

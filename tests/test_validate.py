@@ -68,10 +68,16 @@ def _valid_instance(master):
         },
     ]
 
+    # Carry each role's locked `section` and the bank's section list, as the
+    # tailor must, whenever master.yaml splits its roles into sections.
+    for inst_exp, master_exp in zip(instance_exp, (winnergy, lgchem)):
+        if "section" in master_exp:
+            inst_exp["section"] = master_exp["section"]
+
     northeastern = next(e for e in master["education"] if e["id"] == "northeastern")
     pmp = next(e for e in master["certifications"] if e["id"] == "pmp")
 
-    return {
+    instance = {
         "schema_version": master["schema_version"] if "schema_version" in master else 1.0,
         "profile": "bd",
         "job_description_ref": "job_description.txt",
@@ -103,6 +109,9 @@ def _valid_instance(master):
             "lgchem": ["lg_sourcing"],
         },
     }
+    if "experience_sections" in master:
+        instance["experience_sections"] = copy.deepcopy(master["experience_sections"])
+    return instance
 
 
 @pytest.fixture
@@ -249,3 +258,47 @@ def test_locked_field_tolerates_trailing_whitespace(valid_instance, master, sche
     instance["experience"][0]["title"] = instance["experience"][0]["title"] + "  "
     errors = v.validate(instance, master, schema)
     assert not any(e["code"] == "locked_field_mismatch" for e in errors)
+
+
+# --- experience sections ----------------------------------------------------
+
+def _needs_sections(master):
+    if "experience_sections" not in master:
+        pytest.skip("master.yaml defines no experience_sections")
+
+
+def test_missing_role_section_is_flagged(valid_instance, master, schema):
+    _needs_sections(master)
+    instance = copy.deepcopy(valid_instance)
+    del instance["experience"][0]["section"]
+    errors = v.validate(instance, master, schema)
+    assert any(e["field"] == "section" and e["id"] == "winnergy" for e in errors)
+
+
+def test_renamed_section_heading_is_flagged(valid_instance, master, schema):
+    _needs_sections(master)
+    instance = copy.deepcopy(valid_instance)
+    instance["experience_sections"][0]["heading"] = "Leadership Experience"
+    errors = v.validate(instance, master, schema)
+    assert any(e["code"] == "locked_field_mismatch" and e["field"] == "heading" for e in errors)
+
+
+def test_role_in_unlisted_section_is_flagged(valid_instance, master, schema):
+    _needs_sections(master)
+    instance = copy.deepcopy(valid_instance)
+    section = instance["experience"][0]["section"]
+    instance["experience_sections"] = [
+        s for s in instance["experience_sections"] if s["id"] != section
+    ]
+    errors = v.validate(instance, master, schema)
+    assert any(e["field"] == "experience_sections" and e["id"] == "winnergy" for e in errors)
+
+
+def test_sections_may_be_reordered_or_subset(valid_instance, master, schema):
+    _needs_sections(master)
+    instance = copy.deepcopy(valid_instance)
+    used = {e["section"] for e in instance["experience"]}
+    instance["experience_sections"] = list(reversed(
+        [s for s in instance["experience_sections"] if s["id"] in used]
+    ))
+    assert v.validate(instance, master, schema) == []

@@ -8,6 +8,7 @@ Implements PRD.md §7 and TECH_SPEC.md §3:
      variants[*] value for that bullet id in master.yaml)
   5. Skills subset check
   6. priority_order cross-field check (same bullet-id set as `bullets`)
+  7. Experience-section check (headings verbatim, every role's section listed)
 
 Returns a list of error dicts matching the stdout contract in TECH_SPEC.md §2:
   {code, id, field, expected, actual, message}
@@ -25,6 +26,8 @@ from typing import Any
 
 import jsonschema
 import yaml
+
+from render_pdf import DEFAULT_SECTIONS, role_section
 
 
 # Cosmetic character folds and collapsed whitespace. Applied to BOTH sides of a
@@ -82,6 +85,7 @@ EXPERIENCE_LOCKED_FIELDS = [
     "part_time",
     "concurrent",
     "additional",
+    "section",
 ]
 
 EDUCATION_LOCKED_FIELDS = ["institution", "location", "degree", "detail", "start", "end", "anchor"]
@@ -174,6 +178,21 @@ def validate_experience(instance: dict, master: dict) -> list[dict]:
         errors.extend(
             _check_locked_fields("experience", exp_id, exp, master_exp, EXPERIENCE_LOCKED_FIELDS)
         )
+        # `section` decides which heading the role renders under, so dropping
+        # it isn't a harmless omission like an optional note: the role would
+        # fall into the default section and print under the wrong heading.
+        if "section" in master_exp and "section" not in exp:
+            errors.append(
+                _error(
+                    "locked_field_mismatch",
+                    f"Experience id {exp_id!r} is missing its locked 'section' "
+                    f"field (master.yaml: {master_exp['section']!r}).",
+                    id=exp_id,
+                    field="section",
+                    expected=master_exp["section"],
+                    actual=None,
+                )
+            )
 
         master_bullets_by_id = _index_by_id(master_exp.get("bullets", []))
         for bullet in exp.get("bullets", []):
@@ -327,6 +346,67 @@ def validate_highlights(instance: dict, master: dict) -> list[dict]:
     return errors
 
 
+def validate_experience_sections(instance: dict, master: dict) -> list[dict]:
+    """`experience_sections` entries must come from master.yaml with the
+    heading verbatim (the tailor may reorder or omit sections, never rename
+    one), and every selected role's section must be listed, so no role can
+    drop off the page for want of a heading."""
+    errors = []
+    master_headings = {
+        s["id"]: s["heading"] for s in master.get("experience_sections", [])
+    }
+    seen: set[str] = set()
+    for sec in instance.get("experience_sections", []):
+        sec_id = sec.get("id")
+        if sec_id in seen:
+            errors.append(
+                _error(
+                    "schema_error",
+                    f"experience_sections lists {sec_id!r} more than once.",
+                    id=sec_id,
+                    field="experience_sections",
+                )
+            )
+        seen.add(sec_id)
+        if sec_id not in master_headings:
+            errors.append(
+                _error(
+                    "unknown_id",
+                    f"Experience section {sec_id!r} is not present in master.yaml.",
+                    id=sec_id,
+                    field="experience_sections.id",
+                )
+            )
+        elif _normalize(sec.get("heading")) != _normalize(master_headings[sec_id]):
+            errors.append(
+                _error(
+                    "locked_field_mismatch",
+                    f"Heading of experience section {sec_id!r} does not match master.yaml.",
+                    id=sec_id,
+                    field="heading",
+                    expected=master_headings[sec_id],
+                    actual=sec.get("heading"),
+                )
+            )
+
+    listed = {s["id"] for s in (instance.get("experience_sections") or DEFAULT_SECTIONS)}
+    for exp in instance.get("experience", []):
+        section = role_section(exp)
+        if section not in listed:
+            errors.append(
+                _error(
+                    "schema_error",
+                    f"Experience id {exp.get('id')!r} belongs to section {section!r}, "
+                    f"which experience_sections does not list.",
+                    id=exp.get("id"),
+                    field="experience_sections",
+                    expected=section,
+                    actual=sorted(listed),
+                )
+            )
+    return errors
+
+
 def validate_priority_order(instance: dict) -> list[dict]:
     errors = []
     experience = instance.get("experience", [])
@@ -395,6 +475,7 @@ def validate(instance: dict, master: dict, schema: dict) -> list[dict]:
     errors.extend(validate_certifications(instance, master))
     errors.extend(validate_skills(instance, master))
     errors.extend(validate_highlights(instance, master))
+    errors.extend(validate_experience_sections(instance, master))
     errors.extend(validate_priority_order(instance))
 
     meta_expected = master.get("meta")

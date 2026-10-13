@@ -24,6 +24,9 @@ summary: >-
   environments, with a track record of on-time delivery and stakeholder
   engagement up to executive level. M.S. Management, Riverton University
   (GPA 3.8), concentration in Business Analysis.
+experience_sections:
+  - { id: experience, heading: "Experience" }
+  - { id: additional, heading: "Additional Experience" }
 experience:
   - id: harborlight
     company: Harborlight Community Foundation
@@ -31,6 +34,7 @@ experience:
     title: Program & Outreach Coordinator
     start: "Feb 2026"
     end: "Present"
+    section: experience
     multinational: false
     part_time: true
     concurrent: true
@@ -46,6 +50,7 @@ experience:
     title: Business Development & Marketing Manager
     start: "Jun 2023"
     end: "Jan 2026"
+    section: experience
     multinational: false
     bullets:
       - id: nc_dtc
@@ -64,6 +69,7 @@ experience:
     title: Business Analyst, Partnerships
     start: "Jul 2020"
     end: "May 2023"
+    section: experience
     multinational: true
     multinational_note: "North American arm of a global fintech group"
     bullets:

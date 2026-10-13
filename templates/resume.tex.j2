@@ -67,7 +67,7 @@
 \section*{Summary}
 \VAR{summary}
 
-% One role block, shared by the Experience and Additional Experience sections.
+% One role block, shared by every experience section.
 % `layout` is passed explicitly — Jinja macros don't see the render context.
 \BLOCK{macro exp_block(exp, layout)}
 \textbf{\VAR{exp.title}} \hfill \VAR{exp.start} -- \VAR{exp.end if exp.end else "Present"} \\
@@ -79,23 +79,17 @@
 \resumeItemListEnd
 \BLOCK{endmacro}
 
-% ---------- Experience ----------
-\BLOCK{set core_roles = experience | rejectattr('additional') | list}
-\BLOCK{set additional_roles = experience | selectattr('additional') | list}
-\section*{Experience}
-\BLOCK{for exp in core_roles}
+% ---------- Experience sections ----------
+% Grouped and ordered by render_pdf.group_experience: sections in the
+% instance's experience_sections order (default: Experience, then Additional
+% Experience), roles reverse-chronological within each, empty sections absent.
+\BLOCK{for group in experience_groups}
+\section*{\VAR{group.heading}}
+\BLOCK{for exp in group.roles}
 \VAR{exp_block(exp, layout)}
 \BLOCK{if not loop.last}\vspace{3pt}\BLOCK{endif}
 \BLOCK{endfor}
-
-% ---------- Additional Experience (header disappears when none present) ----------
-\BLOCK{if additional_roles}
-\section*{Additional Experience}
-\BLOCK{for exp in additional_roles}
-\VAR{exp_block(exp, layout)}
-\BLOCK{if not loop.last}\vspace{3pt}\BLOCK{endif}
 \BLOCK{endfor}
-\BLOCK{endif}
 
 % ---------- Projects (optional; header disappears when none present) ----------
 \BLOCK{if projects}

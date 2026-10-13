@@ -117,14 +117,22 @@ Draft 2020-12 JSON Schema, top-level `object`, `required`: `schema_version`,
 - `experience`: array of objects. Each requires: `id`, `company`, `location`,
   `title`, `start`, `end`, `bullets`. Optional passthrough fields copied
   verbatim when present in `master.yaml` for that id: `multinational`,
-  `multinational_note`, `part_time`, `concurrent` — the renderer needs these
-  to append notes and to place part-time/concurrent roles after full-time
-  ones (PRD's experience-ordering note). `id` must reference an id present in
+  `multinational_note`, `part_time`, `concurrent`, `additional`, `section`.
+  `multinational_note` may be omitted to save space; `section` may not (if
+  master has it, the instance must carry it, or the role would print under
+  the wrong heading). `id` must reference an id present in
   `master.yaml.experience`.
   - `bullets`: array of `{id, text}`. `id` must be a bullet id under that
     experience id in `master.yaml`; `text` checked verbatim in §7 rule 2, not
     by the JSON Schema itself (schema only checks shape/type — string
     matching is `validate.py`'s job, not `instance.schema.json`'s).
+- `experience_sections` (optional): array of `{id, heading}`, render order.
+  Each entry must exist in `master.yaml.experience_sections` with the heading
+  verbatim; the tailor may reorder or omit entries, never rename one. Every
+  selected role's section (`section`, else `additional` if `additional: true`,
+  else `experience`) must be listed. Absent → the default
+  `[experience: "Experience", additional: "Additional Experience"]`, so
+  pre-sections instances render exactly as before.
 - `education` / `certifications`: arrays, each entry's non-`id` fields
   checked verbatim against `master.yaml` by id (order may differ from
   master — reordering is allowed, rewriting is not).
@@ -154,16 +162,20 @@ Draft 2020-12 JSON Schema, top-level `object`, `required`: `schema_version`,
   font install needed in the Docker image, keeps Tectonic's font resolution
   simple and reproducible.
 - **Section order** (top to bottom): Header (name, location, phone, email,
-  LinkedIn) → Summary → Experience → Education → Skills → Certifications →
+  LinkedIn) → Summary → Experience section(s) → Projects → Education → Skills → Certifications →
   Languages. Certifications is folded into a single line under Skills rather
   than its own headed section (it's one line: PMP) to save vertical space
   for the one-page constraint.
 - **Section headings**: small caps, bold, full-width bottom rule (`titlesec`),
   matching Jake's-resume convention.
-- **Experience ordering**: within `experience`, full-time roles render in the
-  order given in `instance.yaml`; entries with `part_time: true` or
-  `concurrent: true` render after all non-part-time/non-concurrent entries,
-  preserving relative order within each group (PRD's placement rule).
+- **Experience sections and ordering** (`render_pdf.group_experience`, shared
+  by the DOCX renderer): roles are grouped under `experience_sections` headings
+  in list order; a section with no selected roles renders no heading. Within a
+  section, roles are **reverse-chronological** by end date (`Present`/empty
+  first), ties broken by start date — deterministic, independent of the
+  order in `instance.yaml`. (Replaced the old "part-time after full-time"
+  rule on 2026-10-13: it put a May 2026 role below a 2017 one. Part-time
+  roles now get their own section instead, e.g. `pharmacy`, `volunteer`.)
 - **`multinational_note` rendering**: when `multinational: true` and
   `multinational_note` is present on an experience entry, append
   `" (" + multinational_note + ")"` in smaller/italic text immediately after
