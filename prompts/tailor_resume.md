@@ -66,8 +66,8 @@ judgment of which angle(s) it rewards:
 **Anchor to your dominant profile, with narrow, justified exceptions.** Use
 that profile's variant for every bullet by default — record it in
 `instance.yaml`'s top-level `profile` field. (The summary is a separate,
-looser case — see §4, which already has its own blending rule; nothing below
-tightens that.) This is deliberate, not laziness: variants carry different
+looser case — see §4, which has its own blending rule and the
+summary-support rule.) This is deliberate, not laziness: variants carry different
 **metrics**, not just different wording (e.g. one bullet's `pm` variant states "4 engagement
 stages" while its `bd` variant states "12 new relationships" for the same
 underlying work) — swapping variants just to echo more of the JD's own
@@ -185,10 +185,34 @@ role.
 
 Start from the closest-matching `summaries` entry for your chosen dominant
 profile. You may rephrase connective prose and re-emphasize which
-achievements lead, but every locked fact inside it (percentages, "seven
-years", GPA, institution name, "PMP certified", etc.) must survive verbatim.
+achievements lead, but every locked fact inside it (percentages, "more than
+five years", "three years", GPA, institution name, "PMP certified", etc.) must
+survive verbatim.
 If blending two profiles' summaries reads better for this JD, you may draw
 sentences from both — but do not introduce a claim that appears in neither.
+
+**Experience-length claim.** The bank's honest framing is "more than five
+years in pharma and medtech" (full-time industry roles, 2017–2023), with
+the part-time community-pharmacy years stated separately ("three years").
+Never add the two together, and never call community pharmacy "industry"
+experience.
+
+**Every summary claim must be backed by a bullet selected on the same
+resume.** For each claim in your draft summary (a scope like "stakeholder
+engagement up to CEO level", a function like "coordinating legal and
+finance", a capability like "designing patient-support programs", a
+metric), point to the selected bullet that shows it. If none is on the page,
+cut the claim; do not keep it because it is true somewhere in the bank. A
+reader who sees a summary claim with no evidence below it trusts the rest
+less. Also keep each claim at the scope its bullet supports: one LG Chem
+bullet about patient-support program design does not make that a
+career-wide claim.
+
+**Relocation line.** Keep the closing "Relocated to Toronto in 2024 to
+complete an M.S. in Project Management at Northeastern University (2026)."
+sentence from the bank summary. It explains the move from Thai to
+Canadian roles in one confident line. It is the last sentence you cut if
+the summary must shrink.
 
 Before finalizing the summary, scan the JD's most-repeated terms against it.
 If a term is a near-miss — present in a *sibling* profile's summary variant or
@@ -444,6 +468,8 @@ omitted in a class, you may skip its rows, but the file must always exist.
 - Confirm every locked field in `instance.yaml` string-matches `master.yaml`
   for its id — this is what `validate.py` checks, so pre-checking it
   yourself avoids a wasted render cycle.
+- Does every summary claim point to a selected bullet on this page (§4)?
+  Cut any that don't.
 - Any em dash, en dash, or punctuation-style hyphen in the Summary? Rewrite
   it out (see §1.5).
 - Report the `output/<slug>/resume.pdf` path and its page count as the first
