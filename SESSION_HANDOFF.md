@@ -13,6 +13,28 @@ this file only summarizes the current front line.
 
 ## What's done
 
+- **Resume refinement from recruiter critique, Steps 1-3, 5 (partial), 6-8
+  (2026-10-13).** Source: user's `resume_refinement_prompt.md` (critique of
+  the Lilly PSP resume + letter). Done: `master.yaml` summaries say "more
+  than five years in pharma and medtech" (not "seven years", which counted
+  part-time Boots) + Toronto relocation sentence; `hl_experience` = "5+ yrs";
+  22 bullet variants de-dashed/de-buzzworded (no facts added); dairy paper
+  moved to relevance-gated `publications`; `thaifest` retitled "Public
+  Relations Volunteer". Code: experience **sections** (`section` per role +
+  `experience_sections` headings: Pharmaceutical & Medical Device /
+  Community Pharmacy / Volunteer & Community / Additional), deterministic
+  **reverse-chronological** order within sections (replaces part-time-last
+  rule), language subsets validated, optional `publications`. Prompts:
+  summary claims must have an on-page bullet; AI tools gated off
+  non-technical JDs; cover-letter anti-parroting/relocation/PSP-thesis rules.
+  Pushed back (user informed): CEO/legal/finance/vendor claims kept in bank
+  (they're backed; the new on-page rule fixes the Lilly overclaim); "Clinical
+  Pharmacy" heading rejected for "Community Pharmacy" (Boots is retail;
+  "clinical pharmacist" means hospital practice in Canada); kept "customer
+  experience" in `win_retention` pm (real fact + Lilly JD term; removing it
+  cost 2 covered terms). Free deterministic preview:
+  `output/lilly-psp-associate-2026-10-13-preview/` (48%, 1 page, 4 lines
+  free). Old instances no longer validate (bullet text changed); expected.
 - **General BD + PM resumes (2026-10-08/09).** User applies from their phone
   and can't customize per posting, so built reusable "general" resumes from
   hand-written composite JDs (scratchpad only, not committed): combined BD+PM
@@ -566,6 +588,16 @@ this file only summarizes the current front line.
 
 Highest-leverage remaining items:
 
+0. **Resume refinement Steps 4, 5, 9: blocked on the user's answers** in
+   `REFINEMENT_QUESTIONS.md` (repo root, git-ignored). Then: add confirmed
+   metrics/bullets (3-4 for LG Chem + Winnergy, 2-3 Otsuka; `lg_nlem` leads
+   for pharma JDs; "Patient Support Program (PSP)" exact phrase only if a PSP
+   was actually run, Q3), skills cleanup (Q10, Q15, Q16), optional
+   `meta.work_authorization` only if Q13 says yes (master records an agreed
+   omission), M.S. coursework/capstone in Northeastern `detail` (Q12),
+   `ot_agile` fate (Q9), thaifest title (Q14). Then a paid run:
+   `./resume-gen output/lilly-psp-associate-2026-09-28-e/job_description.txt --cover`
+   and the Step 9 checklist from the critique file.
 1. **Decouple runs from the HTTP connection (top priority, user-hit daily on
    phone).** `POST /run` starts the pipeline in a background thread, log goes
    to a buffer/file keyed by run id; page polls `GET /run/<id>?from=<offset>`
@@ -876,6 +908,7 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 
 ## Log
 
+- **2026-10-13** — Resume refinement (user critique of Lilly PSP output): honest experience length + relocation line in summaries, de-dashed bullets, experience sections + reverse-chron renderer, publications/language subsets, cover-letter rules. Steps 4/5/9 wait on `REFINEMENT_QUESTIONS.md`. 83 tests green; Docker image rebuilt; master backup synced.
 - **2026-10-13** — Session end: merged `web-ui-refresh` -> `main` and pushed; handoff updated (general BD/PM resumes done, Safari-disconnect fix queued as top What's-next item, README caveat added).
 - **2026-10-09** — Automated tailor run: `output/general-project-manager-2026-10-09/` — 1 page(s), 58% coverage, ~$3.79, opus *(logged automatically by scripts/append_handoff_log.py)*
 - **2026-10-09** — Automated tailor run: `output/general-business-development-manager-2026-10-09/` — 1 page(s), 40% coverage, ~$3.17, opus *(logged automatically by scripts/append_handoff_log.py)*
