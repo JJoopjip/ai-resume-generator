@@ -607,14 +607,17 @@ this file only summarizes the current front line.
 
 Highest-leverage remaining items:
 
-0. **Resume refinement Step 9: paid Lilly run, awaiting user approval of the
-   new bullet text.** Steps 4-5 DONE 2026-10-13 (see What's done). Then run
-   `./resume-gen output/lilly-psp-associate-2026-09-28-e/job_description.txt --cover`
-   and check the critique's Step 9 list (no 'seven years', summary claims
-   backed on page, sections + reverse-chron, no Thai Festival/dairy/German,
-   'Patient Support Program' present, relocation line in summary + letter).
-   Free preview of the expected shape: `output/lilly-psp-associate-2026-10-13-preview/`
-   (52%, 1 page, hand-built, NOT a tailor output).
+0. **Resume refinement follow-ups (optional).** Step 9 DONE 2026-10-13
+   (see Log). Open: (a) the tailor wrote an unbacked "scope, schedule, and
+   budget" summary claim despite the §8 self-check (hand-fixed in the Lilly
+   instance); consider a stronger prompt rule or a validator warning for
+   summary terms with no selected bullet behind them. (b) The paid run picked
+   7 bullets for 40% coverage; the hand-built preview fit 9 for 52%, because
+   it chose shorter bullets (ot_trials, ot_regulatory, win_retention,
+   boots_frontline) over long ones (ot_launch, win_process_design). Consider
+   telling §6 overflow to prefer short on-topic bullets before long ones.
+   (c) User still has to check 5 course titles against the transcript
+   (REFINEMENT_QUESTIONS.md Q12).
 
 1. **Decouple runs from the HTTP connection (top priority, user-hit daily on
    phone).** `POST /run` starts the pipeline in a background thread, log goes
@@ -926,6 +929,9 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 
 ## Log
 
+- **2026-10-13** — Refinement Step 9: paid Lilly run checked against the critique list. All pass (5+ yrs, sections, reverse-chron, no Thai Festival/dairy/German, PSP present, relocation in summary + letter, 1 page) except an unbacked 'budget' summary claim, which was hand-removed and re-rendered for free. Dropped '(dotted-line)' from ot_rd_lead per the user.
+- **2026-10-13** — Automated tailor run: `output/lilly-psp-associate-2026-10-13/` — 1 page(s), 40% coverage, ~$6.38, opus *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-13** — Automated tailor run: `output/pasona-bd-manager-2026-10-13/` — 1 page(s), 24% coverage, ~$2.48, sonnet *(logged automatically by scripts/append_handoff_log.py)*
 - **2026-10-13** — Steps 4-5 of resume refinement: 5 overclaims fixed, 7 bullets added, coursework + letter_facts mechanisms; free Lilly preview 52% (was 48%), 1 page. Paid Lilly run awaits user OK.
 - **2026-10-13** — Collected all 16 refinement answers interactively (in `REFINEMENT_QUESTIONS.md`). Found 5 bank overclaims to fix: Otsuka budget/on-time, LG Chem NLEM 'secured', Winnergy 90% 'hospital' accounts, Winnergy budget 'owned'. No bank edits yet.
 - **2026-10-13** — Resume refinement (user critique of Lilly PSP output): honest experience length + relocation line in summaries, de-dashed bullets, experience sections + reverse-chron renderer, publications/language subsets, cover-letter rules. Steps 4/5/9 wait on `REFINEMENT_QUESTIONS.md`. 83 tests green; Docker image rebuilt; master backup synced.
