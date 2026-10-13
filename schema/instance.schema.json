@@ -104,7 +104,12 @@
           "detail": { "type": "string" },
           "start": { "type": "string", "minLength": 1 },
           "end": { "type": "string", "minLength": 1 },
-          "anchor": { "type": "boolean" }
+          "anchor": { "type": "boolean" },
+          "coursework": {
+            "type": "array",
+            "maxItems": 3,
+            "items": { "type": "string", "minLength": 1 }
+          }
         }
       }
     },

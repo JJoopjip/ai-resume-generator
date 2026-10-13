@@ -248,6 +248,22 @@ def validate_education(instance: dict, master: dict) -> list[dict]:
         errors.extend(
             _check_locked_fields("education", edu_id, edu, master_edu, EDUCATION_LOCKED_FIELDS)
         )
+        # Coursework is a JD-picked subset (up to 3, schema-capped) of the
+        # bank's catalog-verified titles, each verbatim.
+        known_courses = {_normalize(c) for c in master_edu.get("coursework", [])}
+        for course in edu.get("coursework", []):
+            if _normalize(course) not in known_courses:
+                errors.append(
+                    _error(
+                        "unknown_id",
+                        f"Course {course!r} on education id {edu_id!r} is not in "
+                        f"master.yaml's coursework list.",
+                        id=edu_id,
+                        field="coursework",
+                        expected=master_edu.get("coursework", []),
+                        actual=course,
+                    )
+                )
     return errors
 
 

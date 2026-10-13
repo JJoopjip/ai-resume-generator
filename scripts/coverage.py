@@ -649,6 +649,7 @@ def instance_segments(instance: dict) -> list[str]:
     for edu in instance.get("education", []):
         parts += [str(edu.get("degree", "")), str(edu.get("institution", "")),
                   str(edu.get("detail", ""))]
+        parts += [str(c) for c in edu.get("coursework", [])]
     for cert in instance.get("certifications", []):
         parts.append(str(cert.get("name", "")))
     for pub in instance.get("publications", []):
@@ -683,6 +684,7 @@ def master_segments(master: dict) -> list[str]:
     for edu in master.get("education", []):
         parts += [str(edu.get("degree", "")), str(edu.get("institution", "")),
                   str(edu.get("detail", ""))]
+        parts += [str(c) for c in edu.get("coursework", [])]
     for cert in master.get("certifications", []):
         parts.append(str(cert.get("name", "")))
     for pub in master.get("publications", []):

@@ -229,6 +229,7 @@ education:
     start: "2024"
     end: "2026"
     anchor: true
+    coursework: [Project Risk Management, Project Finance, Requirements Design and Ownership]
   - id: eastbrook
     institution: Eastbrook College
     location: Vancouver, Canada

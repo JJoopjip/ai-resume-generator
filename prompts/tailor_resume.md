@@ -253,6 +253,16 @@ It is the **lowest-priority** content on the resume — see the overflow rule in
 passthrough fields): `section` picks the heading, `additional` marks it as the
 first cut.
 
+## 4b2. Pharma, PSP and market-access JDs: lead with the strongest evidence
+
+For these roles, the bank's best evidence is, in order: `lg_patient_access`
+(contributed to a Patient Support Program (PSP) that launched), `lg_psp_ops`
+(PSP KPI reviews, adverse-event reports, coverage navigation for HCPs),
+`ot_nlem` (an NLEM listing she owned), `ot_regulatory` / `ot_trials`, and
+`boots_psp` (patient enrollment into manufacturer PSPs). Prefer `ot_nlem`
+over `lg_nlem` (she only supported LG Chem's listings). Include the
+"Patient Access & Support" skill group.
+
 ## 4c. Experience sections and order
 
 Copy `master.yaml`'s `experience_sections` list into `instance.yaml` verbatim
@@ -267,7 +277,15 @@ You do not control role order within a section: the renderer always sorts
 roles reverse-chronologically. Your `experience` list order has no effect on
 the page.
 
-## 4d. Publications, languages, company notes
+## 4d. Publications, languages, company notes, coursework
+
+- **`coursework`** on the Northeastern entry: pick up to 3 titles from that
+  entry's `coursework` list in `master.yaml`, verbatim, choosing the ones
+  closest to the JD's requirements (e.g. Project Risk Management and Project
+  Quality Management for regulated pharma roles; Requirements Analysis and
+  Design for BA roles; Strategy Analysis and Needs Assessment for PSP/patient
+  needs work). Omit the key when the page is tight; it's the first education
+  trim.
 
 - **`publications`** (optional, relevance-gated): include an entry, citation
   verbatim, only when the JD is research, R&D, medical affairs, medical
@@ -356,14 +374,12 @@ Notes:
   under a matching `label` — pick the groups relevant to the chosen
   profile(s) and trim `items` to what's most relevant to the JD, but don't
   add anything not already listed there.
-- **AI and developer tools are relevance-gated.** Drop "AI tools (ChatGPT,
-  Claude Code)", "AI tools (ChatGPT, Canva AI, Claude Code)", LiteLLM and
-  DeepInfra from the Tools line for non-technical roles: pharma, patient
-  support programs, market access, medical, clinical, regulatory, pharmacy,
-  and most BD/sales roles. Keep them only when the JD mentions AI,
-  automation, digital transformation, analytics tooling, or tech/product
-  work. On a pharma page they read as off-topic and take the space a
-  domain skill should have.
+- **AI tools: always keep the general item, gate the niche ones.** Keep
+  "AI tools (ChatGPT, Claude Code)" (or the `dm` group's "AI tools (ChatGPT,
+  Canva AI, Claude Code)") in the Tools line on **every** resume, whatever
+  the role (standing user decision, 2026-10-13: employers in every field now
+  value AI fluency). LiteLLM and DeepInfra are niche developer tools: include
+  them only when the JD mentions AI, automation, LLMs, or tech/product work.
 - **Every skill should be backed by something on the page** (a bullet, the
   degree, or the certification). Prefer dropping an unbacked item over
   listing it.

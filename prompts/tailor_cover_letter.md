@@ -17,6 +17,12 @@ Read, in full, before writing anything:
 You are not re-selecting achievements from `master.yaml`. The resume already
 made those choices; the letter's job is to *narrate a few of them* persuasively.
 
+**One exception: `letter_facts`.** `master.yaml`'s top-level `letter_facts`
+list holds a few true facts that belong in letters but not on resumes (e.g.
+self-directed study of Canadian drug coverage). You may use **at most one**,
+only when its `use_when` matches the JD, and only at the strength its `text`
+states (self-study is "I've studied", never "expertise" or "experience").
+
 ## 1. Hard rules
 
 The letter is prose, so it has more wording latitude than the resume — but the
@@ -132,8 +138,8 @@ coverage, social security, civil servants, private/out-of-pocket) and helped
 secure an NLEM listing, and Canadian patient-support programs exist largely
 because patients move between public and private drug coverage. Present it
 as a transferable way of thinking, not as Canadian expertise: claim
-knowledge of Canadian reimbursement (provincial formularies, CDA-AMC/CADTH,
-pCPA, private payers) only if `instance.yaml` states it. Use this only when
+knowledge of Canadian reimbursement only if `instance.yaml` or a
+`letter_facts` entry states it, and only at that entry's strength. Use this only when
 the matching bullets are on the resume.
 
 Voice checks before you commit each paragraph:

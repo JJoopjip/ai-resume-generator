@@ -112,6 +112,7 @@
 \textbf{\VAR{edu.institution}} \hfill \VAR{edu.start} -- \VAR{edu.end} \\
 \VAR{edu.degree} \hfill \VAR{edu.location} \\
 \BLOCK{if edu.detail}{\fontsize{\VAR{layout['font_size_pt'] - 1}}{\VAR{(layout['font_size_pt'] * 1.2) | round(1)}}\selectfont \VAR{edu.detail}}\\\BLOCK{endif}
+\BLOCK{if edu.coursework}{\fontsize{\VAR{layout['font_size_pt'] - 1}}{\VAR{(layout['font_size_pt'] * 1.2) | round(1)}}\selectfont Relevant coursework: \VAR{edu.coursework | join(", ")}}\\\BLOCK{endif}
 \BLOCK{if not loop.last}\vspace{3pt}\BLOCK{endif}
 \BLOCK{endfor}
 

@@ -330,3 +330,15 @@ def test_publication_must_be_verbatim(valid_instance, master, schema):
     instance["publications"][0]["citation"] = "Lead author, Nature (2017)."
     errors = v.validate(instance, master, schema)
     assert any(e["field"] == "citation" for e in errors)
+
+
+def test_coursework_must_be_a_verbatim_subset(valid_instance, master, schema):
+    edu = next(e for e in master["education"] if e["id"] == "northeastern")
+    if not edu.get("coursework"):
+        pytest.skip("master.yaml northeastern entry has no coursework")
+    instance = copy.deepcopy(valid_instance)
+    instance["education"][0]["coursework"] = edu["coursework"][:2]
+    assert v.validate(instance, master, schema) == []
+    instance["education"][0]["coursework"] = ["Advanced Quantum Pharmacology"]
+    errors = v.validate(instance, master, schema)
+    assert any(e["field"] == "coursework" for e in errors)

@@ -133,6 +133,9 @@ Draft 2020-12 JSON Schema, top-level `object`, `required`: `schema_version`,
   else `experience`) must be listed. Absent → the default
   `[experience: "Experience", additional: "Additional Experience"]`, so
   pre-sections instances render exactly as before.
+- `education[].coursework` (optional): up to 3 course titles, a verbatim
+  subset of that entry's `coursework` list in `master.yaml`, picked per JD.
+  Renders as a small "Relevant coursework:" line under the entry's detail.
 - `education` / `certifications`: arrays, each entry's non-`id` fields
   checked verbatim against `master.yaml` by id (order may differ from
   master — reordering is allowed, rewriting is not).

@@ -158,6 +158,13 @@ def render_docx(instance: dict, out_dir: Path) -> Path:
         if edu.get("detail"):
             detail_p = doc.add_paragraph()
             _add_run(detail_p, edu["detail"], size=style.SMALL_SIZE)
+        if edu.get("coursework"):
+            course_p = doc.add_paragraph()
+            _add_run(
+                course_p,
+                "Relevant coursework: " + ", ".join(edu["coursework"]),
+                size=style.SMALL_SIZE,
+            )
 
     if instance.get("publications"):
         _add_heading(doc, "Publications")
