@@ -929,6 +929,8 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 
 ## Log
 
+- **2026-10-13** — Automated tailor run: `output/medpace-clinical-research-associate-2026-10-13/` — 1 page(s), 24% coverage, ~$2.51, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-13** — Pushed refinement commits 720f0f6..e1fe02a to origin/main (checked: no master.yaml, REFINEMENT_QUESTIONS.md or output/ in them).
 - **2026-10-13** — Refinement Step 9: paid Lilly run checked against the critique list. All pass (5+ yrs, sections, reverse-chron, no Thai Festival/dairy/German, PSP present, relocation in summary + letter, 1 page) except an unbacked 'budget' summary claim, which was hand-removed and re-rendered for free. Dropped '(dotted-line)' from ot_rd_lead per the user.
 - **2026-10-13** — Automated tailor run: `output/lilly-psp-associate-2026-10-13/` — 1 page(s), 40% coverage, ~$6.38, opus *(logged automatically by scripts/append_handoff_log.py)*
 - **2026-10-13** — Automated tailor run: `output/pasona-bd-manager-2026-10-13/` — 1 page(s), 24% coverage, ~$2.48, sonnet *(logged automatically by scripts/append_handoff_log.py)*
