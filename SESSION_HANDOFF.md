@@ -588,8 +588,12 @@ this file only summarizes the current front line.
 
 Highest-leverage remaining items:
 
-0. **Resume refinement Steps 4, 5, 9: blocked on the user's answers** in
-   `REFINEMENT_QUESTIONS.md` (repo root, git-ignored). Then: add confirmed
+0. **Resume refinement Steps 4, 5, 9: answers COLLECTED (2026-10-13)** in
+   `REFINEMENT_QUESTIONS.md` (repo root, git-ignored; see its ANSWERS
+   section, which supersedes the plan below where they differ: e.g. Otsuka
+   NLEM leads (she owned it; LG Chem's she only supported), 90% retention is
+   chains+clinics not hospitals, budgets contributed/managed not owned, PR
+   *Intern* title kept, work auth stays OFF, AI tools on ALL resumes). Then: add confirmed
    metrics/bullets (3-4 for LG Chem + Winnergy, 2-3 Otsuka; `lg_nlem` leads
    for pharma JDs; "Patient Support Program (PSP)" exact phrase only if a PSP
    was actually run, Q3), skills cleanup (Q10, Q15, Q16), optional
@@ -908,6 +912,7 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 
 ## Log
 
+- **2026-10-13** — Collected all 16 refinement answers interactively (in `REFINEMENT_QUESTIONS.md`). Found 5 bank overclaims to fix: Otsuka budget/on-time, LG Chem NLEM 'secured', Winnergy 90% 'hospital' accounts, Winnergy budget 'owned'. No bank edits yet.
 - **2026-10-13** — Resume refinement (user critique of Lilly PSP output): honest experience length + relocation line in summaries, de-dashed bullets, experience sections + reverse-chron renderer, publications/language subsets, cover-letter rules. Steps 4/5/9 wait on `REFINEMENT_QUESTIONS.md`. 83 tests green; Docker image rebuilt; master backup synced.
 - **2026-10-13** — Session end: merged `web-ui-refresh` -> `main` and pushed; handoff updated (general BD/PM resumes done, Safari-disconnect fix queued as top What's-next item, README caveat added).
 - **2026-10-09** — Automated tailor run: `output/general-project-manager-2026-10-09/` — 1 page(s), 58% coverage, ~$3.79, opus *(logged automatically by scripts/append_handoff_log.py)*
