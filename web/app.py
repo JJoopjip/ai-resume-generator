@@ -590,12 +590,22 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("X-Accel-Buffering", "no")
         self.end_headers()
 
+        # A dropped client (phone sleeps, tab closed) must NOT stop the run.
+        # Raising here used to abort _run_narrated's read loop, so nobody
+        # drained the child's stdout pipe: the child blocked on write forever
+        # (hung runs, no cost.json, no handoff log line). Instead, go quiet
+        # and let the caller keep draining until the run finishes.
+        gone = False
+
         def emit(line: str):
+            nonlocal gone
+            if gone:
+                return
             try:
                 self.wfile.write(line.encode("utf-8"))
                 self.wfile.flush()
-            except (BrokenPipeError, ConnectionResetError):
-                raise
+            except (BrokenPipeError, ConnectionResetError, OSError):
+                gone = True
         return emit
 
     def _stream_env(self, tier="best"):
