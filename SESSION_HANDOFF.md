@@ -625,6 +625,11 @@ Highest-leverage remaining items:
    and stores the run id in localStorage to reattach after Safari resumes.
    Apply to the cover-letter route too; don't delete the JD temp file until
    the subprocess exits. Until then: keep Safari foregrounded during runs.
+   PARTIAL FIX 2026-10-13 (b764a06): a dropped client no longer HANGS the
+   run (emit() used to re-raise BrokenPipe, the stdout pipe stopped draining,
+   and the child blocked forever; 3 runs had been stuck 3-4 days). The run now
+   finishes in the background, but the page still can't reattach to it, so
+   the user has to look in output/ afterwards. Reattach is still open.
 
 00000000. **DONE (2026-09-28).** Manual swap-B applied — see What's done.
    `output/bbraun-project-manager-2026-09-28-b/` now sits at 20% (5/25),
@@ -929,7 +934,23 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 
 ## Log
 
+- **2026-10-13** — Automated tailor run: `output/aestema-bd-2026-10-13/` — exit 1, ~$0.83, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-13** — Automated tailor run: `output/zuelligpharma-strategicpartnerships-2026-10-13/` — 1 page(s), 36% coverage, ~$2.48, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-13** — Automated tailor run: `output/advanced-research-group-business-development-manager-2026-10-13/` — 1 page(s), 44% coverage, ~$2.15, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-13** — Automated tailor run: `output/exeltis-mkam-2026-10-13/` — 1 page(s), 36% coverage, ~$3.00, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-13** — Automated tailor run: `output/dksh-sales-marketing-manager-2026-10-13/` — 1 page(s), 28% coverage, ~$3.52, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-13** — Automated tailor run: `output/dksh-client-management-2026-10-13/` — 1 page(s), 40% coverage, ~$2.06, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-13** — Automated tailor run: `output/yikon-genomics-bd-manager-2026-10-13/` — 1 page(s), 20% coverage, ~$2.44, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-13** — Automated tailor run: `output/nestle-bd-executive-2026-10-13/` — 1 page(s), 28% coverage, ~$2.52, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-13** — Automated tailor run: `output/molecular-diagnostics-bd-2026-10-13/` — 1 page(s), 21% coverage, ~$2.34, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-13** — Automated tailor run: `output/lazada-strategic-partnership-2026-10-13/` — 1 page(s), 18% coverage, ~$2.17, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-13** — Automated tailor run: `output/tc-pharma-ibm-2026-10-13/` — 1 page(s), 36% coverage, ~$1.87, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-13** — Automated tailor run: `output/dchauriga-bd-manager-2026-10-13/` — 1 page(s), 44% coverage, ~$2.09, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-13** — Automated tailor run: `output/harrison-assessments-senior-manager-product-bd-2026-10-13/` — 1 page(s), 28% coverage, ~$1.99, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-13** — Automated tailor run: `output/prtr-oem-sourcing-manager-2026-10-13/` — 1 page(s), 20% coverage, ~$2.85, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-13** — Automated tailor run: `output/yoyou-sales-manager-2026-10-13/` — 1 page(s), 20% coverage, ~$2.44, sonnet *(logged automatically by scripts/append_handoff_log.py)*
 - **2026-10-13** — Automated tailor run: `output/medpace-clinical-research-associate-2026-10-13/` — 1 page(s), 24% coverage, ~$2.51, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-13** — Diagnosed 'what's wrong': (1) 2 web runs (aestema, an unnamed product-marketing JD) died at 17:16 on the Claude session usage limit; (2) a client disconnect hung runs forever (fixed, b764a06, +2 tests, service restarted, 3 stuck processes cleared). Re-running both, plus fresh general BD/PM/pharmacy-assistant resumes on the refined bank.
 - **2026-10-13** — Pushed refinement commits 720f0f6..e1fe02a to origin/main (checked: no master.yaml, REFINEMENT_QUESTIONS.md or output/ in them).
 - **2026-10-13** — Refinement Step 9: paid Lilly run checked against the critique list. All pass (5+ yrs, sections, reverse-chron, no Thai Festival/dairy/German, PSP present, relocation in summary + letter, 1 page) except an unbacked 'budget' summary claim, which was hand-removed and re-rendered for free. Dropped '(dotted-line)' from ot_rd_lead per the user.
 - **2026-10-13** — Automated tailor run: `output/lilly-psp-associate-2026-10-13/` — 1 page(s), 40% coverage, ~$6.38, opus *(logged automatically by scripts/append_handoff_log.py)*
