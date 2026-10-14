@@ -64,3 +64,24 @@ def test_run_drains_child_output_after_disconnect():
            "sys.exit(7)\n"]
     code, _state = web_app.Handler._run_narrated(h, cmd, None, emit)
     assert code == 7
+
+
+def test_general_picks_newest_run_per_prefix(tmp_path, monkeypatch):
+    import os, json
+    for name, t in [("general-project-manager-2026-10-09", 100),
+                    ("general-project-manager-2026-10-13", 200),
+                    ("general-pharmacy-assistant-2026-10-13", 150)]:
+        d = tmp_path / name
+        d.mkdir()
+        (d / "resume.pdf").write_bytes(b"%PDF")
+        os.utime(d / "resume.pdf", (t, t))
+    (tmp_path / "general-business-development-manager-2026-10-13").mkdir()  # no PDF
+    monkeypatch.setattr(web_app, "OUTPUT", tmp_path)
+
+    sent = {}
+    h = _FakeHandler()
+    h._send_json = lambda code, obj: sent.update(obj)
+    web_app.Handler._general(h)
+    got = {g["key"]: g["slug"] for g in sent["general"]}
+    assert got == {"pm": "general-project-manager-2026-10-13",
+                   "pharmacy": "general-pharmacy-assistant-2026-10-13"}

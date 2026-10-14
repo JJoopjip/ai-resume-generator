@@ -934,6 +934,9 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 
 ## Log
 
+- **2026-10-13** — Automated tailor run: `output/google-account-manager-2026-10-13/` — 1 page(s), 28% coverage, ~$2.58, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-13** — Automated tailor run: `output/confidential-marketingmanager-2026-10-13/` — 1 page(s), 36% coverage, ~$3.26, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-13** — Automated tailor run: `output/chanel-fashion-advisor-2026-10-13/` — 1 page(s), 5% coverage, ~$3.55, sonnet *(logged automatically by scripts/append_handoff_log.py)*
 - **2026-10-13** — Automated tailor run: `output/general-pharmacy-assistant-2026-10-13/` — 1 page(s), 64% coverage, ~$2.33, sonnet *(logged automatically by scripts/append_handoff_log.py)*
 - **2026-10-13** — Automated tailor run: `output/moet-hennessy-sales-manager-2026-10-13/` — 1 page(s), 32% coverage, ~$2.19, sonnet *(logged automatically by scripts/append_handoff_log.py)*
 - **2026-10-13** — Automated tailor run: `output/general-project-manager-2026-10-13/` — 1 page(s), 45% coverage, ~$2.40, sonnet *(corrected by hand: the launcher had attributed this run to beauty-brandmanager, slug-detection bug fixed same day)*
@@ -956,6 +959,7 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 - **2026-10-13** — Automated tailor run: `output/prtr-oem-sourcing-manager-2026-10-13/` — 1 page(s), 20% coverage, ~$2.85, sonnet *(logged automatically by scripts/append_handoff_log.py)*
 - **2026-10-13** — Automated tailor run: `output/yoyou-sales-manager-2026-10-13/` — 1 page(s), 20% coverage, ~$2.44, sonnet *(logged automatically by scripts/append_handoff_log.py)*
 - **2026-10-13** — Automated tailor run: `output/medpace-clinical-research-associate-2026-10-13/` — 1 page(s), 24% coverage, ~$2.51, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-13** — Phone access to general resumes: web UI has a pinned 'General résumés' card (PM / BD / Pharmacy Assistant → newest output/general-*-<date> run, `GET /general`) with a big 'Open PDF' button (`/download?...&view=1` serves inline). Reachable at the Tailscale URL already in README.
 - **2026-10-13** — Diagnosed 'what's wrong': (1) 2 web runs (aestema, an unnamed product-marketing JD) died at 17:16 on the Claude session usage limit; (2) a client disconnect hung runs forever (fixed, b764a06, +2 tests, service restarted, 3 stuck processes cleared). Re-ran both + fresh general BD/PM/pharmacy-assistant resumes on the refined bank, all Sonnet (user: Sonnet only). Fixed a 3rd bug: run_and_capture took the first output/<slug>/ mention as the run's folder, so a re-run of a JD saved in output/<old>/ logged cost to the wrong run; now prefers the `mkdir output/<slug>` folder (+3 tests).
 - **2026-10-13** — Pushed refinement commits 720f0f6..e1fe02a to origin/main (checked: no master.yaml, REFINEMENT_QUESTIONS.md or output/ in them).
 - **2026-10-13** — Refinement Step 9: paid Lilly run checked against the critique list. All pass (5+ yrs, sections, reverse-chron, no Thai Festival/dairy/German, PSP present, relocation in summary + letter, 1 page) except an unbacked 'budget' summary claim, which was hand-removed and re-rendered for free. Dropped '(dotted-line)' from ot_rd_lead per the user.

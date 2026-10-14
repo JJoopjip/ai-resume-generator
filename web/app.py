@@ -67,6 +67,15 @@ SLUG_RE = re.compile(r"^[A-Za-z0-9._-]+$")  # output folder names only
 # Files the download route and result payloads report on, in display order.
 ARTIFACTS = ("resume.pdf", "resume.docx", "cover_letter.pdf", "cover_letter.docx")
 
+# Pinned "General résumés" card: the newest output/<prefix>*/ run with a PDF
+# for each prefix. Re-running a general posting just makes a newer folder, and
+# the card follows it -- nothing to update here.
+GENERAL_RESUMES = (
+    ("pm", "Project Management", "general-project-manager-"),
+    ("bd", "Business Development", "general-business-development-manager-"),
+    ("pharmacy", "Pharmacy Assistant", "general-pharmacy-assistant-"),
+)
+
 # Flags handed to the pipeline's headless Claude. `--output-format stream-json
 # --verbose` is what lets make_narrator() turn the run into progress lines; we
 # only set this default when the user hasn't supplied their own (see below).
@@ -369,6 +378,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._download()
         if path == "/drafts":
             return self._drafts()
+        if path == "/general":
+            return self._general()
         self._send_text(404, "Not found")
 
     def do_POST(self):
@@ -419,6 +430,23 @@ class Handler(BaseHTTPRequestHandler):
             })
         runs.sort(key=lambda r: r["modified"], reverse=True)
         self._send_json(200, {"ok": True, "drafts": runs[:limit]})
+
+    def _general(self):
+        """Newest general résumé per GENERAL_RESUMES prefix (see its comment)."""
+        out = []
+        folders = [p for p in OUTPUT.iterdir() if p.is_dir()] if OUTPUT.exists() else []
+        for key, label, prefix in GENERAL_RESUMES:
+            hits = [p for p in folders
+                    if p.name.startswith(prefix) and (p / "resume.pdf").is_file()]
+            if not hits:
+                continue
+            best = max(hits, key=lambda p: (p / "resume.pdf").stat().st_mtime)
+            out.append({
+                "key": key, "label": label, "slug": best.name,
+                "modified": (best / "resume.pdf").stat().st_mtime,
+                "files": [f for f in ARTIFACTS if (best / f).is_file()],
+            })
+        self._send_json(200, {"ok": True, "general": out})
 
     def _to_tracker(self):
         """Manual "Add to tracker" button: push output/<slug>/ and relay the
@@ -509,10 +537,12 @@ class Handler(BaseHTTPRequestHandler):
         if OUTPUT.resolve() not in fp.parents or not fp.is_file():
             return self._send_text(404, "Not found")
         body = fp.read_bytes()
+        # ?view=1 opens a PDF in the browser (phone-friendly) instead of saving it.
+        view = (q.get("view") or [""])[0] == "1" and fname.endswith(".pdf")
         self.send_response(200)
         self.send_header("Content-Type", DOWNLOADABLE[fname])
         self.send_header("Content-Disposition",
-                         f'attachment; filename="{slug}-{fname}"')
+                         f'{"inline" if view else "attachment"}; filename="{slug}-{fname}"')
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)

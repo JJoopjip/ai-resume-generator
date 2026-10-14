@@ -264,6 +264,22 @@
   .draft-links { display: flex; gap: 10px; flex-wrap: wrap; }
   .draft-links a { font-size: 12.5px; font-weight: 600; }
 
+  /* --- General résumés (pinned, phone-first) ----------------------------- */
+  .general { display: grid; gap: 10px; grid-template-columns: repeat(3, 1fr); }
+  .general .g {
+    display: flex; flex-direction: column; gap: 6px; padding: 14px;
+    border-radius: var(--radius-sm); background: var(--paper);
+  }
+  .general .g b { font-size: 14px; }
+  .general .g small { color: var(--muted); font-size: 12px; }
+  .general .g .open {
+    display: block; text-align: center; padding: 12px; margin-top: 4px;
+    min-height: 44px; border-radius: var(--radius-sm); font-weight: 700;
+    background: var(--pink); color: #fff; text-decoration: none;
+  }
+  .general .g .more { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12.5px; font-weight: 600; }
+  @media (max-width: 640px) { .general { grid-template-columns: 1fr; } }
+
   /* --- Spinner ----------------------------------------------------------- */
   .spin {
     display: inline-block; width: 14px; height: 14px; border-radius: 50%;
@@ -301,6 +317,14 @@
         <button class="tab" id="tab-generate" role="tab" aria-selected="true">Generate</button>
         <button class="tab" id="tab-drafts" role="tab" aria-selected="false">Drafts</button>
       </div>
+    </div>
+
+    <div class="card" id="general-card" style="margin-bottom:16px">
+      <div class="card-head">
+        <h2>General résumés</h2>
+        <span class="sub">newest of each, tap to read</span>
+      </div>
+      <div id="general-list" class="general"><span class="sub">Loading…</span></div>
     </div>
 
     <!-- ================= GENERATE ================= -->
@@ -472,6 +496,7 @@ $("tab-drafts").addEventListener("click", () => { showView("drafts"); loadDrafts
 function showView(name) {
   const gen = name === "generate";
   $("view-generate").classList.toggle("hidden", !gen);
+  $("general-card").classList.toggle("hidden", !gen);
   $("view-drafts").classList.toggle("hidden", gen);
   $("tab-generate").setAttribute("aria-selected", String(gen));
   $("tab-drafts").setAttribute("aria-selected", String(!gen));
@@ -505,6 +530,29 @@ async function loadDrafts() {
     list.innerHTML = '<span class="err">Couldn\'t load your drafts: ' + escapeHtml(e.message) + "</span>";
   }
 }
+
+
+/* ---------- General résumés (pinned card) -------------------------------- */
+async function loadGeneral() {
+  const box = $("general-list");
+  try {
+    const r = await (await fetch("/general")).json();
+    const g = r.general || [];
+    if (!g.length) { box.innerHTML = '<span class="sub">No general résumés yet.</span>'; return; }
+    box.innerHTML = g.map((x) => {
+      const q = (f, v) => `/download?slug=${encodeURIComponent(x.slug)}&file=${encodeURIComponent(f)}${v ? "&view=1" : ""}`;
+      const when = new Date(x.modified * 1000).toLocaleDateString([], { month: "short", day: "numeric" });
+      const more = x.files.filter((f) => f !== "resume.pdf").map((f) =>
+        `<a href="${q(f, false)}">${(LABELS[f] || f).replace("Résumé — ", "").replace("Cover letter — ", "Letter ")}</a>`).join("");
+      return `<div class="g"><b>${escapeHtml(x.label)}</b><small>${when}</small>`
+           + `<a class="open" href="${q("resume.pdf", true)}" target="_blank" rel="noopener">Open PDF</a>`
+           + `<span class="more">${more}</span></div>`;
+    }).join("");
+  } catch (e) {
+    box.innerHTML = '<span class="err">Couldn\'t load: ' + escapeHtml(e.message) + "</span>";
+  }
+}
+loadGeneral();
 
 /* ---------- Running ----------------------------------------------------- */
 go.addEventListener("click", startRun);
