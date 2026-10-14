@@ -33,6 +33,26 @@ import subprocess
 import sys
 
 _SLUG_RE = re.compile(r"\boutput/([A-Za-z0-9._-]+)/")
+# `mkdir output/<slug>` (TASK step 2) is where the run claims its OWN folder.
+# Prefer it: when the JD itself lives in an older output/<old>/ folder (a
+# re-run of a saved posting), the first output/ mention is that old folder,
+# and cost.json + the handoff line used to land on the wrong run.
+_MKDIR_RE = re.compile(r"\bmkdir\b[^\n;&|]*?\boutput/([A-Za-z0-9._-]+)")
+
+
+def _hunt_mkdir_slug(obj) -> str | None:
+    """First `mkdir ... output/<slug>` in any string of a stream-json event."""
+    if isinstance(obj, str):
+        m = _MKDIR_RE.search(obj)
+        return m.group(1).rstrip("/") if m else None
+    if isinstance(obj, dict):
+        obj = list(obj.values())
+    if isinstance(obj, list):
+        for v in obj:
+            found = _hunt_mkdir_slug(v)
+            if found:
+                return found
+    return None
 
 
 def _hunt_slug(obj) -> str | None:
@@ -70,7 +90,8 @@ def main(argv=None) -> int:
         return 2
 
     session_id = None
-    slug = None
+    slug = None          # first output/<slug>/ mention (fallback)
+    mkdir_slug = None    # the folder this run created (preferred)
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                              text=True, bufsize=1)
     for line in proc.stdout:
@@ -91,7 +112,10 @@ def main(argv=None) -> int:
             found = _hunt_slug(ev)
             if found:
                 slug = found
+        if mkdir_slug is None:
+            mkdir_slug = _hunt_mkdir_slug(ev)
     code = proc.wait()
+    slug = mkdir_slug or slug
 
     info = {}
     if session_id:

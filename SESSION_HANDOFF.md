@@ -934,6 +934,12 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 
 ## Log
 
+- **2026-10-13** — Automated tailor run: `output/general-pharmacy-assistant-2026-10-13/` — 1 page(s), 64% coverage, ~$2.33, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-13** — Automated tailor run: `output/moet-hennessy-sales-manager-2026-10-13/` — 1 page(s), 32% coverage, ~$2.19, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-13** — Automated tailor run: `output/general-project-manager-2026-10-13/` — 1 page(s), 45% coverage, ~$2.40, sonnet *(corrected by hand: the launcher had attributed this run to beauty-brandmanager, slug-detection bug fixed same day)*
+- **2026-10-13** — Automated tailor run: `output/general-business-development-manager-2026-10-13/` — 1 page(s), 36% coverage, ~$2.59, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-13** — Automated tailor run: `output/confidential-product-marketing-manager-2026-10-13/` — 1 page(s), 50% coverage, ~$3.27, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-13** — Automated tailor run: `output/aestema-bd-2026-10-13-b/` — 1 page(s), 51% coverage, ~$3.85, sonnet *(logged automatically by scripts/append_handoff_log.py)*
 - **2026-10-13** — Automated tailor run: `output/aestema-bd-2026-10-13/` — exit 1, ~$0.83, sonnet *(logged automatically by scripts/append_handoff_log.py)*
 - **2026-10-13** — Automated tailor run: `output/zuelligpharma-strategicpartnerships-2026-10-13/` — 1 page(s), 36% coverage, ~$2.48, sonnet *(logged automatically by scripts/append_handoff_log.py)*
 - **2026-10-13** — Automated tailor run: `output/advanced-research-group-business-development-manager-2026-10-13/` — 1 page(s), 44% coverage, ~$2.15, sonnet *(logged automatically by scripts/append_handoff_log.py)*
@@ -950,7 +956,7 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 - **2026-10-13** — Automated tailor run: `output/prtr-oem-sourcing-manager-2026-10-13/` — 1 page(s), 20% coverage, ~$2.85, sonnet *(logged automatically by scripts/append_handoff_log.py)*
 - **2026-10-13** — Automated tailor run: `output/yoyou-sales-manager-2026-10-13/` — 1 page(s), 20% coverage, ~$2.44, sonnet *(logged automatically by scripts/append_handoff_log.py)*
 - **2026-10-13** — Automated tailor run: `output/medpace-clinical-research-associate-2026-10-13/` — 1 page(s), 24% coverage, ~$2.51, sonnet *(logged automatically by scripts/append_handoff_log.py)*
-- **2026-10-13** — Diagnosed 'what's wrong': (1) 2 web runs (aestema, an unnamed product-marketing JD) died at 17:16 on the Claude session usage limit; (2) a client disconnect hung runs forever (fixed, b764a06, +2 tests, service restarted, 3 stuck processes cleared). Re-running both, plus fresh general BD/PM/pharmacy-assistant resumes on the refined bank.
+- **2026-10-13** — Diagnosed 'what's wrong': (1) 2 web runs (aestema, an unnamed product-marketing JD) died at 17:16 on the Claude session usage limit; (2) a client disconnect hung runs forever (fixed, b764a06, +2 tests, service restarted, 3 stuck processes cleared). Re-ran both + fresh general BD/PM/pharmacy-assistant resumes on the refined bank, all Sonnet (user: Sonnet only). Fixed a 3rd bug: run_and_capture took the first output/<slug>/ mention as the run's folder, so a re-run of a JD saved in output/<old>/ logged cost to the wrong run; now prefers the `mkdir output/<slug>` folder (+3 tests).
 - **2026-10-13** — Pushed refinement commits 720f0f6..e1fe02a to origin/main (checked: no master.yaml, REFINEMENT_QUESTIONS.md or output/ in them).
 - **2026-10-13** — Refinement Step 9: paid Lilly run checked against the critique list. All pass (5+ yrs, sections, reverse-chron, no Thai Festival/dairy/German, PSP present, relocation in summary + letter, 1 page) except an unbacked 'budget' summary claim, which was hand-removed and re-rendered for free. Dropped '(dotted-line)' from ot_rd_lead per the user.
 - **2026-10-13** — Automated tailor run: `output/lilly-psp-associate-2026-10-13/` — 1 page(s), 40% coverage, ~$6.38, opus *(logged automatically by scripts/append_handoff_log.py)*
