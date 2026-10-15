@@ -74,6 +74,7 @@ GENERAL_RESUMES = (
     ("pm", "Project Management", "general-project-manager-"),
     ("bd", "Business Development", "general-business-development-manager-"),
     ("pharmacy", "Pharmacy Assistant", "general-pharmacy-assistant-"),
+    ("reception", "Receptionist", "general-receptionist-"),
 )
 
 # Flags handed to the pipeline's headless Claude. `--output-format stream-json
