@@ -243,15 +243,24 @@ bullet you selected, so the line reinforces the body rather than floating alone.
 Omit the `highlights` key entirely if none are a good fit — the impact line then
 simply doesn't render.
 
-## 4b. Additional Experience — the server role
+## 4b. Restaurant & hospitality roles (`section: hospitality`)
 
-`master.yaml` has a `server` role carrying `section: additional` and
-`additional: true`. Include it by default: it fills the Canadian timeline and
-renders under its own "Additional Experience" heading, after the main roles.
-It is the **lowest-priority** content on the resume — see the overflow rule in
-§6, where it is the first thing cut. Copy both fields verbatim (locked
-passthrough fields): `section` picks the heading, `additional` marks it as the
-first cut.
+`master.yaml` has four restaurant roles under the "Restaurant & Hospitality
+Experience" section: `teowtemtoh` (current, full-time server who also plans
+inventory purchasing and resolves complaints), `server` (Khao San Road,
+`additional: true`), `kaokang` and `chapayom` (short front-of-house stints).
+
+- **Restaurant / front-of-house / hospitality / guest-facing JDs:** these are
+  the core evidence. Include ALL four roles (the user asked for every
+  part-time job to show), newest first (the renderer sorts), with every bullet
+  they have. Put the section FIRST in `experience_sections`, ahead of industry
+  and pharmacy, and cut pharma bullets before any hospitality bullet. Never
+  claim a manager title: `teowtemtoh` is "Server (Full-Time)"; its purchasing
+  and complaint bullets already say "manager-level duty". Do not add facts the
+  bullets don't state (no team sizes, covers, sales figures).
+- **Every other JD:** drop `teowtemtoh`, `kaokang` and `chapayom` (not relevant),
+  and keep `server` as before: lowest priority, kept for the Canadian timeline,
+  the FIRST cut on overflow (§6). Copy `section` and `additional` verbatim.
 
 ## 4b2. Pharma, PSP and market-access JDs: lead with the strongest evidence
 
@@ -443,7 +452,8 @@ Read the exit code and the JSON on stdout:
   shape. Fix and re-run; does not count against the overflow retry cap.
 - **Exit 3**: page overflow. `page_count` in the JSON tells you it's >1.
   Cut in this order:
-  1. **First, drop the Additional Experience role entirely** (the entry with
+  1. **First (NOT on restaurant / hospitality JDs, see §4b: there trim pharma
+     bullets instead and keep all four hospitality roles), drop the `additional: true` role (`server`) entirely** (the entry with
      `additional: true`, i.e. `server`) if it's still present: remove the whole
      entry from `experience` *and* its key from `priority_order` — the entire
      role, header and all, not just one of its bullets. The "Additional

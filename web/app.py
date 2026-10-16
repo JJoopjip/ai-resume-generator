@@ -75,6 +75,7 @@ GENERAL_RESUMES = (
     ("bd", "Business Development", "general-business-development-manager-"),
     ("pharmacy", "Pharmacy Assistant", "general-pharmacy-assistant-"),
     ("reception", "Receptionist", "general-receptionist-"),
+    ("restaurant", "Restaurant / FOH Manager", "general-restaurant-manager-"),
 )
 
 # Flags handed to the pipeline's headless Claude. `--output-format stream-json
