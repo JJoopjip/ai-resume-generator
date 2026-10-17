@@ -370,7 +370,10 @@ Notes:
   set, no more, no less. Order = cut order (§6), not display order.
 - `meta`, `education` (non-id fields), and `certifications` are locked —
   copy them from `master.yaml` verbatim; you may reorder education entries but
-  not alter their content. `languages` and `publications` are verbatim subsets
+  not alter their content. Certifications are a verbatim subset: PMP always;
+  **Smart Serve Ontario** (`smartserve`) on restaurant / hospitality / food-service /
+  retail-service JDs, and on any other JD only when a spare line remains (it is
+  the first certification dropped). Never add Food Handler: not held. `languages` and `publications` are verbatim subsets
   (§4d).
 - `projects` is optional and self-built work, not employment — never merge it
   into `experience`. Include it when the role values building, automating or
