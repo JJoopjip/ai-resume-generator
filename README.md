@@ -3,7 +3,7 @@
 **A headless Claude (Anthropic) agent, wrapped in deterministic guardrails,
 that turns a job posting into a polished, one-page resume — automatically.**
 
-You give it a job description. It reads your career history, decides which of
+You give it a job description (pasted, or screenshots of it when the site blocks copying). It reads your career history, decides which of
 your achievements best match that specific job, writes them up, lays them out
 as a professional PDF and Word document, and checks that everything fits on one
 page — trimming intelligently if it doesn't. The result is a draft ready for you

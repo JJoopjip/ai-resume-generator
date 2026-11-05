@@ -447,6 +447,28 @@ Read the exit code and the JSON on stdout:
   cap below); if no omitted bullet is a real improvement within that budget,
   change nothing and stop — leaving a term uncovered is a perfectly good
   outcome.
+- **Exit 0, fill the page (standing user decision, 2026-10-29: every resume
+  should look as full as possible).** The conservative first pass in §3 is
+  only to avoid overflow churn; it must not be where you stop. If
+  `fit.lines_free` ≥ 2 (≈24pt+ of blank space at the bottom), keep adding
+  verbatim master content until `lines_free` is 0 or 1, one batched edit per
+  render. Font and margins are already at their floor — never shrink them, and
+  do not loosen them to "fill" (that only adds whitespace). Candidates, best
+  first:
+  1. The most relevant omitted bullets of roles already on the page.
+  2. A relevant omitted role (e.g. `lgchem`, or `boots` variants) with its best
+     bullets, respecting §3a and the role gates in §4b/`thaifest`.
+  3. If nothing relevant is left, supporting content that honestly strengthens
+     the role (transferable bullets such as team leadership, stakeholder
+     communication, process improvement, data/KPI work; extra skills items,
+     projects, education detail, coursework, languages, publications) — still
+     verbatim from `master.yaml`, still gated by the hard rules in §1. Never
+     add a bullet that contradicts the role's positioning (no pharma/PSP
+     content on restaurant JDs, etc.).
+  If an addition overflows, revert it and try a shorter candidate. This
+  fill pass gets up to 3 extra re-renders beyond the overflow loop (still
+  inside the 5-attempt cap). In `omitted.md` mark fillers as selected, not
+  omitted, and never describe the page as "kept lean".
 - **Exit 1**: validation failure — `errors[]` names the id/field mismatch.
   Fix `instance.yaml` (you likely copied a locked field wrong or altered
   bullet text) and re-run. This does not count against the overflow retry

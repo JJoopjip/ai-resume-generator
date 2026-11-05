@@ -27,7 +27,9 @@ python3 web/app.py       # or: bash web/start.sh  (also opens the browser)
 
 Then open <http://127.0.0.1:5000> in your browser.
 
-1. Paste the full job posting into the box.
+1. Paste the full job posting into the box. If the site blocks copying (LinkedIn),
+   tap **Add screenshot** (or paste an image into the box) instead: up to 8, top to
+   bottom. The text appears in the box for you to check before you generate.
 2. (Optional) tick **Cover letter too** if this posting needs one, and pick a
    tier: **Best quality** (Opus/high, the default) or **Fast & cheaper**
    (Sonnet/medium — the CLI's `--fast`).

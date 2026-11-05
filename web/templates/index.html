@@ -319,14 +319,6 @@
       </div>
     </div>
 
-    <div class="card" id="general-card" style="margin-bottom:16px">
-      <div class="card-head">
-        <h2>General résumés</h2>
-        <span class="sub">newest of each, tap to read</span>
-      </div>
-      <div id="general-list" class="general"><span class="sub">Loading…</span></div>
-    </div>
-
     <!-- ================= GENERATE ================= -->
     <div id="view-generate" class="cols">
       <div class="main">
@@ -341,9 +333,11 @@
               </div>
             </div>
           </div>
-          <textarea id="jd" placeholder="Paste the full job posting here…"></textarea>
+          <textarea id="jd" placeholder="Paste the full job posting here, or add screenshots of it (LinkedIn blocks copying)…"></textarea>
           <div class="row">
             <button id="go" class="btn btn-primary">Generate</button>
+            <button id="shot" type="button" class="btn btn-soft">Add screenshot</button>
+            <input id="shot-file" type="file" accept="image/*" multiple hidden>
             <label class="check"><input type="checkbox" id="cover"> Cover letter too</label>
             <span class="sub" id="tier-note">Opus, high effort — the default the eval backs.</span>
           </div>
@@ -388,6 +382,14 @@
 
     <!-- ================= DRAFTS ================= -->
     <div id="view-drafts" class="hidden">
+    <div class="card" id="general-card" style="margin-bottom:16px">
+      <div class="card-head">
+        <h2>General résumés</h2>
+        <span class="sub">newest of each, tap to read</span>
+      </div>
+      <div id="general-list" class="general"><span class="sub">Loading…</span></div>
+    </div>
+
       <div class="card">
         <div class="card-head">
           <h2>Everything you've generated</h2>
@@ -496,7 +498,6 @@ $("tab-drafts").addEventListener("click", () => { showView("drafts"); loadDrafts
 function showView(name) {
   const gen = name === "generate";
   $("view-generate").classList.toggle("hidden", !gen);
-  $("general-card").classList.toggle("hidden", !gen);
   $("view-drafts").classList.toggle("hidden", gen);
   $("tab-generate").setAttribute("aria-selected", String(gen));
   $("tab-drafts").setAttribute("aria-selected", String(!gen));
@@ -553,6 +554,61 @@ async function loadGeneral() {
   }
 }
 loadGeneral();
+
+
+/* ---------- Screenshot of the posting -----------------------------------
+   LinkedIn won't let you copy a posting, so take a screenshot (or several, top
+   to bottom) instead. Each is downscaled here (phone photos are huge), the
+   server reads them into text, and the text lands in the box for you to check
+   before Generate. Also works by pasting an image straight into the box. */
+const shot = $("shot"), shotFile = $("shot-file");
+shot.addEventListener("click", () => shotFile.click());
+shotFile.addEventListener("change", () => { addShots([...shotFile.files]); shotFile.value = ""; });
+jd.addEventListener("paste", (ev) => {
+  const files = [...(ev.clipboardData?.files || [])].filter((f) => f.type.startsWith("image/"));
+  if (files.length) { ev.preventDefault(); addShots(files); }
+});
+
+function downscale(file, maxEdge = 2400) {
+  return new Promise((resolve, reject) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const k = Math.min(1, maxEdge / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL("image/jpeg", 0.9));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error(file.name + " isn't an image this browser can read")); };
+    img.src = url;
+  });
+}
+
+async function addShots(files) {
+  if (!files.length) return;
+  if (files.length > 8) { status.innerHTML = '<span class="err">Add up to 8 screenshots at a time.</span>'; return; }
+  const goWasOff = go.disabled;   // a run may be in flight; don't re-enable it
+  shot.disabled = go.disabled = true;
+  status.innerHTML = '<span class="spin"></span> Reading ' + files.length +
+    " screenshot" + (files.length > 1 ? "s" : "") + " — about 10–30 seconds…";
+  try {
+    const images = await Promise.all(files.map((f) => downscale(f)));
+    const resp = await fetch("/jd-from-image", { method: "POST",
+      headers: { "Content-Type": "application/json" }, body: JSON.stringify({ images }) });
+    if (!resp.ok) throw new Error((await resp.text()) || ("Error " + resp.status));
+    const { text } = await resp.json();
+    jd.value = jd.value.trim() ? jd.value.trim() + "\n\n" + text : text;
+    jd.dispatchEvent(new Event("input"));
+    status.textContent = "Read the screenshot" + (files.length > 1 ? "s" : "") +
+      ". Check the text for mistakes, then Generate.";
+  } catch (e) {
+    status.innerHTML = '<span class="err">' + escapeHtml(e.message) + "</span>";
+  } finally {
+    shot.disabled = false;
+    go.disabled = goWasOff;
+  }
+}
 
 /* ---------- Running ----------------------------------------------------- */
 go.addEventListener("click", startRun);

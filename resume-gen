@@ -230,14 +230,18 @@ Do all of this without asking any questions:
 fi
 
 # ---- Resume tailor stage (optionally + cover letter) -------------------------
-# Parse: exactly one <job-description-file>, plus optional --cover / --no-cover.
+# Parse: exactly one <job-description-file> (or one or more screenshots of the
+# posting, top to bottom), plus optional --cover / --no-cover.
 WANT_COVER=0
 JD_INPUT=""
+JD_IMG_COUNT=0
 for arg in "$@"; do
   case "$arg" in
     --cover)    WANT_COVER=1 ;;
     --no-cover) WANT_COVER=0 ;;
     -*) echo "resume-gen: unknown option '$arg'." >&2; exit 4 ;;
+    *.png|*.PNG|*.jpg|*.JPG|*.jpeg|*.JPEG|*.webp|*.WEBP|*.gif|*.GIF)
+      JD_IMG_COUNT=$((JD_IMG_COUNT + 1)) ;;
     *)
       if [ -n "$JD_INPUT" ]; then
         echo "resume-gen: pass a single job-description file (got '$JD_INPUT' and '$arg')." >&2
@@ -246,6 +250,28 @@ for arg in "$@"; do
       JD_INPUT="$arg" ;;
   esac
 done
+# Screenshots of a posting (LinkedIn blocks copying it): read them into a text
+# JD first. Check the transcription in the saved job_description.txt afterwards.
+if [ "$JD_IMG_COUNT" -gt 0 ]; then
+  if [ -n "$JD_INPUT" ]; then
+    echo "resume-gen: pass either a job-description file or screenshots, not both." >&2
+    exit 4
+  fi
+  JD_INPUT="$(mktemp -t jd-img-XXXXXX.txt)"
+  echo "  resume-gen │ reading $JD_IMG_COUNT screenshot(s) of the posting …" >&2
+  # Positional params are function-local: keep only the image paths, in order.
+  read_screenshots() {
+    _n=$#
+    for _a in "$@"; do
+      case "$_a" in
+        *.png|*.PNG|*.jpg|*.JPG|*.jpeg|*.JPEG|*.webp|*.WEBP|*.gif|*.GIF) set -- "$@" "$_a" ;;
+      esac
+    done
+    shift "$_n"
+    python3 scripts/jd_from_image.py "$@" -o "$JD_INPUT"
+  }
+  read_screenshots "$@" || exit $?
+fi
 if [ -z "$JD_INPUT" ] || [ ! -f "$JD_INPUT" ]; then
   echo "resume-gen: '$JD_INPUT' is not a file. Pass a job-description file, add --cover" >&2
   echo "for a cover letter too, or use 'render'/'validate'/'cover-letter'." >&2
@@ -308,6 +334,12 @@ Do all of this without asking any questions:
      back in — copied VERBATIM from $MASTER, never reworded or invented — to
      raise coverage, then re-render. Keep the swap only if it still fits (exit 0);
      otherwise revert. Stop once there is no worthwhile swap or no room.
+     THEN FILL THE PAGE: if \`fit.lines_free\` >= 2, add more verbatim $MASTER
+     content until it is 0-1 (standing user decision: every resume should look
+     as full as possible). Order: most relevant omitted bullets, then a relevant
+     omitted role, then honest supporting content (transferable bullets, skills,
+     projects, coursework). Follow prompt §6 (fill the page); never shrink the
+     font/margins, never break the hard rules, revert any addition that overflows.
 6. Finish at a one-page render (exit 0), or at the 5-attempt cap per §6/§6a.
    Either way your last action must be a render, so output/<slug>/resume.pdf
    always reflects the final instance.yaml and is viewable.

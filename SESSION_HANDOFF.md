@@ -13,6 +13,19 @@ this file only summarizes the current front line.
 
 ## What's done
 
+- **Screenshot-of-the-posting input (2026-11-05).** LinkedIn blocks copying a
+  JD, so `scripts/jd_from_image.py` reads 1-8 screenshots via a short headless
+  Claude (Sonnet/low, `Read` tool only, scratch dir cwd) and returns plain text.
+  Web: "Add screenshot" button (+ paste an image into the box) -> `POST
+  /jd-from-image` -> text lands in the textarea for review, then Generate
+  (client downscales to 2400px JPEG; server sniffs magic bytes, own 2-slot cap).
+  CLI: `./resume-gen shot1.png shot2.png [--cover --fast]` transcribes first.
+  Verified live on a rendered fake posting (web + script); CLI tested with a
+  stubbed `claude`; `tests/test_jd_from_image.py` (95 tests green). Host-side
+  only: no Docker rebuild needed. NOT yet tried on a real LinkedIn screenshot
+  or a phone upload (HEIC may fail in Chrome's canvas decode).
+  Note: the working tree also holds the other agent's uncommitted work
+  (fill-the-page rule, General-résumés card move); nothing here is committed.
 - **Resume refinement Steps 4-5: bank enriched from the user's answers
   (2026-10-13).** Fixed 5 overclaims (Otsuka budget 'managed' -> contributed,
   'on time' removed; LG Chem NLEM 'secured' -> supported; Winnergy 90% was 4
@@ -934,6 +947,16 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 
 ## Log
 
+- **2026-11-05** — Added screenshot-of-JD input (`scripts/jd_from_image.py`, web `/jd-from-image` + "Add screenshot" button, `resume-gen <images>`), because LinkedIn blocks copying postings. First real-world check still needed: a phone screenshot of an actual LinkedIn posting.
+- **2026-10-29** — Automated tailor run: `output/oncoustics-clinical-ops-coop-2026-10-29/` — 1 page(s), 28% coverage, ~$1.88, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-29** — Automated tailor run: `output/opulence-regulatory-affairs-2026-10-29/` — 1 page(s), 48% coverage, ~$2.27, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-29** — Automated tailor run: `output/grifols-quality-systems-associate-2026-10-29/` — 1 page(s), 20% coverage, ~$2.15, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-29** — Automated tailor run: `output/clinicalresearch-crc-2026-10-29/` — no metrics captured *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-29** — Fixed exit 127 caused by my own fill-the-page edit: unescaped double quotes inside resume-gen's double-quoted TASK string made `the page` run as a shell command. Lesson: no bare `"` inside that TASK heredoc-style string.
+- **2026-10-29** — Fill-the-page rule (user: all resumes should look fullest): prompts/tailor_resume.md §6 + resume-gen step 5 now tell the agent to keep adding verbatim master content (relevant bullets → relevant role → supporting content) while `fit.lines_free` >= 2. Prompt-only; not yet validated on a live run — check next run's `lines_free` is 0-1. Existing 3 resumes not regenerated.
+- **2026-10-29** — Investigation (no code change): last 3 resumes (muji x2, confidential-bsm 10-22) are NOT under-packed from font size — all render at the 10.0pt/0.3in/0.4in floor; free space is only 10/39/23pt (0/3/1 lines). Spare lines exist only because the agent's relevance gating left bullets out; remedy would be the agent backfilling `lines_free`, not shrinking type (already at schema minimum).
+- **2026-10-29** — Automated tailor run: `output/muji-assistant-store-manager-2026-10-29/` — 1 page(s), 12% coverage, ~$2.69, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-10-23** — Web UI: moved the pinned "General résumés" card from the Generate tab into the top of the Drafts tab (`web/templates/index.html`; template is read from disk by the service, no Docker rebuild needed).
 - **2026-10-16** — Automated tailor run: `output/general-restaurant-manager-2026-10-16/` — 1 page(s), 25% coverage, ~$2.54, sonnet *(logged automatically by scripts/append_handoff_log.py)*
 - **2026-10-15** — Automated tailor run: `output/general-receptionist-2026-10-15/` — 1 page(s), 27% coverage, ~$2.10, sonnet *(logged automatically by scripts/append_handoff_log.py)*
 - **2026-10-13** — Automated tailor run: `output/google-account-manager-2026-10-13/` — 1 page(s), 28% coverage, ~$2.58, sonnet *(logged automatically by scripts/append_handoff_log.py)*

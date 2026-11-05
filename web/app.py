@@ -20,10 +20,12 @@ your browser's downloads. Nothing here changes where or whether files are saved.
 Run:  python3 web/app.py       then open http://127.0.0.1:5000
 """
 
+import base64
 import json
 import os
 import re
 import subprocess
+import sys
 import tempfile
 import threading
 import urllib.error
@@ -37,6 +39,9 @@ WEB_DIR = Path(__file__).resolve().parent
 ROOT = WEB_DIR.parent                      # the resume_generator project root
 OUTPUT = ROOT / "output"
 RESUME_GEN = ROOT / "resume-gen"           # reused verbatim; never modified
+
+sys.path.insert(0, str(ROOT / "scripts"))
+import jd_from_image  # noqa: E402  (screenshot -> JD text; shared with the CLI)
 
 # Localhost only by default. In the Docker setup this is set to 0.0.0.0 so the
 # container can publish the port — but compose maps it to 127.0.0.1 on the host,
@@ -103,6 +108,13 @@ _CLAUDE_RUN_FLAGS = ("--permission-mode acceptEdits "
 # "busy" instead of queuing.
 _RUN_SLOTS = int(os.environ.get("RESUME_WEB_CONCURRENCY", "2"))
 _run_lock = threading.Semaphore(_RUN_SLOTS)
+
+# Screenshot -> JD text (scripts/jd_from_image.py). Cheap and independent of the
+# résumé runs, so it has its own small cap rather than eating a generation slot.
+_ocr_slots = threading.Semaphore(2)
+_IMG_MAGIC = (b"\x89PNG\r\n\x1a\n", b"\xff\xd8\xff", b"GIF8", b"RIFF")  # RIFF = webp
+_IMG_EXT = {b"\x89PNG": ".png", b"\xff\xd8\xff": ".jpg", b"GIF8": ".gif", b"RIFF": ".webp"}
+_MAX_IMG_BODY = 30 * 1024 * 1024  # the page downscales; this is just a ceiling
 
 _BUSY_MSG = (f"Already generating {_RUN_SLOTS} résumé(s)/cover letter(s) at once. "
              "Please wait for one to finish, then try again.")
@@ -392,6 +404,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._cover()
         if path == "/to-tracker":
             return self._to_tracker()
+        if path == "/jd-from-image":
+            return self._jd_from_image()
         self._send_text(404, "Not found")
 
     # -- helpers ---------------------------------------------------------------
@@ -584,6 +598,43 @@ class Handler(BaseHTTPRequestHandler):
             self._run_pipeline(jd_text, want_cover, tier)
         finally:
             _run_lock.release()
+
+    def _jd_from_image(self):
+        """Screenshots of a posting (LinkedIn blocks copy/paste) -> plain text
+        for the textarea. Body: {"images": ["data:image/jpeg;base64,...", ...]}.
+        Nothing is generated here; the user reviews the text, then hits Generate."""
+        length = int(self.headers.get("Content-Length", "0"))
+        if not 0 < length <= _MAX_IMG_BODY:
+            return self._send_text(413 if length else 400,
+                                   "Attach one or more screenshots of the posting.")
+        try:
+            imgs = json.loads(self.rfile.read(length)).get("images") or []
+            raw = [base64.b64decode(i.split(",", 1)[-1], validate=True) for i in imgs]
+        except (ValueError, AttributeError, TypeError):
+            return self._send_text(400, "Couldn't read those images.")
+        if not raw or len(raw) > jd_from_image.MAX_IMAGES:
+            return self._send_text(
+                400, f"Send 1 to {jd_from_image.MAX_IMAGES} screenshots.")
+        if any(not b.startswith(_IMG_MAGIC) for b in raw):
+            return self._send_text(400, "Only PNG, JPEG, WebP or GIF images work.")
+
+        if not _ocr_slots.acquire(blocking=False):
+            return self._send_text(409, "Already reading screenshots. Try again in a moment.")
+        try:
+            with tempfile.TemporaryDirectory(prefix="jd-up-") as d:
+                paths = []
+                for n, b in enumerate(raw, 1):
+                    ext = next(e for m, e in _IMG_EXT.items() if b.startswith(m))
+                    fp = Path(d) / f"shot{n}{ext}"
+                    fp.write_bytes(b)
+                    paths.append(fp)
+                text = jd_from_image.transcribe(paths)
+        except jd_from_image.TranscribeError as e:
+            code = 422 if e.code == 1 else 500
+            return self._send_text(code, str(e))
+        finally:
+            _ocr_slots.release()
+        self._send_json(200, {"ok": True, "text": text})
 
     def _cover(self):
         # Draft a cover letter for a résumé that ALREADY exists on disk, reusing
