@@ -328,8 +328,8 @@
             <div class="row">
               <span class="sub" id="wc">no text yet</span>
               <div class="seg" role="group" aria-label="Quality tier">
-                <button id="tier-best" aria-pressed="true">Best quality</button>
-                <button id="tier-fast" aria-pressed="false">Fast &amp; cheaper</button>
+                <button id="tier-fast" aria-pressed="true">Fast &amp; cheap</button>
+                <button id="tier-best" aria-pressed="false">Best quality (slow)</button>
               </div>
             </div>
           </div>
@@ -339,7 +339,7 @@
             <button id="shot" type="button" class="btn btn-soft">Add screenshot</button>
             <input id="shot-file" type="file" accept="image/*" multiple hidden>
             <label class="check"><input type="checkbox" id="cover"> Cover letter too</label>
-            <span class="sub" id="tier-note">Opus, high effort — the default the eval backs.</span>
+            <span class="sub" id="tier-note">Sonnet, medium effort — cheap and quick (default).</span>
           </div>
           <div class="sub" id="status"></div>
         </div>
@@ -405,7 +405,7 @@ const $ = (id) => document.getElementById(id);
 const go = $("go"), jd = $("jd"), status = $("status"), log = $("log"),
       result = $("result"), cover = $("cover");
 
-let tier = "best";     // matches the server's default; sent as ?tier=
+let tier = "fast";     // matches the server's default; sent as ?tier=
 let timer = null, started = 0;
 
 /* ---------- Steps -------------------------------------------------------
@@ -480,8 +480,8 @@ function setTier(t) {
   $("tier-best").setAttribute("aria-pressed", String(t === "best"));
   $("tier-fast").setAttribute("aria-pressed", String(t === "fast"));
   $("tier-note").textContent = t === "best"
-    ? "Opus, high effort — the default the eval backs."
-    : "Sonnet, medium effort — cheaper and quicker; good for bulk or low-match runs.";
+    ? "Opus, high effort — slower and uses more tokens; use when it matters."
+    : "Sonnet, medium effort — cheap and quick (default).";
 }
 $("tier-best").addEventListener("click", () => setTier("best"));
 $("tier-fast").addEventListener("click", () => setTier("fast"));
@@ -801,12 +801,14 @@ const LABELS = {
   "resume.docx": "Résumé — Word",
   "cover_letter.pdf": "Cover letter — PDF",
   "cover_letter.docx": "Cover letter — Word",
+  "cover_note.txt": "Cover note — text",
 };
 const SUBS = {
   "resume.pdf": "ready to send",
   "resume.docx": "editable copy",
   "cover_letter.pdf": "ready to send",
   "cover_letter.docx": "editable copy",
+  "cover_note.txt": "short email-style note",
 };
 
 function kb(bytes) {

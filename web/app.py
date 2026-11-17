@@ -63,6 +63,7 @@ DOWNLOADABLE = {
     "resume.docx": _DOCX_CTYPE,
     "cover_letter.pdf": "application/pdf",
     "cover_letter.docx": _DOCX_CTYPE,
+    "cover_note.txt": "text/plain; charset=utf-8",
     "omitted.md": "text/markdown; charset=utf-8",
     "coverage.md": "text/markdown; charset=utf-8",
     "instance.yaml": "text/yaml; charset=utf-8",
@@ -70,7 +71,8 @@ DOWNLOADABLE = {
 SLUG_RE = re.compile(r"^[A-Za-z0-9._-]+$")  # output folder names only
 
 # Files the download route and result payloads report on, in display order.
-ARTIFACTS = ("resume.pdf", "resume.docx", "cover_letter.pdf", "cover_letter.docx")
+ARTIFACTS = ("resume.pdf", "resume.docx", "cover_letter.pdf", "cover_letter.docx",
+             "cover_note.txt")
 
 # Pinned "General résumés" card: the newest output/<prefix>*/ run with a PDF
 # for each prefix. Re-running a general posting just makes a newer folder, and
@@ -89,8 +91,8 @@ GENERAL_RESUMES = (
 #
 # The model/effort half mirrors resume-gen's own two tiers, because setting
 # RESUME_GEN_CLAUDE_FLAGS overrides the launcher's choice (and its --fast flag)
-# entirely — so the page has to name the tier itself. "best" is the launcher's
-# default (Opus/high, the tier the live eval backs); "fast" is `--fast`.
+# entirely — so the page has to name the tier itself. "fast" (Sonnet) is the web default;
+# "best" (Opus/high) is opt-in via the Best quality button.
 TIERS = {
     "best": "--model claude-opus-5 --effort high",
     "fast": "--model claude-sonnet-5 --effort medium",
@@ -574,9 +576,9 @@ class Handler(BaseHTTPRequestHandler):
         q = parse_qs(urlparse(self.path).query)
         want_cover = (q.get("cover") or ["0"])[0] == "1"
         # ?tier=fast picks the cheaper Sonnet tier (the launcher's --fast).
-        tier = (q.get("tier") or ["best"])[0]
+        tier = (q.get("tier") or ["fast"])[0]
         if tier not in TIERS:
-            tier = "best"
+            tier = "fast"
         # ?force=1 skips the duplicate-JD check below (the "generate again
         # anyway" path after the warning).
         force = (q.get("force") or ["0"])[0] == "1"
@@ -691,11 +693,11 @@ class Handler(BaseHTTPRequestHandler):
                 gone = True
         return emit
 
-    def _stream_env(self, tier="best"):
+    def _stream_env(self, tier="fast"):
         """os.environ + our stream-json default (a user's own flags still win)."""
         env = os.environ.copy()
         env.setdefault("RESUME_GEN_CLAUDE_FLAGS",
-                       f"{TIERS.get(tier, TIERS['best'])} {_CLAUDE_RUN_FLAGS}")
+                       f"{TIERS.get(tier, TIERS['fast'])} {_CLAUDE_RUN_FLAGS}")
         return env
 
     def _run_narrated(self, cmd, env, emit):
@@ -746,7 +748,7 @@ class Handler(BaseHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError):
             pass
 
-    def _run_pipeline(self, jd_text, want_cover=False, tier="best"):
+    def _run_pipeline(self, jd_text, want_cover=False, tier="fast"):
         emit = self._open_stream()
 
         # Write the pasted JD to a temp file and run the UNMODIFIED pipeline.
