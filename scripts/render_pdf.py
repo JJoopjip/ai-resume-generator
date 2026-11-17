@@ -34,6 +34,7 @@ _TEX_SPECIAL_CHARS = {
     "^": r"\textasciicircum{}",
     "·": r"\textperiodcentered{}",
     "—": r"\textemdash{}",
+    "–": r"\textendash{}",
 }
 _TEX_ESCAPE_RE = re.compile(
     "|".join(re.escape(c) for c in sorted(_TEX_SPECIAL_CHARS, key=len, reverse=True))
