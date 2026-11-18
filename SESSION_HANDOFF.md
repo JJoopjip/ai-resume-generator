@@ -948,6 +948,18 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 
 ## Log
 
+- 2026-11-18: Portfolio URL is now chantamas.com (was jjoopjip.github.io): edited `master.yaml` line 63 (backup auto-syncs) and re-rendered resume + cover letter for genericbd-bdspecialist-2026-11-10. Other older output/ folders still show the old URL.
+- **2026-11-17** — Automated tailor run: `output/origins-online-commerce-planning-manager-2026-11-17/` — exit 1, 44% coverage, ~$1.92, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-11-17** — Automated tailor run: `output/clinchoice-project-manager-2026-11-17/` — 1 page(s), 32% coverage, ~$3.37, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-11-17** — Automated tailor run: `output/oceanmd-product-launch-specialist-2026-11-17/` — 1 page(s), 36% coverage, ~$4.06, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-11-17** — Automated tailor run: `output/freyr-regulatory-pm-2026-11-17/` — 1 page(s), 30% coverage, ~$3.03, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-11-17** — Automated tailor run: `output/gsk-patient-support-programs-2026-11-17/` — 1 page(s), 47% coverage, ~$3.89, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-11-17** — Automated tailor run: `output/cpg-pm-innovation-commercialization-2026-11-17/` — 1 page(s), 36% coverage, ~$2.77, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-11-17** — Automated cover-letter run: `output/bbraun-project-manager-2026-11-17/` — 1 page(s), 16% coverage, ~$0.64, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-11-17** — Automated tailor run: `output/bbraun-pm1-2026-11-17/` — no metrics captured *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-11-17** — Automated tailor run: `output/alexion-patientexperienceassociate-2026-11-17/` — 1 page(s), 42% coverage, ~$3.01, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-11-17** — Automated tailor run: `output/sentrex-program-manager-2026-11-17/` — 1 page(s), 48% coverage, ~$3.94, sonnet *(logged automatically by scripts/append_handoff_log.py)*
+- **2026-11-17** — Automated cover-letter run: `output/indero-project-manager-vendor-management-2026-11-17/` — 1 page(s), 40% coverage, ~$0.67, sonnet *(logged automatically by scripts/append_handoff_log.py)*
 - 2026-11-17: Web UI default tier is now `fast` (Sonnet/medium) in app.py + index.html; "Best quality (slow)" (Opus/high) is an opt-in toggle. Saves time/tokens.
 - **2026-11-11** — genericbd-bdspecialist: turned `cover_note.txt` into a 1-page letter (hand-written `cover_letter.yaml`, same facts, no LLM) and rendered cover_letter.pdf/.docx locally via `scripts/generate_resume.py cover` (Docker was down; tectonic is local). Drafts page picks them up automatically.
 - **2026-11-11** — Drafts page now lists a run's cover letter (cover_letter.pdf/.docx were already in ARTIFACTS) and also hand-written `cover_note.txt` (added to `ARTIFACTS`/`DOWNLOADABLE` in web/app.py + labels in index.html). Web service restarted; tests pass.
