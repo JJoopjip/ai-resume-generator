@@ -617,6 +617,8 @@ this file only summarizes the current front line.
   synced. **Not yet exercised on a live render** — worth confirming the
   shorter summaries still read naturally on the next real run.
 
+- Locations toggle: per-job/education locations are omitted from the rendered resume by default (header location kept). Opt in with `--locations` / `RESUME_GEN_LOCATIONS=1` / web "Include work locations" checkbox. Applied at render time in `generate_resume.cmd_render` via `render_pdf.strip_locations`; validate/coverage unaffected. **Docker image must be rebuilt** (not done — Docker was down).
+
 ## What's next
 
 Highest-leverage remaining items:
@@ -948,6 +950,7 @@ Full checklist with all sub-items and completion history: **`TODO.md`**.
 
 ## Log
 
+- 2026-11-20: Added locations toggle (default off) — CLI flag, env var, web checkbox; 95 tests pass; image rebuild pending.
 - 2026-11-18: Portfolio URL is now chantamas.com (was jjoopjip.github.io): edited `master.yaml` line 63 (backup auto-syncs) and re-rendered resume + cover letter for genericbd-bdspecialist-2026-11-10. Other older output/ folders still show the old URL.
 - **2026-11-17** — Automated tailor run: `output/origins-online-commerce-planning-manager-2026-11-17/` — exit 1, 44% coverage, ~$1.92, sonnet *(logged automatically by scripts/append_handoff_log.py)*
 - **2026-11-17** — Automated tailor run: `output/clinchoice-project-manager-2026-11-17/` — 1 page(s), 32% coverage, ~$3.37, sonnet *(logged automatically by scripts/append_handoff_log.py)*

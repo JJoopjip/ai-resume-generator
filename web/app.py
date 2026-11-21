@@ -582,6 +582,8 @@ class Handler(BaseHTTPRequestHandler):
         # ?force=1 skips the duplicate-JD check below (the "generate again
         # anyway" path after the warning).
         force = (q.get("force") or ["0"])[0] == "1"
+        # ?locations=1 keeps job/education locations on the resume (default: off).
+        locations = (q.get("locations") or ["0"])[0] == "1"
 
         if not force:
             dupe = _find_duplicate_jd(jd_text)
@@ -597,7 +599,7 @@ class Handler(BaseHTTPRequestHandler):
         if not _run_lock.acquire(blocking=False):
             return self._send_text(409, _BUSY_MSG)
         try:
-            self._run_pipeline(jd_text, want_cover, tier)
+            self._run_pipeline(jd_text, want_cover, tier, locations)
         finally:
             _run_lock.release()
 
@@ -693,9 +695,10 @@ class Handler(BaseHTTPRequestHandler):
                 gone = True
         return emit
 
-    def _stream_env(self, tier="fast"):
+    def _stream_env(self, tier="fast", locations=False):
         """os.environ + our stream-json default (a user's own flags still win)."""
         env = os.environ.copy()
+        env["RESUME_GEN_LOCATIONS"] = "1" if locations else "0"
         env.setdefault("RESUME_GEN_CLAUDE_FLAGS",
                        f"{TIERS.get(tier, TIERS['fast'])} {_CLAUDE_RUN_FLAGS}")
         return env
@@ -748,7 +751,7 @@ class Handler(BaseHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError):
             pass
 
-    def _run_pipeline(self, jd_text, want_cover=False, tier="fast"):
+    def _run_pipeline(self, jd_text, want_cover=False, tier="fast", locations=False):
         emit = self._open_stream()
 
         # Write the pasted JD to a temp file and run the UNMODIFIED pipeline.
@@ -769,7 +772,7 @@ class Handler(BaseHTTPRequestHandler):
             tier_note = "cheaper/faster tier" if tier == "fast" else "best-quality tier"
             emit(f"  web │ starting {kind} on the {tier_note} — this takes a few "
                  "minutes; watch the steps below.\n\n")
-            code, state = self._run_narrated(cmd, self._stream_env(tier), emit)
+            code, state = self._run_narrated(cmd, self._stream_env(tier, locations), emit)
 
             # This run's own slug, read straight off its own stream (see
             # _hunt_slug) -- not a diff of output/, which two concurrent runs

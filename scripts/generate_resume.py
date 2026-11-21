@@ -209,10 +209,15 @@ def cmd_render(args: argparse.Namespace) -> int:
              + (f"; {len(coverage['selection_gap'])} term(s) in master but unselected"
                 if coverage['selection_gap'] else ""))
 
+    # Work/education locations are left off the rendered resume unless asked for
+    # (--locations or RESUME_GEN_LOCATIONS=1). Validation/coverage keep the full data.
+    show_locations = getattr(args, "locations", False) or os.environ.get("RESUME_GEN_LOCATIONS", "0") == "1"
+    render_instance = instance if show_locations else render_pdf.strip_locations(instance)
+
     _log(f"[3/4] rendering + compiling PDF ({layout['font_size_pt']}pt / "
          f"{layout['margin_h_in']}in H × {layout['margin_v_in']}in V margins) → {out_dir}/ …")
     try:
-        pdf_result = render_pdf.render_pdf(instance, out_dir, layout)
+        pdf_result = render_pdf.render_pdf(render_instance, out_dir, layout)
     except Exception:
         _emit(
             "render",
@@ -253,7 +258,7 @@ def cmd_render(args: argparse.Namespace) -> int:
 
     _log("[4/4] writing DOCX …")
     try:
-        docx_path = render_docx.render_docx(instance, out_dir)
+        docx_path = render_docx.render_docx(render_instance, out_dir)
     except Exception:
         _emit(
             "render",
@@ -402,6 +407,8 @@ def build_parser() -> argparse.ArgumentParser:
         "margin_h_in/margin_v_in within schema/layout.schema.json's bounds. Omit "
         "for the tightened default (10.0pt / 0.4in H / 0.3in V).",
     )
+    render_p.add_argument("--locations", action="store_true",
+                          help="include work/education locations (default: omitted)")
     render_p.add_argument("--layout-schema", default=str(DEFAULT_LAYOUT_SCHEMA_PATH))
     render_p.set_defaults(func=cmd_render)
 

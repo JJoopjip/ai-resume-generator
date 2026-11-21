@@ -61,7 +61,9 @@ FAST="${RESUME_GEN_FAST:-0}"
 _n=$#
 while [ "$_n" -gt 0 ]; do
   _a="$1"; shift
-  if [ "$_a" = "--fast" ]; then FAST=1; else set -- "$@" "$_a"; fi
+  if [ "$_a" = "--fast" ]; then FAST=1
+  elif [ "$_a" = "--locations" ]; then export RESUME_GEN_LOCATIONS=1
+  else set -- "$@" "$_a"; fi
   _n=$((_n - 1))
 done
 
@@ -76,6 +78,7 @@ case "${1:-}" in
       -v "$(pwd)":/work \
       -v resume-gen-tectonic-cache:/home/appuser/.cache/Tectonic \
       -e RESUME_GEN_MASTER="${RESUME_GEN_MASTER:-master.yaml}" \
+      -e RESUME_GEN_LOCATIONS="${RESUME_GEN_LOCATIONS:-0}" \
       resume-gen "$@"
     ;;
   eval)

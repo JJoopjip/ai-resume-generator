@@ -140,6 +140,20 @@ def _jinja_env() -> jinja2.Environment:
     return env
 
 
+def strip_locations(instance: dict) -> dict:
+    """Copy of instance with experience/education locations blanked (the default
+    render omits them; the header location is kept)."""
+    import copy
+    out = copy.deepcopy(instance)
+    for key in ("experience", "education", "volunteer"):
+        items = out.get(key)
+        if isinstance(items, list):
+            for it in items:
+                if isinstance(it, dict) and "location" in it:
+                    it["location"] = ""
+    return out
+
+
 def render_tex(instance: dict, out_dir: Path, layout: dict) -> Path:
     """Render resume.tex.j2 with an escaped, section-grouped copy of instance plus the
     bounded `layout` overrides (font_size_pt, margin_h_in, margin_v_in — see
